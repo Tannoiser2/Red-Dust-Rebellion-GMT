@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**750 test del modulo + 100 controlli di smoke test della scena, 0 falliti.**
+**768 test del modulo + 100 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -99,6 +99,8 @@ disponibile in UI è il Passo.
 | Mano dei Reclaimer giocabile in UI | ✅ Capability ed Eventi dal pannello |
 | Non-Player *Curiosity*: motore (§8.2/§8.4/§8.5) | ✅ contatori, Eligibility CR, Activation Number, selettore di spazi |
 | Non-Player: Space Selection Priorities | ✅ tutte e 4 le tabelle |
+| Non-Player: Piece Priorities §8.5.8 | ✅ tabella e selettore dei pezzi |
+| Non-Player: Move Priorities §8.5.7 | ⚠️ tabella trascritta, motore da scrivere |
 | Non-Player: Operazioni §8.6 (Rally, Attack, Campaign, Preach) | ✅ eseguite uno spazio alla volta |
 | Non-Player: Operazioni di movimento | ⬜ serve la tabella Move Priorities |
 | Non-Player: 24 carte *Curiosity* e schede aiuto | ⬜ componenti fisici da acquisire |

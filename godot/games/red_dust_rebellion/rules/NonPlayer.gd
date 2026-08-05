@@ -24,6 +24,8 @@ extends RefCounted
 ## un Asset Total sull'edge track.
 
 const DATA_FILE := "np_priorities.json"
+const PIECE_FILE := "np_piece_priorities.json"
+const MOVE_FILE := "np_move_priorities.json"
 
 ## §8.4.1: valori iniziali dei contatori surrogati.
 const START_SUPPLY := 0
@@ -38,6 +40,9 @@ var rng: RandomNumberGenerator
 var np_factions: PackedStringArray = PackedStringArray()
 var tables: Dictionary = {}
 var missing: Array = []
+## §8.5.8 Piece Priorities e §8.5.7 Move Priorities, dalle schede del gioco.
+var piece_priorities: Dictionary = {}
+var move_priorities: Dictionary = {}
 var log_lines: Array[String] = []
 
 
@@ -46,12 +51,19 @@ func _init(p_state: GameState, p_module: RDRModule,
 	state = p_state
 	module = p_module
 	rng = p_rng if p_rng != null else RandomNumberGenerator.new()
-	var path := RDRModule.DATA_DIR + DATA_FILE
-	if FileAccess.file_exists(path):
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-		if typeof(parsed) == TYPE_DICTIONARY:
-			tables = parsed.get("tables", {})
-			missing = parsed.get("missing", [])
+	var parsed = _load(DATA_FILE)
+	tables = parsed.get("tables", {})
+	missing = parsed.get("missing", [])
+	piece_priorities = _load(PIECE_FILE)
+	move_priorities = _load(MOVE_FILE)
+
+
+func _load(file_name: String) -> Dictionary:
+	var path := RDRModule.DATA_DIR + file_name
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 
 
 ## C'è la tabella delle priorità per questa Fazione NP?
@@ -275,6 +287,82 @@ func _apply_row(test: Dictionary, pool: Array, faction: String) -> Array:
 		"random":
 			return [pool[rng.randi_range(0, pool.size() - 1)]]
 	return []
+
+
+# ---------------------------------------------------------------------------
+# §8.5.8 Piece Priorities
+# ---------------------------------------------------------------------------
+
+## Ordine in cui una Fazione NP tocca i pezzi presenti in uno spazio.
+## `purpose`:
+##   "enemy"           — rimuovere, sostituire o Attivare pezzi nemici
+##   "friendly_place"  — piazzare o muovere pezzi amici
+##   "friendly_remove" — rimuovere pezzi PROPRI: si legge la tabella al contrario
+## §8.5.8: prima dei pezzi delle Fazioni NP si tolgono sempre quelli dei giocatori.
+## Restituisce token "tipo" oppure "tipo:stato", nell'ordine di priorità.
+func piece_order(acting: String, sid: String, purpose: String) -> Array:
+	var out: Array = []
+	for group in piece_priorities.get("order", []):
+		var g: Dictionary = group
+		match String(g.get("when", "")):
+			"acting_is_np_marsgov":
+				if not (acting == "marsgov" and is_np("marsgov")):
+					continue
+			"space_with_vulnerable_enemy_base":
+				# Le unità amiche della Base vulnerabile: si espandono a runtime.
+				if sid == "" or not _vulnerable_enemy_base(sid, acting):
+					continue
+				out.append_array(_friends_of_vulnerable_base(sid, acting))
+				continue
+		out.append_array(g.get("pieces", []))
+	if purpose == "friendly_remove":
+		out.reverse()
+	elif purpose == "enemy" and bool(piece_priorities.get("player_pieces_first", true)):
+		# §8.5.8 nota A: prima i pezzi dei giocatori, poi quelli delle Fazioni NP.
+		var players: Array = []
+		var nps: Array = []
+		for token in out:
+			var owner: String = RDRModule.PIECE_OWNER.get(String(token).split(":")[0], "")
+			if owner != "" and is_np(owner):
+				nps.append(token)
+			else:
+				players.append(token)
+		out = players + nps
+	return out
+
+
+## Le unità nemiche amiche della Base vulnerabile presente nello spazio.
+func _friends_of_vulnerable_base(sid: String, acting: String) -> Array:
+	for base_id in ["corp_base", "cr_base", "rd_base", "mg_base"]:
+		if String(RDRModule.PIECE_OWNER[base_id]) == acting:
+			continue
+		if module.count_in(state, sid, base_id) == 0:
+			continue
+		match base_id:
+			"mg_base", "corp_base":
+				return ["security", "mg_troop", "eg_troop", "specops:active"]
+			"rd_base":
+				return ["rd_rebel:hidden", "rd_rebel:active"]
+			"cr_base":
+				return ["cr_rebel:hidden", "cr_rebel:active"]
+	return []
+
+
+## Il primo pezzo davvero presente nello spazio, secondo le priorità.
+## Restituisce {type, state} oppure {} se non c'è nulla di ammissibile.
+func pick_piece(acting: String, sid: String, purpose: String,
+		allowed: Array = []) -> Dictionary:
+	for token in piece_order(acting, sid, purpose):
+		var parts := String(token).split(":")
+		var type_id := String(parts[0])
+		if not RDRModule.PIECE_OWNER.has(type_id):
+			continue  # Population e Supply sono marker, non pezzi
+		if not allowed.is_empty() and not allowed.has(type_id):
+			continue
+		var piece_state = String(parts[1]) if parts.size() > 1 else null
+		if module.count_in(state, sid, type_id, piece_state) > 0:
+			return {"type": type_id, "state": "" if piece_state == null else String(piece_state)}
+	return {}
 
 
 # ---------------------------------------------------------------------------

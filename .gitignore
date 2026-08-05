@@ -8,3 +8,7 @@ web/
 # Estrazione automatica di riferimento degli Eventi: il file buono, scritto a
 # mano, è event_effects.json (vedi sources/rules/estrai_effetti_eventi.py).
 godot/games/red_dust_rebellion/data/event_effects_auto.json
+# Scansioni del gioco fisico (materiale GMT): servono per trascrivere il
+# sistema Non-Player, ma non vanno ridistribuite.
+sources/rules/Tabelle Curiosity.pdf
+sources/rules/Carte Curiosity.pdf

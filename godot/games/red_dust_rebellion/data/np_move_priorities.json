@@ -1,0 +1,291 @@
+{
+  "_note": "Move Priorities (§8.5.7), trascritte dalla scheda del gioco fisico. Si usano per Secure (§5.3), Recon (§5.4), March (§5.7), Travel (§5.8) e per l'Attività Speciale Transport (§6.3). Il passo A sceglie la destinazione e il B l'origine — tranne per i Reclaimer, che fanno il contrario. `keep_in_origin` dice quali forze restano, `move_to_destination` quante e quali arrivano; le voci con `when` valgono solo se la condizione è vera, quelle con `only_if_player` solo se quella Fazione è di un giocatore.",
+  "steps": {
+    "marsgov": {
+      "a": "destination",
+      "b": "origin"
+    },
+    "corporations": {
+      "a": "destination",
+      "b": "origin"
+    },
+    "red_dust": {
+      "a": "destination",
+      "b": "origin"
+    },
+    "reclaimer": {
+      "a": "origin",
+      "b": "destination"
+    }
+  },
+  "select_space": [
+    {
+      "label": "most moveable forces not required to remain in origin per instructions below",
+      "factions": [
+        "marsgov",
+        "corporations",
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "most_moveable"
+    },
+    {
+      "label": "select at random from remaining spaces",
+      "factions": [
+        "marsgov",
+        "corporations",
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "random"
+    }
+  ],
+  "keep_in_origin": [
+    {
+      "label": "keep sufficient forces to change no Control",
+      "factions": [
+        "marsgov",
+        "corporations",
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "keep_no_control_change"
+    },
+    {
+      "label": "keep acting cubes ≥ Active Rebels in origin",
+      "factions": [
+        "marsgov",
+        "corporations"
+      ],
+      "rule": "keep_cubes_ge_active_rebels",
+      "when": "cubes_ge_vulnerable_enemies"
+    },
+    {
+      "label": "keep MG forces ≥ CORP forces",
+      "factions": [
+        "marsgov"
+      ],
+      "rule": "keep_mg_ge_corp",
+      "when": "origin_at_support_with_corp_base"
+    },
+    {
+      "label": "keep CORP forces > MG forces",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "keep_corp_gt_mg",
+      "when": "origin_populated_with_corp_base"
+    },
+    {
+      "label": "keep cubes = Population",
+      "factions": [
+        "marsgov"
+      ],
+      "rule": "keep_cubes_eq_population"
+    },
+    {
+      "label": "keep 4 cubes in spaces with MG Base",
+      "factions": [
+        "marsgov"
+      ],
+      "rule": "keep_4_cubes_at_mg_base",
+      "only_if_player": "reclaimer"
+    },
+    {
+      "label": "keep 4 cubes in spaces with CORP Base",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "keep_4_cubes_at_corp_base"
+    },
+    {
+      "label": "keep 1 Hidden Rebel in spaces with acting Faction Base",
+      "factions": [
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "keep_1_hidden_rebel_at_base"
+    },
+    {
+      "label": "keep 3 acting Faction Rebels in spaces with room for an Available Base",
+      "factions": [
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "keep_3_rebels_with_base_room"
+    },
+    {
+      "label": "keep 1 RD Rebel in 2+ Pop spaces without Active Opposition",
+      "factions": [
+        "red_dust"
+      ],
+      "rule": "keep_1_rebel_pop2_no_active_opposition"
+    },
+    {
+      "label": "keep 1 CR Rebel in Populated spaces",
+      "factions": [
+        "reclaimer"
+      ],
+      "rule": "keep_1_rebel_populated"
+    }
+  ],
+  "move_to_destination": [
+    {
+      "label": "get 1 CR Base to destination",
+      "factions": [
+        "reclaimer"
+      ],
+      "rule": "get_1_base",
+      "when": "destination_is_desert"
+    },
+    {
+      "label": "get 1 acting Faction unit to destination",
+      "factions": [
+        "marsgov",
+        "corporations",
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "get_1_unit"
+    },
+    {
+      "label": "get acting Faction units equal to Hidden Rebels",
+      "factions": [
+        "marsgov",
+        "corporations"
+      ],
+      "rule": "get_units_eq_hidden_rebels"
+    },
+    {
+      "label": "get acting Faction units equal to twice Hidden Rebels",
+      "factions": [
+        "marsgov",
+        "corporations"
+      ],
+      "rule": "get_units_eq_twice_hidden_rebels",
+      "when": "destination_is_wilderness"
+    },
+    {
+      "label": "get MG forces ≥ CORP forces",
+      "factions": [
+        "marsgov"
+      ],
+      "rule": "get_mg_ge_corp",
+      "when": "destination_at_support_with_corp_base"
+    },
+    {
+      "label": "get COIN Control",
+      "factions": [
+        "marsgov",
+        "corporations"
+      ],
+      "rule": "get_coin_control"
+    },
+    {
+      "label": "get cubes = Population",
+      "factions": [
+        "marsgov",
+        "corporations"
+      ],
+      "rule": "get_cubes_eq_population"
+    },
+    {
+      "label": "get CORP forces > MG forces",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "get_corp_gt_mg",
+      "when": "destination_populated_with_corp_base"
+    },
+    {
+      "label": "get 4 cubes to MG Base",
+      "factions": [
+        "marsgov"
+      ],
+      "rule": "get_4_cubes_to_mg_base",
+      "only_if_player": "reclaimer"
+    },
+    {
+      "label": "get 4 cubes to CORP Base",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "get_4_cubes_to_corp_base"
+    },
+    {
+      "label": "get as many Hidden Rebels as possible",
+      "factions": [
+        "red_dust"
+      ],
+      "rule": "get_max_hidden_rebels",
+      "when": "destination_at_support"
+    },
+    {
+      "label": "get 1 acting Faction Hidden Rebel to destination",
+      "factions": [
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "get_1_hidden_rebel",
+      "when": "acting_base_in_destination"
+    },
+    {
+      "label": "get 3 acting Faction Rebels to destination",
+      "factions": [
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "get_3_rebels",
+      "when": "destination_has_room_for_available_base"
+    },
+    {
+      "label": "get 3 Security to destination",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "get_3_security",
+      "when": "destination_no_corp_base_with_room"
+    },
+    {
+      "label": "get 1 Security to destination",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "get_1_security",
+      "when": "destination_has_damage"
+    },
+    {
+      "label": "get 1 SpecOps to destination",
+      "factions": [
+        "corporations"
+      ],
+      "rule": "get_1_specops"
+    },
+    {
+      "label": "get acting Faction Control",
+      "factions": [
+        "red_dust",
+        "reclaimer"
+      ],
+      "rule": "get_faction_control"
+    }
+  ],
+  "step_c": {
+    "marsgov": {
+      "coin_control": "new_destination",
+      "otherwise": "new_origin"
+    },
+    "corporations": {
+      "coin_control": "new_destination",
+      "otherwise": "new_origin"
+    },
+    "red_dust": {
+      "no_enemy_control_in_destination": "new_destination",
+      "otherwise": "new_origin"
+    },
+    "reclaimer": {
+      "moveable_rebels_remain_in_origin": "new_destination",
+      "otherwise": "new_origin"
+    }
+  }
+}

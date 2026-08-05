@@ -78,6 +78,7 @@ func _init() -> void:
 	test_np_setup()
 	test_np_priorities()
 	test_np_operations()
+	test_np_piece_priorities()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -2061,6 +2062,70 @@ func test_np_priorities() -> void:
 	ok(["europa", "tenzing"].has(String(blind["space"])), "senza tabella sceglie comunque")
 	ok(String(blind["row"]).contains("mancante"),
 		"…e dichiara che la tabella manca: «%s»" % blind["row"])
+
+
+func test_np_piece_priorities() -> void:
+	print("Non-Player — Piece Priorities (§8.5.8) e Move Priorities (§8.5.7)")
+	var s := fresh()
+	var np := np_for(s, ["red_dust"])
+
+	ok(not np.piece_priorities.is_empty(), "la tabella Piece Priorities è caricata")
+	ok(not np.move_priorities.is_empty(), "la tabella Move Priorities è caricata")
+
+	# §8.5.7: i Reclaimer invertono i passi A e B — scelgono prima l'origine.
+	var steps: Dictionary = np.move_priorities.get("steps", {})
+	eq(String(steps["marsgov"]["a"]), "destination", "NP MG sceglie prima la destinazione")
+	eq(String(steps["reclaimer"]["a"]), "origin", "NP CR sceglie prima l'origine")
+	eq((np.move_priorities.get("keep_in_origin", []) as Array).size(), 11,
+		"11 istruzioni «keep in origin»")
+	eq((np.move_priorities.get("move_to_destination", []) as Array).size(), 17,
+		"17 istruzioni «move to destination»")
+
+	# Le Basi vengono per prime, e fra loro le CORP prima delle MG.
+	var order: Array = np.piece_order("red_dust", "", "friendly_place")
+	ok(order.size() > 10, "l'ordine dei pezzi è completo (%d voci)" % order.size())
+	ok(order.find("corp_base:basic") < order.find("mg_base"),
+		"le Basi CORP vengono prima di quelle MG")
+	ok(order.find("corp_base:terraforming") < order.find("corp_base:basic"),
+		"le Basi potenziate prima di quelle normali")
+	ok(order.find("cr_rebel:hidden") < order.find("cr_rebel:active"),
+		"i Ribelli Nascosti prima di quelli Attivi")
+	ok(order.find("cr_rebel:hidden") < order.find("rd_rebel:hidden"),
+		"fra i Ribelli, i Reclaimer prima del Red Dust")
+	ok(order.find("satellite") < order.find("eg_troop"),
+		"i Satelliti prima delle Truppe EG")
+
+	# Rimuovendo pezzi PROPRI la tabella si legge al contrario.
+	var back: Array = np.piece_order("red_dust", "", "friendly_remove")
+	ok(back.find("mg_base") < back.find("corp_base:basic"),
+		"per i pezzi propri l'ordine è rovesciato")
+
+	# §8.5.8 nota A: prima i pezzi dei giocatori, poi quelli delle Fazioni NP.
+	# Con il solo Red Dust fra le NP, i suoi Ribelli scendono in fondo.
+	# Le Basi RD sono stampate fra le prime; se il Red Dust è NP scendono comunque
+	# sotto le Security, che appartengono a un giocatore.
+	var enemy: Array = np.piece_order("reclaimer", "", "enemy")
+	ok(enemy.find("rd_base:basic") > enemy.find("security"),
+		"i pezzi delle Fazioni NP si toccano per ultimi")
+	var s2 := fresh()
+	var np2 := np_for(s2, [])
+	var enemy2: Array = np2.piece_order("reclaimer", "", "enemy")
+	ok(enemy2.find("rd_base:basic") < enemy2.find("security"),
+		"…mentre fra soli giocatori vale l'ordine stampato")
+
+	# pick_piece trova il primo pezzo davvero presente nello spazio.
+	var s3 := fresh()
+	var np3 := np_for(s3, ["red_dust"])
+	var sid := "radau"
+	module.remove_pieces(s3, sid, "rd_rebel", 99, "available")
+	module.place_from_available(s3, sid, "mg_troop", 2)
+	module.place_from_available(s3, sid, "security", 1)
+	var got: Dictionary = np3.pick_piece("red_dust", sid, "enemy")
+	eq(String(got["type"]), "security", "fra cubi COIN si prende prima la Security")
+	var only_mg: Dictionary = np3.pick_piece("red_dust", sid, "enemy", ["mg_troop"])
+	eq(String(only_mg["type"]), "mg_troop", "…ma il filtro dei tipi ammessi vince")
+	eq(np3.pick_piece("red_dust", "wilderness", "enemy", ["corp_base"]).is_empty(), true,
+		"se non c'è nulla di ammissibile non sceglie niente")
 
 
 func test_np_operations() -> void:

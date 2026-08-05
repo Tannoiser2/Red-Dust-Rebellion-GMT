@@ -1,0 +1,85 @@
+{
+  "_note": "Piece Priorities (§8.5.8), dalla scheda del gioco fisico. `order` si legge dall'alto in basso e da sinistra a destra per rimuovere, sostituire o Attivare pezzi NEMICI e per piazzare o muovere pezzi AMICI; al contrario (dal basso e da destra) per rimuovere pezzi amici. Prima dei pezzi NP si tolgono sempre quelli dei GIOCATORI.",
+  "player_pieces_first": true,
+  "order": [
+    {
+      "group": "bases",
+      "pieces": [
+        "corp_base:terraforming",
+        "corp_base:basic",
+        "cr_base:conversion_center",
+        "cr_base:basic",
+        "rd_base:dug_in",
+        "rd_base:basic",
+        "mg_base"
+      ]
+    },
+    {
+      "group": "friendly_units_of_vulnerable_base",
+      "when": "space_with_vulnerable_enemy_base",
+      "pieces": []
+    },
+    {
+      "group": "satellites",
+      "pieces": [
+        "satellite"
+      ]
+    },
+    {
+      "group": "supply",
+      "when": "acting_is_np_marsgov",
+      "pieces": [
+        "supply"
+      ]
+    },
+    {
+      "group": "eg_troops",
+      "pieces": [
+        "eg_troop"
+      ]
+    },
+    {
+      "group": "mg_first",
+      "when": "acting_is_np_marsgov",
+      "pieces": [
+        "mg_troop",
+        "security"
+      ]
+    },
+    {
+      "group": "cubes",
+      "pieces": [
+        "security",
+        "mg_troop"
+      ]
+    },
+    {
+      "group": "rebels",
+      "pieces": [
+        "cr_rebel:hidden",
+        "rd_rebel:hidden",
+        "cr_rebel:active",
+        "rd_rebel:active"
+      ]
+    },
+    {
+      "group": "specops",
+      "pieces": [
+        "specops:hidden",
+        "specops:active"
+      ]
+    },
+    {
+      "group": "population",
+      "pieces": [
+        "population"
+      ]
+    },
+    {
+      "group": "supply_last",
+      "pieces": [
+        "supply"
+      ]
+    }
+  ]
+}

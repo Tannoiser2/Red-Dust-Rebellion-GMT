@@ -168,10 +168,19 @@ fatto su Cuba Libre e All Bridges Burning.
       Eligibility dei Reclaimer a 3d6, Activation Number con le sue eccezioni e
       con la conversione dei tiri falliti, selettore di spazi guidato dalle
       priorità che spiega anche perché ha scelto così
-- [ ] Da trascrivere dalle scansioni del gioco fisico (già in mano): le 24 carte
-      *Curiosity* (48 facce), Move Priorities, Piece Priorities, Eligibility
-      Table, Effective Events, Event Instructions, Capability & Campaign Effects,
-      istruzioni NP di Flashpoint e Dust Storm Round
+- [x] **Piece Priorities** (§8.5.8) in `data/np_piece_priorities.json` e nel
+      motore: quale pezzo si tocca per primo per piazzare, muovere, rimuovere o
+      Attivare — con la lettura rovesciata per i pezzi propri e la regola che
+      mette i pezzi dei giocatori davanti a quelli delle Fazioni NP
+- [x] **Move Priorities** (§8.5.7) trascritte in `data/np_move_priorities.json`:
+      passi A/B/C per Fazione, 11 istruzioni «keep in origin», 17 «move to
+      destination»
+- [ ] Motore di movimento NP che consumi la Move Priorities, e con esso Secure,
+      Recon, March, Travel, Transport e Raid
+- [ ] Da trascrivere dalle scansioni (già nel repo, ignorate da git): le 24 carte
+      *Curiosity* (48 facce), Eligibility Table, Effective Events, Event
+      Instructions, Capability & Campaign Effects, istruzioni NP di Flashpoint e
+      Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
       Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il
