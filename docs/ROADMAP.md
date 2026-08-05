@@ -192,8 +192,12 @@ fatto su Cuba Libre e All Bridges Burning.
       Eligibility → pescata della carta Curiosity → lettura dell'albero →
       esecuzione, con tutto il ragionamento nel Log
 - [x] Mazzo Curiosity per Fazione, che gira a ciclo continuo come da §8.9
-- [ ] Istruzioni di Train (MarsGov) e Logistics (CORP): le carte si leggono ma le
-      istruzioni non agiscono ancora — il Log lo dichiara riga per riga
+- [x] Istruzioni di Train (col Pacify), Logistics (Basi, acquisti su Earth,
+      Aldrin Cycler, Security) e Assault (nelle sue due varianti, con Suppress e
+      Bombard nel piano): **tutte e 11 le Operazioni NP agiscono**
+- [ ] Attività Speciali delle Fazioni NP: la carta le sceglie ma non le esegue
+      ancora (Purify, Ransack, Ambush, Coordinate, Redistribute, Entrench,
+      Petition, Public Relations, Exploit, Raid)
 - [ ] Transport e Raid (Attività Speciali di movimento)
 - [x] Interprete delle carte *Curiosity* (§8.5.3) e **tutte e 48 le facce**
       delle 24 carte in `data/np_cards.json`: riquadri in cima con sì/no verso

@@ -513,6 +513,21 @@ func _run_instructions(faction: String, op_id: String, instructions: Array,
 				used.append_array(campaign(roll, limited))
 			"preach":
 				used.append_array(preach(roll, limited))
+			"assault_remove_bases":
+				used.append_array(assault(faction, "bases", roll, limited))
+			"assault_remove":
+				used.append_array(assault(faction, "any", roll, limited))
+			"assault_suppress":
+				pass  # Suppress e Bombard viaggiano nel piano dell'Assault
+			"train_place_troops":
+				used.append_array(train(roll, limited))
+			"train_pacify":
+				pass  # il Pacify è già dentro train(), come sulla carta
+			"logistics_upgrade_base":
+				used.append_array(logistics())
+			"logistics_upgrade_more", "logistics_buy_earth", "logistics_aldrin", \
+			"logistics_place_security":
+				pass  # tutte risolte da logistics() in una volta sola
 			_:
 				log_lines.append("NP %s: istruzione «%s» non ancora eseguibile." % [
 					faction, i["id"]])
@@ -563,6 +578,146 @@ func run_by_space(faction: String, column: String, candidates: Callable, body: C
 		if not bool(check["ok"]):
 			break
 	return used
+
+
+# ---------------------------------------------------------------------------
+# §8.6.4 NP MARSGOV / §8.6.5 NP CORPORATIONS
+# ---------------------------------------------------------------------------
+
+## Train: ❶ Place Troops con la colonna Place Cubes, poi ★ Pacify fino a due
+## volte in uno spazio, nell'ordine della carta — House a Supporto, Repair,
+## Shift verso il Supporto Attivo. Fuori dalle Limitate il Pacify può prendere
+## di mira uno spazio in più, non scelto per il Train.
+func train(activation_number: int, limited: bool = false) -> Array:
+	var candidates := func() -> Array:
+		return Array(ops.train_candidates())
+	var body := func(sid: String) -> bool:
+		return bool(ops.train({"spaces": [{"id": sid, "troops": 4}]}).get("ok", false))
+	var used := run_by_space("marsgov", "place_cubes", candidates, body,
+		activation_number, limited)
+
+	var pool: Array = []
+	for sid in used:
+		if state.spaces[String(sid)].control == "coin":
+			pool.append(String(sid))
+	if not limited:
+		for sid in module.mars_spaces(state):
+			var s := String(sid)
+			if state.spaces[s].control == "coin" and not pool.has(s):
+				pool.append(s)
+	if pool.is_empty():
+		return used
+	var pick := String(np.select_space("marsgov", "place_population", pool)["space"])
+	if pick == "":
+		return used
+	var actions := _pacify_actions(pick)
+	if actions.is_empty():
+		return used
+	var res: Dictionary = ops.train({"spaces": [{"id": pick, "troops": 0}],
+		"pacify": {"id": pick, "actions": actions}})
+	if res.get("ok", false):
+		log_lines.append("NP marsgov: Pacify a %s (%s)." % [_name(pick), ", ".join(actions)])
+		if not used.has(pick):
+			used.append(pick)
+	return used
+
+
+## Assault (§8.6.4 MarsGov, §8.6.5 CORP). `mode`:
+##   "bases" — ❶ solo dove cadrebbe una Base Ribelle
+##   "any"   — ❸ dovunque l'Assault abbia effetto
+## Il Suppress (❷) e il Bombard delle Truppe EG sono passati nel piano quando la
+## Fazione è EarthGov Controller, come sulla carta; gli SpecOps CORP si Attivano
+## per rimuovere forze in più.
+func assault(faction: String, mode: String, activation_number: int,
+		limited: bool = false) -> Array:
+	var candidates := func() -> Array:
+		var out: Array = []
+		for sid in module.mars_spaces(state):
+			var s := String(sid)
+			if not ops.act.selectable(s):
+				continue
+			var own := 0
+			for t in ops._coin_unit_types(faction):
+				own += module.count_in(state, s, String(t))
+			if own <= 0:
+				continue
+			var active := module.count_in(state, s, "rd_rebel", "active") \
+				+ module.count_in(state, s, "cr_rebel", "active")
+			if mode == "bases":
+				if not _assault_clears_base(s, own):
+					continue
+			elif active <= 0 and not _assault_clears_base(s, own):
+				continue
+			out.append(s)
+		return out
+	var eg := module.eg_controller(state) == faction
+	var body := func(sid: String) -> bool:
+		var plan := {"faction": faction, "spaces": [sid]}
+		if faction == "corporations" and module.count_in(state, sid, "specops", "hidden") > 0:
+			plan["activate_specops"] = [sid]
+		if eg and module.count_in(state, "orbit", "satellite") > 0:
+			plan["bombard"] = [sid]
+		return bool(ops.assault(plan).get("ok", false))
+	return run_by_space(faction, "remove_or_replace", candidates, body,
+		activation_number, limited)
+
+
+## Le due azioni di Pacify, nell'ordine della carta e solo se hanno effetto.
+func _pacify_actions(sid: String) -> Array:
+	var out: Array = []
+	if ops.act.can_house(sid) and state.spaces[sid].support > 0:
+		out.append("house")
+	if ops.act.can_repair(sid, "marsgov"):
+		out.append("repair")
+	if out.size() < 2 and state.get_resources("marsgov") >= 3 \
+			and state.spaces[sid].support < CoinEnums.Support.ACTIVE_SUPPORT:
+		out.append("shift")
+	return out.slice(0, 2)
+
+
+## Logistics: potenzia una Base (e altre se restano 2+ Dust Storm Round), compra
+## quattro unità su Earth, risolve l'Aldrin Cycler e piazza Security dove le Basi
+## CORP hanno 0-3 cubi. Il vincolo sono i Profits: si prende solo il pagabile.
+func logistics() -> Array:
+	var profits := int(state.tracks.get("profits", 0))
+	var rounds_left := 3 - int(state.tracks.get("dust_storm_rounds", 0))
+
+	var upgradable: Array = []
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if module.is_desert(state, s) and module.count_in(state, s, "corp_base", "basic") > 0:
+			upgradable.append(s)
+	# La prima Base è gratis, ogni altra costa 3 Profits.
+	var want := 1 if rounds_left < 2 else 1 + int(profits / 3.0)
+	var deserts := np.select_spaces("corporations", "place_or_upgrade_bases", upgradable, want)
+	var spent: int = maxi(0, deserts.size() - 1) * 3
+
+	var thin: Array = []
+	for sid in module.mars_spaces(state):
+		var s2 := String(sid)
+		if module.count_in(state, s2, "corp_base") == 0:
+			continue
+		var cubes := module.count_in(state, s2, "security") \
+			+ module.count_in(state, s2, "mg_troop") + module.count_in(state, s2, "eg_troop")
+		if cubes <= 3:
+			thin.append(s2)
+	var security_at := np.select_spaces("corporations", "place_cubes", thin,
+		maxi(0, profits - spent))
+
+	var res: Dictionary = ops.logistics({
+		"deserts": deserts, "security_at": security_at,
+		"earth": {"security": 3, "specops": 1}, "transit": true,
+	})
+	if not res.get("ok", false):
+		log_lines.append("NP corporations: Logistics rifiutata (%s)." % res.get("error", ""))
+		return []
+	log_lines.append("NP corporations: Logistics — %d Basi potenziate, %d spazi rinforzati." % [
+		deserts.size(), security_at.size()])
+	var used2: Array = deserts.duplicate()
+	for s3 in security_at:
+		if not used2.has(String(s3)):
+			used2.append(String(s3))
+	return used2
 
 
 # ---------------------------------------------------------------------------

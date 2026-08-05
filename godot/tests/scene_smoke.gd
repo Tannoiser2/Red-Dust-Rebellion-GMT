@@ -442,6 +442,14 @@ func _initialize() -> void:
 			break
 	_ok(errors.is_empty(), "sei turni di bot senza errori (%s)" % ", ".join(errors))
 	_ok(turns >= 6, "il bot ha giocato %d turni" % turns)
+	# Nessuna istruzione deve restare non eseguibile: se ne aggiungo una nelle
+	# carte e scordo il codice, il bot passerebbe il turno a vuoto senza dirlo.
+	var stubs: Array = []
+	for line in gc.np_ops.log_lines:
+		if String(line).contains("non ancora eseguibile"):
+			stubs.append(String(line))
+	_ok(stubs.is_empty(), "nessuna istruzione della carta resta inerte (%s)"
+		% ", ".join(PackedStringArray(stubs)))
 	_ok(gc.state != null, "la partita è ancora coerente dopo i turni del bot")
 
 	if shot_path != "":
