@@ -131,6 +131,27 @@ generare la cache delle `class_name`:
 godot --headless --path godot --editor --quit
 ```
 
+## Costruire l'app macOS
+
+Servono i template di esportazione della stessa versione di Godot (4.7).
+L'esportazione produce un bundle universale (Intel + Apple Silicon) in
+`dist/macos/`:
+
+```bash
+godot --headless --path godot --export-release "macOS" "../dist/macos/Red Dust Rebellion — Digital.app"
+```
+
+Gli asset arrivano dal modulo Vassal e portano con sé attributi estesi di
+Finder, che fanno fallire la firma: vanno ripuliti, poi si firma ad-hoc (senza
+certificato di sviluppatore) perché Gatekeeper lasci aprire l'app in locale.
+
+```bash
+xattr -cr "dist/macos/Red Dust Rebellion — Digital.app" && codesign --force --deep --sign - "dist/macos/Red Dust Rebellion — Digital.app"
+```
+
+Poi basta copiare il bundle in `/Applications`. Essendo firmata solo ad-hoc,
+alla prima apertura macOS può chiedere conferma (Ctrl-clic → Apri).
+
 ## Perché i dati sono affidabili
 
 Popolazione, adiacenze, forze iniziali e regole di Controllo non sono state inserite
