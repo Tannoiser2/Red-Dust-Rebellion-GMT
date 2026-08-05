@@ -89,6 +89,15 @@ CARD_SLOTS = {
 }
 
 
+STACK_TAG = "VASSAL.build.module.map.SetupStack"
+
+# I SetupStack nominati sulla tavola principale sono gli "hotspot" del modulo: si
+# trovano sulla casella 'Neutral' della traccia Infrastruttura di ciascuno spazio,
+# cioè dove vanno i marker Supporto/Opposizione. (Il Vassal scrive 'Noctis
+# Labrythus' con un refuso.)
+STACK_ALIAS = {"Noctis Labrythus": "Noctis Labyrinthus"}
+
+
 def parse_path(path):
     return [tuple(int(v) for v in p.split(",")) for p in path.split(";")]
 
@@ -127,6 +136,19 @@ def main():
         zones[name] = parse_path(path)
         order.append(name)
 
+    # Hotspot (casella 'Neutral' della traccia Infrastruttura) per spazio.
+    sbox = {}
+    for st in root.iter(STACK_TAG):
+        name = st.attrib.get("name") or ""
+        if st.attrib.get("owningBoard") != "RDR Game Board" or not name:
+            continue
+        name = STACK_ALIAS.get(name, name)
+        if name in SPACES:
+            sbox[SPACES[name]] = [
+                round(int(st.attrib["x"]) / BOARD_W, 5),
+                round(int(st.attrib["y"]) / BOARD_H, 5),
+            ]
+
     regions = {}
     for vassal_name, sid in SPACES.items():
         pts = zones[vassal_name]
@@ -137,6 +159,8 @@ def main():
             # ordine di disegno: i Deserti stanno sotto, i Labirinti (cerchi) sopra
             "z": order.index(vassal_name),
         }
+        if sid in sbox:
+            regions[sid]["sbox"] = sbox[sid]
 
     off = {}
     for vassal_name, sid in OFF_MAP.items():
@@ -165,6 +189,17 @@ def main():
     for label in zones:
         if label.startswith("EG Confidence "):
             eg[label.rsplit(" ", 1)[1]] = centroid(zones[label])
+
+    # La traccia EG Confidence ha 9 caselle stampate (10/8/6/4/2/1/1/0/0-nessun
+    # Controller), ma il Vassal definisce solo 7 zone: le due caselle '1' e le due
+    # '0' condividono una zona sola. Ricostruiamo i 9 centri dal passo costante
+    # fra le caselle '10' e '2' (4 passi), verificato sull'immagine della tavola.
+    eg_boxes = []
+    if "10" in eg and "2" in eg:
+        x_eg, y_top = eg["10"]
+        step = (eg["2"][1] - y_top) / 4.0
+        # indice 0 = casella in fondo (No Controller), 8 = casella '10' in cima
+        eg_boxes = [[x_eg, round(y_top + step * (8 - i), 5)] for i in range(9)]
     cards = {k2: centroid(zones[k1]) for k1, k2 in CARD_SLOTS.items() if k1 in zones}
 
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -192,7 +227,8 @@ def main():
                 "_note": "Geometrie dei tracciati della tavola, normalizzate [0..1].",
                 "edge_track": track,
                 "flashpoint_track": flashpoint,
-                "eg_confidence_track": eg,
+                "eg_confidence_zones": eg,
+                "eg_confidence_boxes": eg_boxes,
                 "sop": sop,
                 "card_slots": cards,
             },
@@ -201,7 +237,7 @@ def main():
             indent=1,
         )
 
-    print("regions:", len(regions), "off_map:", len(off), "edge_track:", len(track))
+    print("regions:", len(regions), "sbox:", len(sbox), "off_map:", len(off), "edge_track:", len(track))
     print("sop:", len(sop), "flashpoint:", len(flashpoint), "eg:", len(eg))
 
 

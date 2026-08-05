@@ -11,12 +11,13 @@ architettura `coin_engine/` + `games/<gioco>/`, così che il terzo titolo riusi
 
 ## Stato
 
-🚧 **Fase 1 — dati e regole di base.** Mappa, spazi, fazioni, pezzi, carte Evento e
-schieramento iniziale sono estratti dal modulo Vassal e dal regolamento, e validati
-da test headless. Il motore calcola Controllo, Supporto/Opposizione, traccia
-EarthGov Confidence e i quattro totali di vittoria.
+🚧 **Fase 2 — la partita si vede.** La mappa di Mars è renderizzata con i poligoni
+del Vassal, lo schieramento iniziale è sui suoi spazi, i marker Supporto/Controllo
+stanno nelle caselle stampate e i tracciati (Edge Track, EarthGov Confidence,
+Flashpoint, Sequence of Play) mostrano i valori reali. Non si può ancora *giocare*:
+mancano Operazioni, Attività Speciali e i round periodici.
 
-**86 test passati, 0 falliti.**
+**86 test del modulo + 15 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -34,7 +35,12 @@ EarthGov Confidence e i quattro totali di vittoria.
 | Round Flashpoint e Dust Storm | ⬜ da implementare |
 | Eventi (effetti) | ⬜ testi presenti, effetti da implementare |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
-| Interfaccia Godot | ⬜ da portare (le scene ABB non sono ancora state adattate) |
+| Mappa renderizzata + 30 zone cliccabili | ✅ 24 su Mars + Aldrin Cycler/Orbita |
+| Pezzi sulla mappa (67 su Mars + 18 fuori) | ✅ texture del Vassal, Nascosto/Attivo, lati potenziati |
+| Marker Supporto/Opposizione e Controllo | ✅ sulle caselle 'Neutral' stampate (coordinate Vassal) |
+| Tracciati: Edge Track, EG Confidence, Flashpoint, SoP | ✅ |
+| Pannello di stato + dettaglio spazio | ✅ |
+| Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 
 ## Struttura
 
@@ -60,6 +66,17 @@ docs/
 
 ```bash
 godot --headless --path godot -s res://tests/test_runner.gd
+```
+
+```bash
+godot --headless --path godot -s res://tests/scene_smoke.gd
+```
+
+Lo smoke test monta davvero la scena. Con un renderer vero (cioè senza
+`--headless`) salva anche uno screenshot:
+
+```bash
+godot --path godot -s res://tests/scene_smoke.gd -- --shot=/tmp/rdr.png
 ```
 
 Alla prima esecuzione su una macchina nuova serve una passata di import per

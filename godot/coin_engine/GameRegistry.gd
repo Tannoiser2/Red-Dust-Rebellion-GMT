@@ -14,6 +14,15 @@ var manifest: GameManifest
 
 
 func _ready() -> void:
+	_ensure()
+
+
+## Carica il manifest se non è ancora stato caricato. Serve perché l'ordine di
+## `_ready()` fra autoload non è garantito: un altro autoload (GameController)
+## può chiedere il modulo prima che questo abbia eseguito il proprio `_ready()`.
+func _ensure() -> void:
+	if manifest != null:
+		return
 	game_id = _resolve_game_id()
 	manifest = _load_manifest(game_id)
 
@@ -45,6 +54,7 @@ func _load_manifest(gid: String) -> GameManifest:
 # ---------------------------------------------------------------------------
 
 func game_root() -> String:
+	_ensure()
 	return "res://games/%s/" % game_id
 
 func data_dir() -> String:
@@ -65,6 +75,7 @@ func asset_path(file_name: String) -> String:
 # ---------------------------------------------------------------------------
 
 func create_module() -> RulesModule:
+	_ensure()
 	return manifest.create_module() if manifest else null
 
 func create_operations(state, module):
@@ -83,4 +94,5 @@ func create_bot(state, module):
 	return manifest.create_bot(state, module) if manifest else null
 
 func default_roles(game_def: GameDef) -> Dictionary:
+	_ensure()
 	return manifest.default_roles(game_def) if manifest else {}

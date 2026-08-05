@@ -17,17 +17,23 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] 86 test headless
 - [x] `docs/RULES_DIGEST.md`
 
-## Fase 2 — Interfaccia
+## Fase 2 — Interfaccia ✅
 
-- [ ] Portare/riscrivere le scene Godot (in ABB: `Main.gd`, `RegionView.gd`,
-      `TrackOverlay.gd`, `GameController.gd`) sulla mappa di Mars
-- [ ] Render dei 24 poligoni con l'ordine di disegno del Vassal (Deserti sotto,
-      Labirinti sopra) e tinta del Controllo
-- [ ] Pezzi sulla mappa: cubi, esagoni Nascosti/Attivi, dischi con lato upgrade
-- [ ] Traccia Infrastruttura per spazio (quadrati verdi/grigi, Popolazione, Danno)
-- [ ] Edge Track, EG Confidence, Flashpoint, Sequence of Play, Displaced
-      Population, Casualties
-- [ ] Aldrin Cycler (Earth / Transit / Phobos / Orbit)
+- [x] Scene Godot scritte per la mappa di Mars (`Main.gd`, `RegionView.gd`,
+      `TrackOverlay.gd`, `RDRAssets.gd`, autoload `GameController.gd`)
+- [x] Render dei 24 poligoni con l'ordine di disegno del Vassal (Deserti sotto,
+      Labirinti sopra: il clic nella zona di sovrapposizione va al Labirinto) e
+      tinta del Controllo
+- [x] Pezzi sulla mappa: cubi, esagoni Nascosti/Attivi, dischi con lato upgrade
+- [x] Marker Supporto/Opposizione e Controllo sulle caselle stampate (`sbox`
+      estratto dai SetupStack del Vassal)
+- [x] Popolazione e Danno per spazio (badge sulla traccia Infrastruttura)
+- [x] Edge Track (7 marcatori), EG Confidence (9 caselle ricostruite),
+      Flashpoint, cilindri Sequence of Play
+- [x] Aldrin Cycler (Earth / Transit / Phobos / Orbit) con i suoi 18 pezzi
+- [x] Pannello di stato (vittoria, controllo, risorse) e dettaglio dello spazio
+- [x] `tests/scene_smoke.gd`: monta la scena e sa salvare uno screenshot
+- [ ] Zoom/pan sulla mappa e finestra delle carte (rimandati)
 
 ## Fase 3 — Sequenza di gioco
 
