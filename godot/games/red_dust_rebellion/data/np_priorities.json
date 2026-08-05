@@ -1,9 +1,234 @@
 {
-  "_note": "Space Selection Priorities del sistema Non-Player Curiosity (§8.5.6), trascritte dal libretto renderizzato a 600 DPI. Ogni riga è un filtro applicato in ordine: `flag` tiene gli spazi che soddisfano la condizione, `max`/`min` tengono quelli a pari merito sul valore, `random` sceglie a caso. Le righe con `only_if_player` sono quelle con la spunta rossa: valgono solo se quella Fazione è di un giocatore. MANCA la tabella NP MARSGOV: non è riprodotta nel libretto (sta sulla scheda foldout del gioco fisico).",
-  "missing": [
-    "marsgov"
-  ],
+  "_note": "Space Selection Priorities del sistema Non-Player Curiosity (§8.5.6), trascritte dal libretto renderizzato a 600 DPI. Ogni riga è un filtro applicato in ordine: `flag` tiene gli spazi che soddisfano la condizione, `max`/`min` tengono quelli a pari merito sul valore, `random` sceglie a caso. Le righe con `only_if_player` sono quelle con la spunta rossa: valgono solo se quella Fazione è di un giocatore. NP Red Dust, NP Reclaimers e NP CORP sono trascritte dal libretto renderizzato a 600 DPI; NP MarsGov dalla scansione della scheda foldout del gioco fisico.",
+  "missing": [],
   "tables": {
+    "marsgov": {
+      "columns": [
+        "shift_toward_active_support",
+        "place_bases",
+        "place_cubes",
+        "secure_destination",
+        "recon_destination",
+        "transport_destination",
+        "place_population",
+        "fortify",
+        "remove_or_replace"
+      ],
+      "rows": [
+        {
+          "label": "Rebels at Support",
+          "columns": [
+            "secure_destination",
+            "recon_destination",
+            "fortify",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "rebels_at_support"
+          }
+        },
+        {
+          "label": "CR is player: MG Base with 0-3 COIN cubes",
+          "columns": [
+            "place_cubes",
+            "recon_destination",
+            "transport_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_with_few_cubes",
+            "faction": "marsgov",
+            "max": 3
+          },
+          "only_if_player": "reclaimer"
+        },
+        {
+          "label": "most Support",
+          "columns": [
+            "place_population",
+            "fortify",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "support"
+          }
+        },
+        {
+          "label": "most Rebels",
+          "columns": [
+            "fortify"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "rd_rebel",
+              "cr_rebel"
+            ]
+          }
+        },
+        {
+          "label": "not at Active Support",
+          "columns": [
+            "shift_toward_active_support",
+            "place_bases",
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "transport_destination"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "support_not",
+            "level": "active_support"
+          }
+        },
+        {
+          "label": "no COIN Control",
+          "columns": [
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "transport_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "no_control",
+            "faction": "coin"
+          }
+        },
+        {
+          "label": "Labyrinth or MG Base",
+          "columns": [
+            "place_population",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "labyrinth_or_base",
+            "faction": "marsgov"
+          }
+        },
+        {
+          "label": "most Population",
+          "columns": [
+            "shift_toward_active_support",
+            "place_bases",
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "transport_destination",
+            "place_population",
+            "fortify",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "population"
+          }
+        },
+        {
+          "label": "RD is player: most Opposition",
+          "columns": [
+            "shift_toward_active_support",
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "transport_destination"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "opposition"
+          },
+          "only_if_player": "red_dust"
+        },
+        {
+          "label": "Rebel Base",
+          "columns": [
+            "shift_toward_active_support",
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "rebel_base_present"
+          }
+        },
+        {
+          "label": "CR is player: CR Base or CR Control",
+          "columns": [
+            "shift_toward_active_support",
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_or_control",
+            "faction": "reclaimer"
+          },
+          "only_if_player": "reclaimer"
+        },
+        {
+          "label": "fewest Rebel forces",
+          "columns": [
+            "shift_toward_active_support",
+            "place_bases",
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "transport_destination",
+            "place_population",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "min",
+            "metric": "rebel_forces"
+          }
+        },
+        {
+          "label": "most MG forces",
+          "columns": [
+            "shift_toward_active_support",
+            "place_bases",
+            "secure_destination",
+            "recon_destination",
+            "place_population",
+            "fortify"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "mg_troop",
+              "mg_base"
+            ]
+          }
+        },
+        {
+          "label": "select at random from remaining spaces",
+          "columns": [
+            "shift_toward_active_support",
+            "place_bases",
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "transport_destination",
+            "place_population",
+            "fortify",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "random"
+          }
+        }
+      ]
+    },
     "red_dust": {
       "columns": [
         "shift_active_opposition",

@@ -11,10 +11,12 @@ extends RefCounted
 ## riprodotti nel libretto:
 ##   * le 24 carte *Curiosity* (6 per Fazione, bifacciali), che scelgono quale
 ##     Operazione e quale Attività Speciale eseguire;
-##   * la tabella Space Selection Priorities di NP MarsGov;
 ##   * le tabelle Move Priorities, Piece Priorities, Eligibility, Effective
 ##     Events, Event Instructions e Capability & Campaign Effects.
 ## Finché non ci sono, `has_table()` dice cosa manca e il chiamante lo sa.
+##
+## Le quattro Space Selection Priorities ci sono tutte: tre trascritte dal
+## libretto, quella di NP MarsGov dalla scansione della scheda del gioco.
 ##
 ## §8.2: le Fazioni NP seguono le regole normali salvo poche eccezioni. Le due
 ## che riguardano questo file: NP MG e NP RD non tracciano Risorse (usano il
@@ -360,6 +362,11 @@ func _predicate(sid: String, test: Dictionary, faction: String) -> bool:
 			return module.count_in(state, sid, "cr_base", "conversion_center") > 0
 		"rebel_base_present":
 			return _count(sid, ["rd_base", "cr_base"]) > 0
+		"rebels_at_support":
+			return st.support > 0 and _count(sid, ["rd_rebel", "cr_rebel"]) > 0
+		"labyrinth_or_base":
+			return module.is_labyrinth(state, sid) \
+				or module.count_in(state, sid, _base_of(String(test.get("faction", faction)))) > 0
 	return false
 
 

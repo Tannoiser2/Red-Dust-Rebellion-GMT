@@ -159,19 +159,19 @@ fatto su Cuba Libre e All Bridges Burning.
 ## Fase 6 — Non-Player *Curiosity*
 
 - [x] Lettura del `RDR_Curiosity_NP_Rules_Booklet` (32 pagine)
-- [x] Trascrizione delle Space Selection Priorities dal libretto renderizzato a
-      600 DPI: **3 tabelle su 4** (`data/np_priorities.json`) — NP Red Dust,
-      NP Reclaimers, NP CORP
+- [x] Space Selection Priorities: **tutte e 4 le tabelle** in
+      `data/np_priorities.json` — NP Red Dust, NP Reclaimers e NP CORP trascritte
+      dal libretto renderizzato a 600 DPI, NP MarsGov dalla scansione della
+      scheda del gioco fisico
 - [x] Motore NP (`rules/NonPlayer.gd`): contatori surrogati (Supply Total per MG,
       Agitate Total per RD, Asset Total per CR al posto della mano), procedura di
       Eligibility dei Reclaimer a 3d6, Activation Number con le sue eccezioni e
       con la conversione dei tiri falliti, selettore di spazi guidato dalle
       priorità che spiega anche perché ha scelto così
-- [ ] **Manca il gioco fisico**: le 24 carte *Curiosity* (6 per Fazione,
-      bifacciali) che scelgono Operazione e Attività Speciale, la tabella
-      Space Selection Priorities di NP MarsGov, e le tabelle Move Priorities,
-      Piece Priorities, Eligibility, Effective Events, Event Instructions,
-      Capability & Campaign Effects
+- [ ] Da trascrivere dalle scansioni del gioco fisico (già in mano): le 24 carte
+      *Curiosity* (48 facce), Move Priorities, Piece Priorities, Eligibility
+      Table, Effective Events, Event Instructions, Capability & Campaign Effects,
+      istruzioni NP di Flashpoint e Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
       Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il

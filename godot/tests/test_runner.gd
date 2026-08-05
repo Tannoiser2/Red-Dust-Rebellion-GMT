@@ -1954,8 +1954,8 @@ func test_np_setup() -> void:
 	eq(np.has_table("red_dust"), true, "c'è la tabella NP Red Dust")
 	eq(np.has_table("reclaimer"), true, "c'è la tabella NP Reclaimers")
 	eq(np.has_table("corporations"), true, "c'è la tabella NP CORP")
-	eq(np.has_table("marsgov"), false, "la tabella NP MarsGov manca (non è nel libretto)")
-	ok(Array(np.missing).has("marsgov"), "…ed è dichiarata mancante nei dati")
+	eq(np.has_table("marsgov"), true, "c'è la tabella NP MarsGov (dalla scheda del gioco)")
+	eq(Array(np.missing).size(), 0, "nessuna tabella delle priorità manca più")
 
 	# Chi è NP e chi è giocatore: serve alle righe con la spunta rossa.
 	var s2 := fresh()
@@ -2039,9 +2039,25 @@ func test_np_priorities() -> void:
 		ok(not seen.has(sid), "%s scelto una volta sola" % sid)
 		seen.append(sid)
 
-	# Senza tabella (NP MarsGov) si sceglie a caso, ma lo si dichiara.
-	var np_mg := np_for(fresh(), ["marsgov"])
-	var blind := np_mg.select_space("marsgov", "place_cubes", ["europa", "tenzing"])
+	# NP MarsGov ora ha la sua tabella: «Rebels at Support» viene per prima nella
+	# colonna Fortify, quindi vince lo spazio con Supporto e Ribelli.
+	var s6 := fresh()
+	var np6 := np_for(s6, ["marsgov"])
+	var with_rebels := ""
+	var quiet := ""
+	for sid in module.mars_spaces(s6):
+		var reb := module.count_in(s6, sid, "rd_rebel") + module.count_in(s6, sid, "cr_rebel")
+		if s6.spaces[sid].support > 0 and reb > 0 and with_rebels == "":
+			with_rebels = sid
+		elif s6.spaces[sid].support > 0 and reb == 0 and quiet == "":
+			quiet = sid
+	if with_rebels != "" and quiet != "":
+		eq(String(np6.select_space("marsgov", "fortify", [quiet, with_rebels])["space"]),
+			with_rebels, "NP MG fortifica dove ci sono Ribelli a Supporto")
+
+	# Una Fazione senza tabella sceglierebbe a caso, dichiarandolo.
+	var np_none := np_for(fresh(), ["earthgov"])
+	var blind := np_none.select_space("earthgov", "place_cubes", ["europa", "tenzing"])
 	ok(["europa", "tenzing"].has(String(blind["space"])), "senza tabella sceglie comunque")
 	ok(String(blind["row"]).contains("mancante"),
 		"…e dichiara che la tabella manca: «%s»" % blind["row"])
@@ -2060,8 +2076,7 @@ func test_np_operations() -> void:
 		eq(gate["ok"], false, "%s è bloccata: serve la Move Priorities" % op_id)
 		ok(String(gate["error"]).contains("Move Priorities"), "…e il motivo è dichiarato")
 	eq(npo.can_run("red_dust", "rally")["ok"], true, "il Rally invece si può eseguire")
-	# Senza la tabella di MarsGov nemmeno le sue Operazioni ferme sono eseguibili.
-	eq(npo.can_run("marsgov", "train")["ok"], false, "NP MarsGov è fermo: manca la sua tabella")
+	eq(npo.can_run("marsgov", "train")["ok"], true, "il Train di NP MarsGov ora è eseguibile")
 
 	# Rally: piazza Basi dove ci sono 3+ Ribelli e almeno uno Nascosto.
 	var s1 := fresh()
