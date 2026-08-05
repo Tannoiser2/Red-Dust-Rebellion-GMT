@@ -7,16 +7,14 @@ extends RefCounted
 ## Eligibility, gli Activation Number e — soprattutto — il selettore di spazi
 ## guidato dalle Space Selection Priorities (§8.5.6), che è il cuore del sistema.
 ##
-## Quello che NON c'è ancora, perché sono componenti del gioco fisico non
-## riprodotti nel libretto:
-##   * le 24 carte *Curiosity* (6 per Fazione, bifacciali), che scelgono quale
-##     Operazione e quale Attività Speciale eseguire;
-##   * le tabelle Move Priorities, Piece Priorities, Eligibility, Effective
-##     Events, Event Instructions e Capability & Campaign Effects.
-## Finché non ci sono, `has_table()` dice cosa manca e il chiamante lo sa.
+## Le tabelle del gioco fisico sono trascritte tutte: le quattro Space Selection
+## Priorities, Move Priorities, Piece Priorities, Eligibility, Effective Events,
+## e le 48 facce delle carte *Curiosity*.
 ##
-## Le quattro Space Selection Priorities ci sono tutte: tre trascritte dal
-## libretto, quella di NP MarsGov dalla scansione della scheda del gioco.
+## Resta fuori una cosa sola, e non è una tabella: i simboli ★ (Critical) e ⊘
+## (Not Performed) stampati sotto le icone delle Fazioni sulle 51 carte Evento.
+## Senza di quelli `current_critical` resta falso e la tabella di Eligibility
+## cade sull'ultima riga — che è dichiarato da `degraded`.
 ##
 ## §8.2: le Fazioni NP seguono le regole normali salvo poche eccezioni. Le due
 ## che riguardano questo file: NP MG e NP RD non tracciano Risorse (usano il
@@ -201,6 +199,158 @@ func reclaimer_eligibility_check(cost_first: int, cost_second: int) -> Dictionar
 	if out["rank"] > 0:
 		log_lines.append("NP CR spende %d di Asset Total per essere %dª Disponibile." % [
 			out["spent"], out["rank"]])
+	return out
+
+
+# ---------------------------------------------------------------------------
+# §8.5.5 Effective Events
+# ---------------------------------------------------------------------------
+
+## Cosa «aggiunge o aumenta» e cosa «rimuove o riduce» rende un Evento efficace
+## per ciascuna Fazione NP (tabella Effective Events della scheda del gioco).
+const EFFECTIVE := {
+	"marsgov": {
+		"adds": ["support", "population_at_support", "own_forces", "eg_up", "supply"],
+		"removes": ["enemy_forces", "profits", "opposition", "population_at_opposition",
+			"asset_cards", "player_resources"],
+	},
+	"corporations": {
+		"adds": ["profits", "own_forces", "eg_up", "terraforming_bases"],
+		"removes": ["enemy_forces", "eg_down", "asset_cards", "player_resources"],
+	},
+	"red_dust": {
+		"adds": ["opposition", "population_at_opposition", "agitate_total", "own_forces",
+			"hidden_rebels"],
+		"removes": ["enemy_forces", "support", "profits", "eg_down",
+			"population_at_support", "asset_cards", "supply", "player_resources"],
+	},
+	"reclaimer": {
+		"adds": ["asset_total", "own_forces", "conversion_centers", "hidden_rebels"],
+		"removes": ["profits", "enemy_forces", "support", "opposition", "population",
+			"eg_down", "supply", "player_resources"],
+	},
+}
+
+
+## §8.5.5: un Evento è efficace per una Fazione NP se almeno uno dei suoi effetti
+## compare nella riga di quella Fazione.
+##
+## Qui gli effetti non si indovinano dal testo: si leggono da `event_effects.json`,
+## che li ha già scomposti in operazioni atomiche. Ogni operazione viene tradotta
+## nella categoria corrispondente della tabella e confrontata con la riga.
+## Restituisce {effective, matched} — `matched` dice quali categorie hanno preso.
+func event_effective(faction: String, effects: Array) -> Dictionary:
+	var row: Dictionary = EFFECTIVE.get(faction, {})
+	var got := _categories(faction, effects)
+	var matched: Array[String] = []
+	for key in got["adds"]:
+		if Array(row.get("adds", [])).has(String(key)) and not matched.has(String(key)):
+			matched.append(String(key))
+	for key2 in got["removes"]:
+		if Array(row.get("removes", [])).has(String(key2)) and not matched.has(String(key2)):
+			matched.append(String(key2))
+	return {"effective": not matched.is_empty(), "matched": matched}
+
+
+## Traduce le operazioni di un Evento nelle categorie della tabella, SEPARANDO
+## ciò che aggiunge da ciò che toglie: la stessa grandezza sta in colonne diverse
+## per Fazioni diverse — le Corporations vogliono i Profits che salgono, il Red
+## Dust quelli che scendono, e confonderli renderebbe ogni Evento efficace per
+## tutti.
+func _categories(faction: String, effects: Array) -> Dictionary:
+	var adds: Array[String] = []
+	var removes: Array[String] = []
+	for entry in effects:
+		var e: Dictionary = entry
+		var delta := int(e.get("delta", e.get("delta_per", 0)))
+		match String(e.get("op", "")):
+			"profits":
+				(adds if delta > 0 else removes).append("profits")
+			"resources":
+				# «Player Resources»: conta solo se quella Fazione è di un giocatore.
+				var who := String(e.get("faction", ""))
+				if delta < 0 and who != faction and is_player(who):
+					removes.append("player_resources")
+			"eg_side":
+				if String(e.get("side", "EG+")) == "EG+":
+					adds.append("eg_up")
+				else:
+					removes.append("eg_down")
+			"eg_confidence":
+				if delta > 0:
+					adds.append("eg_up")
+				else:
+					removes.append("eg_down")
+			"supply_earth":
+				(adds if delta > 0 else removes).append("supply")
+			"clear_supply":
+				removes.append("supply")
+			"population_earth", "house":
+				adds.append("population")
+			"damage", "displaced_clear":
+				removes.append("population")
+			"displaced":
+				(adds if delta > 0 else removes).append("population")
+			"repair":
+				adds.append("population")
+			"shift":
+				# Spostare verso il Supporto AGGIUNGE Supporto e TOGLIE Opposizione.
+				var levels := int(e.get("levels", 1))
+				if String(e.get("toward", "")) == "neutral":
+					removes.append("support")
+					removes.append("opposition")
+				elif levels > 0:
+					adds.append("support")
+					adds.append("population_at_support")
+					removes.append("opposition")
+					removes.append("population_at_opposition")
+				else:
+					adds.append("opposition")
+					adds.append("population_at_opposition")
+					removes.append("support")
+					removes.append("population_at_support")
+			"set_support":
+				removes.append("support")
+				removes.append("opposition")
+			"place", "replace":
+				adds.append_array(_piece_categories(faction, e))
+			"remove":
+				removes.append("enemy_forces")
+			"hide":
+				adds.append("hidden_rebels")
+			"flip":
+				match String(e.get("to_state", "")):
+					"terraforming": adds.append("terraforming_bases")
+					"conversion_center": adds.append("conversion_centers")
+			"draw_asset":
+				adds.append("asset_total")
+			"discard_asset":
+				removes.append("asset_cards")
+			"free_op":
+				# «An X Operation or Special Activity»: vale se tocca alla Fazione.
+				# Il campo può essere una scelta ({"choice": …}): allora è di chi
+				# esegue, quindi buono per chiunque stia agendo.
+				var who2 = e.get("faction", "executing")
+				if typeof(who2) != TYPE_STRING or String(who2) in [faction, "executing"]:
+					adds.append("own_forces")
+	return {"adds": adds, "removes": removes}
+
+
+func _piece_categories(faction: String, e: Dictionary) -> Array:
+	var out: Array[String] = []
+	for spec in e.get("pieces", [e]):
+		var type_id := String((spec as Dictionary).get("type", ""))
+		if type_id.begins_with("@"):
+			out.append("own_forces")
+			continue
+		var owner: String = RDRModule.PIECE_OWNER.get(type_id, "")
+		if owner == faction or (faction in RDRModule.COIN_FACTIONS
+				and owner in RDRModule.COIN_FACTIONS):
+			out.append("own_forces")
+	for t in e.get("to", []):
+		var owner2: String = RDRModule.PIECE_OWNER.get(String(t), "")
+		if owner2 == faction:
+			out.append("own_forces")
 	return out
 
 

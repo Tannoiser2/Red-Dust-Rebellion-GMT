@@ -205,8 +205,16 @@ fatto su Cuba Libre e All Bridges Burning.
       delle 24 carte in `data/np_cards.json`: riquadri in cima con sì/no verso
       «pesca» o «gira», bivi, blocchi di istruzioni e Attività Speciali. Gli `id`
       delle istruzioni puntano alle funzioni di `NonPlayerOps.gd`
-- [ ] Da trascrivere: Effective Events, Event Instructions, Capability &
-      Campaign Effects, istruzioni NP di Flashpoint e Dust Storm Round
+- [x] **Effective Events** (§8.5.5): un Evento è efficace per una Fazione NP se
+      almeno uno dei suoi effetti compare nella sua riga. Non si indovina dal
+      testo — si legge da `event_effects.json`, che gli effetti li ha già
+      scomposti, traducendo ogni operazione nella categoria della tabella e
+      separando ciò che AGGIUNGE da ciò che TOGLIE
+- [ ] Simboli ★ (Critical) e ⊘ (Not Performed) sotto le icone delle Fazioni sulle
+      51 carte Evento: è l'ultimo dato mancante, e senza di esso la tabella di
+      Eligibility cade sempre sull'ultima riga
+- [ ] Da trascrivere: Event Instructions, Capability & Campaign Effects,
+      istruzioni NP di Flashpoint e Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
       Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il

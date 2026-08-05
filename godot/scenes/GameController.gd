@@ -710,6 +710,16 @@ func _np_context() -> Dictionary:
 		ctx["first_chose"] = _np_first_choice
 	if rounds != null:
 		ctx["next_is_dust_storm"] = int(rdr().card_flashpoint.get(rounds.next_card(), -1)) < 0
+	# §8.5.5: l'efficacia dell'Evento si calcola dagli effetti già scomposti in
+	# event_effects.json. Il «Critical» invece è un simbolo stampato sulle carte
+	# (★/⊘ sotto l'icona della Fazione), che non abbiamo ancora estratto.
+	var fid := sequence.pending_faction() if sequence != null else ""
+	if fid != "" and np != null and np.is_np(fid):
+		var opt: Dictionary = events.option(state.current_card, false)
+		var shaded: Dictionary = events.option(state.current_card, true)
+		var eff: Dictionary = np.event_effective(fid, opt.get("effects", []))
+		var eff2: Dictionary = np.event_effective(fid, shaded.get("effects", []))
+		ctx["current_effective"] = bool(eff["effective"]) or bool(eff2["effective"])
 	return ctx
 
 

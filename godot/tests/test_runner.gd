@@ -81,6 +81,7 @@ func _init() -> void:
 	test_np_piece_priorities()
 	test_np_movement()
 	test_np_eligibility()
+	test_np_effective_events()
 	test_np_cards()
 	test_campaign_effects()
 
@@ -2269,6 +2270,53 @@ func test_np_eligibility() -> void:
 	# La riga ⑥ è solo dei Reclaimer: al Red Dust non si applica.
 	eq(String(np.choose_action("red_dust", "second", {})["action"]), "lim_op",
 		"la riga sull'Asset Total non vale per il Red Dust")
+
+
+func test_np_effective_events() -> void:
+	print("Non-Player — Effective Events (§8.5.5)")
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "red_dust", "reclaimer", "corporations"])
+	var ev := RDREvents.new(s, module)
+
+	# #1 ombreggiato toglie Profits e Risorse MarsGov: efficace per Red Dust
+	# (rimuove Profits e Risorse di un giocatore), non per le Corporations.
+	var shaded1: Array = ev.option(1, true).get("effects", [])
+	ok(bool(np.event_effective("red_dust", shaded1)["effective"]),
+		"#1 ombreggiato è efficace per il Red Dust")
+	eq(bool(np.event_effective("corporations", shaded1)["effective"]), false,
+		"…e non per le Corporations, a cui non aggiunge né toglie nulla di suo")
+
+	# #10 non ombreggiato sposta verso il Supporto: efficace per MarsGov.
+	var un10: Array = ev.option(10, false).get("effects", [])
+	var mg10: Dictionary = np.event_effective("marsgov", un10)
+	ok(bool(mg10["effective"]), "#10 sposta verso il Supporto: efficace per MarsGov")
+	ok(Array(mg10["matched"]).has("support"), "…e la categoria è «support»")
+	# Lo stesso Evento non giova al Red Dust, che vuole l'Opposizione.
+	eq(bool(np.event_effective("red_dust", un10)["effective"]), false,
+		"…mentre al Red Dust non serve")
+
+	# #10 ombreggiato sposta verso l'Opposizione e piazza Ribelli: efficace per RD.
+	var sh10: Array = ev.option(10, true).get("effects", [])
+	ok(bool(np.event_effective("red_dust", sh10)["effective"]),
+		"#10 ombreggiato è efficace per il Red Dust")
+
+	# Un'opzione senza effetti non è efficace per nessuno.
+	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		eq(bool(np.event_effective(String(fid), [])["effective"]), false,
+			"un Evento senza effetti non è efficace per %s" % fid)
+
+	# Su tutte e 93 le opzioni, ogni Fazione trova qualcosa di efficace: se una
+	# riga della tabella fosse tradotta male, quella Fazione resterebbe a zero.
+	for fid2 in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		var hits := 0
+		for number in range(1, 49):
+			for shaded in [false, true]:
+				var opt: Dictionary = ev.option(number, shaded)
+				if opt.is_empty():
+					continue
+				if bool(np.event_effective(String(fid2), opt.get("effects", []))["effective"]):
+					hits += 1
+		ok(hits >= 10, "%s trova %d opzioni efficaci fra le 93" % [fid2, hits])
 
 
 func test_np_cards() -> void:
