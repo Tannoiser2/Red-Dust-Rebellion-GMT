@@ -456,6 +456,30 @@ func _initialize() -> void:
 	# §4.1: l'Attività Speciale accompagna l'Operazione. Se il bot non ne
 	# eseguisse mai nessuna, giocherebbe metà del proprio turno.
 	_ok(specials_done > 0, "il bot ha eseguito %d Attività Speciali" % specials_done)
+
+	# La barra deve offrire il pulsante del bot quando tocca a una Fazione NP,
+	# e non le Operazioni: quelle le sceglie la carta Curiosity.
+	gc.new_game("standard", 20240424, ["marsgov", "corporations", "reclaimer"])
+	await process_frame
+	var guard_ui := 0
+	while gc.sequence != null and guard_ui < 5 \
+			and not gc.np.is_np(gc.sequence.pending_faction()):
+		guard_ui += 1
+		gc.do_pass()
+		await process_frame
+	if gc.sequence != null and gc.np.is_np(gc.sequence.pending_faction()):
+		var labels: Array[String] = []
+		for child in (main.get("_ops_box") as HFlowContainer).get_children():
+			if child is Button:
+				labels.append((child as Button).text)
+		var has_np_btn := false
+		for l in labels:
+			if l.begins_with("Gioca il turno"):
+				has_np_btn = true
+		_ok(has_np_btn, "la barra offre il turno del bot (%s)" % ", ".join(labels))
+		main.call("_run_np_turn")
+		await process_frame
+		_ok(true, "il pulsante del bot esegue il turno senza errori")
 	_ok(gc.state != null, "la partita è ancora coerente dopo i turni del bot")
 
 	if shot_path != "":

@@ -220,6 +220,8 @@ fatto su Cuba Libre e All Bridges Burning.
       `data/np_event_instructions.json`. Le indicazioni su quale colonna usare
       finiscono nel Log perché siano leggibili al tavolo; le condizioni
       calcolabili (`critical_if`, `performed_if`, `perform`) le applica il motore
+- [x] Scelta dei ruoli nella schermata iniziale e turno del bot in interfaccia:
+      la partita in solitario si apre e si gioca dall'app
 - [ ] Da trascrivere: Capability & Campaign Effects, istruzioni NP di Flashpoint
       e Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza

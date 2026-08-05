@@ -8,6 +8,11 @@ const GAME_SCENE := "res://scenes/Main.tscn"
 
 var _seed_edit: LineEdit
 var _status: Label
+## §8.0: chi è gestito dal sistema Non-Player. In solitario si tiene una Fazione
+## e si lasciano le altre al bot.
+var _roles := {"marsgov": "player", "corporations": "bot",
+	"red_dust": "bot", "reclaimer": "bot"}
+var _role_btns := {}
 
 
 func _ready() -> void:
@@ -62,6 +67,27 @@ func _build() -> void:
 
 	col.add_child(HSeparator.new())
 
+	var lbl := Label.new()
+	lbl.text = "Chi gioca"
+	lbl.add_theme_color_override("font_color", RDRTheme.ACCENT)
+	col.add_child(lbl)
+	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		var row := HBoxContainer.new()
+		var name := Label.new()
+		name.text = _faction_name(String(fid))
+		name.custom_minimum_size = Vector2(190, 0)
+		name.add_theme_color_override("font_color", RDRAssets.text_color(String(fid)))
+		row.add_child(name)
+		var b := Button.new()
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(_toggle_role.bind(String(fid)))
+		_role_btns[fid] = b
+		row.add_child(b)
+		col.add_child(row)
+	_refresh_roles()
+
+	col.add_child(HSeparator.new())
+
 	var b_resume := _btn("Riprendi la partita salvata", _on_resume_saved)
 	b_resume.disabled = not GameController.has_save(GameController.SAVE_PATH)
 	col.add_child(b_resume)
@@ -94,9 +120,37 @@ func _btn(text: String, cb: Callable) -> Button:
 	return b
 
 
+func _faction_name(fid: String) -> String:
+	match fid:
+		"marsgov": return "MarsGov"
+		"corporations": return "Corporations"
+		"red_dust": return "Red Dust"
+	return "Reclaimer"
+
+
+func _toggle_role(fid: String) -> void:
+	_roles[fid] = "bot" if _roles[fid] == "player" else "player"
+	_refresh_roles()
+
+
+func _refresh_roles() -> void:
+	var bots := 0
+	for fid in _role_btns.keys():
+		var is_bot: bool = _roles[fid] == "bot"
+		(_role_btns[fid] as Button).text = "Non-Player" if is_bot else "Giocatore"
+		if is_bot:
+			bots += 1
+	if _status != null:
+		_status.text = "" if bots < 4 else "Con quattro bot non resta niente da giocare."
+
+
 func _on_new() -> void:
 	var seed_value := int(_seed_edit.text) if _seed_edit.text.is_valid_int() else 0
-	GameController.new_game("standard", seed_value)
+	var np: Array = []
+	for fid in _roles.keys():
+		if _roles[fid] == "bot":
+			np.append(String(fid))
+	GameController.new_game("standard", seed_value, np)
 	_open_game()
 
 

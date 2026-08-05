@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**913 test del modulo + 109 controlli di smoke test della scena, 0 falliti.**
+**913 test del modulo + 111 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -68,7 +68,8 @@ disponibile in UI è il Passo.
 | Salvataggio e ripresa | ✅ stato + carta in corso (`user://partita.json`) |
 | Tema unico dei comandi | ✅ `RDRTheme` |
 | Anteprima di costo ed effetti prima di eseguire | ✅ simulata su una copia dello stato |
-| Schermata iniziale | ✅ `MainMenu.tscn` (nuova partita, seme, riprendi) |
+| Schermata iniziale | ✅ `MainMenu.tscn` (nuova partita, seme, ruoli, riprendi) |
+| Partita in solitario dall'app | ✅ si sceglie chi è Giocatore e chi Non-Player |
 | Salvataggio automatico a ogni cambio carta | ✅ `user://autosave.json` |
 | Tooltip di regole sulle Operazioni | ✅ una riga per Operazione, col paragrafo |
 | Lampeggio degli spazi toccati da un'azione | ✅ |

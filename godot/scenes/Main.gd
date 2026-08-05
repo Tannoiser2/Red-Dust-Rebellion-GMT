@@ -611,6 +611,11 @@ func _refresh_instructions() -> void:
 		txt = "[color=#%s]%s: scegli gli spazi (%d candidati), poi «Esegui».[/color]" % [
 			RDRTheme.FOCUS.to_html(false), gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode),
 			_op_candidates.size()]
+	elif gc.sequence != null and gc.sequence.pending_faction() != "" \
+			and gc.np != null and gc.np.is_np(gc.sequence.pending_faction()):
+		var np_fid := gc.sequence.pending_faction()
+		txt = "Tocca a %s, gestita dal sistema Non-Player: premi «Gioca il turno»." % \
+			RDRTheme.faction_chip(gc.game_def.faction(np_fid).short_name, np_fid)
 	elif gc.sequence != null and gc.sequence.pending_faction() != "":
 		var fid := gc.sequence.pending_faction()
 		txt = "Tocca a %s (%s Disponibile): scegli un'Operazione, l'Evento, oppure Passa." % [
@@ -844,6 +849,30 @@ func _ev_repeat_allowed() -> bool:
 	return bool((_ev_reqs[_ev_index] as Dictionary).get("repeat", false))
 
 
+## §8.0: fa giocare la Fazione Non-Player di turno.
+func _run_np_turn() -> void:
+	var res: Dictionary = GameController.np_take_turn()
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "turno del bot rifiutato"))
+		return
+	if bool(res.get("degraded", false)):
+		_append_log("[i]Il bot non ha potuto valutare l'Evento su questa carta.[/i]")
+
+
+## Fa giocare di seguito tutte le Fazioni Non-Player, fino al turno di un
+## giocatore o alla fine della carta.
+func _run_np_until_player() -> void:
+	var gc := GameController
+	for guard in range(8):
+		if gc.sequence == null:
+			return
+		var fid := gc.sequence.pending_faction()
+		if fid == "" or not gc.np.is_np(fid):
+			return
+		if not GameController.np_take_turn().get("ok", false):
+			return
+
+
 ## Esegue una delle Operazioni gratuite concesse dagli Eventi (§7.0).
 func _run_free_op(index: int) -> void:
 	var res: Dictionary = GameController.execute_free_op(index)
@@ -967,6 +996,22 @@ func _refresh_op_bar() -> void:
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
 	var fid := gc.sequence.pending_faction()
+	# §8.0: quando tocca a una Fazione gestita dal bot, l'unica azione è farla
+	# giocare — le Operazioni le sceglie la carta Curiosity, non il giocatore.
+	if gc.np != null and gc.np.is_np(fid):
+		var b_np := Button.new()
+		b_np.text = "Gioca il turno di %s" % gc.game_def.faction(fid).short_name
+		b_np.tooltip_text = "Sistema Non-Player Curiosity (§8.0): pesca la carta, sceglie ed esegue."
+		b_np.pressed.connect(_run_np_turn)
+		RDRTheme.accent_button(b_np, RDRTheme.BTN_HOVER_BG, RDRTheme.FOCUS)
+		_ops_box.add_child(b_np)
+		var b_all := Button.new()
+		b_all.text = "…e i successivi"
+		b_all.tooltip_text = "Fa giocare di seguito tutte le Fazioni Non-Player fino al tuo turno."
+		b_all.pressed.connect(_run_np_until_player)
+		_ops_box.add_child(b_all)
+		_refresh_move_box()
+		return
 	if _ev_active:
 		_build_event_bar()
 		return
