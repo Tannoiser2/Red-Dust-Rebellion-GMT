@@ -1,0 +1,25 @@
+RED DUST REBELLION VASSAL MODULE INSTRUCTIONS
+
+1. Unlike many of my other COIN modules, this module makes minimal use of automation. Neither Control nor Victory markers on the General Records Track are automatically managed by the module. Users will need to adjust things manually. 
+
+2. To make the game as ergonomic as possible, I have made a series of buttons on the toolbar that will adjust faction Resources and Victory marker placement. 
+
+3. To begin a new game, after selecting the Default setup, one player should create the deck of Event cards by pressing the "Create Deck" button on the toolbar. 
+
+4. Each space on the map has a hotspot that can be right-clicked on to produce a menu of options for placing markers, adjusting support/opposition or control settings, or dispatching pieces from available forces boxes. On Desert and Labyrinth spaces, the hotspot is the space where support/opposition markers would be placed. Note that each option also has a keyboard shortcut that can be used when the hotspot is selected by left-click (instead of right-clicking). On The Wilderness, or Earth, the hotspot is a large "+" icon in the space. 
+
+5. The Bases appear on the available forces track as players would expect. However, all but on one of the Bases are actually dummies that give the illusion of bases being placed on the numeric track. While I recommend that players NOT manually drag-and-drop bases from these displays (use the dispatch piece function; see #4 above), if you really want to manually drag a base from the display, drag from the last Base on the track (eg. from the #9 space on Corporations or Red Dust). 
+
+6. The Church of the Reclaimer faction has a private Hand window in which to hold Asset cards. Press the "+" icon in each card slot to draw a random card from the deck. Right-click on card to play to the played card space on the map (just above the CR Player Mat near the bottom of the board). When finished with your card play, the CR player should right-click on and discard his/her played cards from this space. 
+
+7. Red Dust Campaign cards are drawn manually by dragging away from their deck. Drawn cards are visible to the RD player, but hidden from everyone else. Choose which one you want to put into play and send it to a card slot above the CR Player Mat by right-clicking on the card.
+
+8. Eligibility status can be adjusted after two factions have taken their turn by using the button on the toolbar. 
+
+9. The "Draw Event" button on the toolbar does what you would expect it to do: it discards any card in the Current Card slot on the map, and draws the topmost card from the deck into the Current Card slot. 
+
+10. IMPORTANT: If a Dust Storm card appears as the upcoming card, DO NOT use the Draw Event toolbar. Instead, wait until the Dust Storm event has been fully resolved, then press the button twice to reveal the next two cards. 
+
+12. Reset Phase and Dust Storms update can be expedited by using the appropriate toolbar buttons. 
+
+13. To quickly and easily clear away pawns after a player's turn is over, use the ESC key on your keyboard. 

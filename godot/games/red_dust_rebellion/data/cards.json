@@ -1,0 +1,872 @@
+{
+ "_note": "48 carte Evento + 3 Dust Storm. Testi ed Eligibility estratti dal Playbook (pp. 24-40) con sources/rules/estrai_carte_rdr.py. flashpoint = valore del simbolo fulmine; faction_order = ordine di Eligibility stampato sulla carta.",
+ "cards": [
+  {
+   "number": 1,
+   "title": "A Green New Deal",
+   "flashpoint": 0,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Remove all Damage from spaces with COIN Control. Increase Profits by 1 per Damage removed. Shift up to 2 spaces where any Damage was removed 1 level each towards Active Support.",
+   "shaded": "Reduce Profits by 5 and MG Resources by 9.",
+   "unshaded_title": "Public works programs",
+   "shaded_title": "Lowest bidder approved",
+   "tips": "The unshaded effect removes Damage without affecting Displaced Population or Earth.",
+   "history": "With the possibility of terraforming, life on Mars rapidly became a reality. Huge new construction projects needed to be built to support the terraforming stations, requiring more water, more oxygen, more living space, and more transportation to support the efforts. The scale and scope of these projects is massive and generational, but their approval by Earth’s governments in the landmark “Green New Deal” cleared the way for Mars to undergo unprecedented growth and expansion."
+  },
+  {
+   "number": 2,
+   "title": "EarthGov Declares Emergency",
+   "flashpoint": 1,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Place 4 Supply markers or 4 EG Troops on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
+   "shaded": "Reduce Profits by 5.",
+   "unshaded_title": "Mars Government supported",
+   "unshaded_eg": "EG+",
+   "shaded_title": "We need a return on investment",
+   "shaded_eg": "EG-",
+   "tips": "The Earth Government Controller determines which pieces are sent from Earth to Transit during an Aldrin Cycler phase caused by the unshaded effect, and no pieces will be sent if there is no Earth Government Controller.",
+   "history": "The Martian Government rules Mars on behalf of Earth. The United Nations sub-committee for Mars, called “EarthGov” by local Martians, is technically the governing body of Mars, with the local government following their mandates and directives. The sub-committee lets the local government handle most matters, but weighs in on issues it considers important to the cause of “humanity”. As the conflict on Mars heats up, EarthGov declares a planetary state of emergency."
+  },
+  {
+   "number": 3,
+   "title": "Terran Loyalties Tested",
+   "flashpoint": 1,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Remove all Rebel Bases from 2 spaces with EG Troops.",
+   "shaded": "CORP may Exploit in any 1 space with Support, even if more MG forces than CORP forces there.",
+   "unshaded_title": "Earth is home",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Our loyalty is to our shareholders",
+   "shaded_eg": "EG-",
+   "tips": "Exploit performed by the shaded effect still requires a CORP Base and no Damage in the selected space.",
+   "history": "“A Mars for Martians!” is a common rallying cry for the Red Dust movement, but many Martians still feel a strong kinship with Earth. For them, the idea of rebelling against Earth seems not only dangerous, but fundamentally in opposition with the ideals that sent humanity to a new world. These Martians feel that the best thing for Mars is to cooperate with EarthGov and the Martian Government to help root out the insurgents."
+  },
+  {
+   "number": 4,
+   "title": "USSS Challenger",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Place up to 8 EG Troops in Labyrinths without Rebel forces.",
+   "shaded": "Move all EG Troops from Phobos and 1 other space on Mars to Available.",
+   "unshaded_title": "EarthGov flagship visit",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Private contractors take over",
+   "shaded_eg": "EG-",
+   "tips": "None.",
+   "history": "The largest spaceship ever designed for armed conflict, the USSS Challenger features an impressive array of missiles, rail guns, point defense systems, and even nuclear warheads. In addition, it can carry hundreds of fully equipped EarthGov marines and deploy them via dozens of landing craft. The Challenger was deployed late in the Rebellion, as a gesture of Terran strength and determination to hold the colony."
+  },
+  {
+   "number": 5,
+   "title": "Satellite Network Updated",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Shift EG Confidence up one step for each Satellite in Orbit, then move all Satellites to Orbit.",
+   "shaded": "RD or CR may free Attack in each space with friendly forces and a Satellite.",
+   "unshaded_title": "The sky is full of stars",
+   "shaded_title": "Security compromised",
+   "tips": "The unshaded effect moves all Satellites, even from Earth, Transit, or Casualties.",
+   "history": "The Martian Positioning System (MPS) Network is a system of satellites designed to monitor atmospheric conditions on Mars, take high resolution images of the surface, and provide accurate positioning data for ground based surveyors. These satellites quickly became an important part of the Martian Government’s intelligence gathering efforts against insurgent bases in the wastelands, as well as a potent symbol of their authority."
+  },
+  {
+   "number": 6,
+   "title": "The Aldrin Cycler",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Place 3 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
+   "shaded": "Either transfer up to 6 MG Resources to RD Resources, or remove all Supply markers from Transit.",
+   "unshaded_title": "Mars and Earth are one",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Aid programs redirected",
+   "shaded_eg": "EG-",
+   "tips": "The Earth Government Controller determines which pieces are sent from Earth to Transit during an Aldrin Cycler phase caused by the unshaded effect, and no pieces will be sent if there is no Earth Government Controller.",
+   "history": "Legendary astronaut Buzz Aldrin came up with an idea to slingshot a ship around Earth’s orbit to get to Mars, and then use Martian gravity to slingshot it back. Once in motion, the ships would require very little fuel to continue their cyclical journey. These ships are the container fleet that supplies Mars with hard-to-get resources and people. When the ships pass close to Mars and Earth, other local vessels rendezvous with them to load and unload supplies."
+  },
+  {
+   "number": 7,
+   "title": "Letters From Home",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Place 2 Population markers on Earth, then may House in any 1 space with Support.",
+   "shaded": "Remove up to 6 MG Troops from spaces on Mars without Support.",
+   "unshaded_title": "Keeping in touch",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Why should we help you if you won’t help yourselves?",
+   "shaded_eg": "EG-",
+   "tips": "A House action performed by the unshaded effect still requires a Population from Displaced Population.",
+   "history": "A radio signal from Earth can reach Mars in 4 to 20 minutes, depending on the current position of the planets. The delay is too long to have an actual conversation, but short enough to engage in communication via visual letters. This creates both a feeling of connection with Earth and a sense of isolation from the people back home."
+  },
+  {
+   "number": 8,
+   "title": "Tenzing",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Shift Tenzing 2 levels towards Active Support. Activate all Rebels in Tenzing, then MG may free Assault there.",
+   "shaded": "Set Tenzing to Neutral, then RD gains Resources equal to its Population and CR draws 1 Asset card.",
+   "unshaded_title": "First city of Mars",
+   "shaded_title": "A diverse city, with diverse beliefs",
+   "tips": "None.",
+   "history": "Tenzing Labyrinth was the site of the first colony on Mars. Dug deep into the lava tunnels of Olympus Mons, this is where our Martian story begins. It is named after Norgay Tenzing, one of the first people to climb Mount Everest along with New Zealander Sir Edmund Hillary. The discussion over who to name the multinational colony after became a great international incident in 2060. The Russians refused to name it Armstrong, and the Americans wouldn’t agree to name it Gargarin. In the end, a delegation led by New Zealand and Nepal presented Tenzing as a compromise name. Nowadays, Tenzing is a bustling metropolis and the home of the massive Gagarin space port. It is also the seat of the Martian Government and the most diverse and eclectic of the Labyrinths."
+  },
+  {
+   "number": 9,
+   "title": "Targeting Cyclists",
+   "flashpoint": 3,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Place 1 Supply marker on Earth for each Labyrinth without any Rebel forces.",
+   "shaded": "Remove 1 Supply marker from Earth for each Labyrinth with any Rebel forces.",
+   "unshaded_title": "Targeted marketing",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Targeted for termination",
+   "shaded_eg": "EG-",
+   "tips": "None.",
+   "history": "The early days of Martian settlement were hampered with commitments to celebrities and billionaires who had helped fund the initial flights and wanted to check an item off their bucket list by exploring a new world. Thanks to the Aldrin Cycler, Mars is now a lot more affordable and a popular tourist destination for Earth elites, known by locals as “cyclists”. Cyclists come to Mars with plenty of Earth money to spend, complaints about the food and accommodation, and a serious lack of air lock safety knowledge."
+  },
+  {
+   "number": 10,
+   "title": "Bicentennial Day",
+   "flashpoint": 3,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Shift any 2 spaces 1 level each towards Active Support.",
+   "shaded": "Shift any 2 spaces 1 level each towards Active Opposition. Place 2 Rebels in each selected space.",
+   "unshaded_title": "200 years of human achievement",
+   "unshaded_eg": "EG+",
+   "shaded_title": "200 years of dependence",
+   "tips": "None.",
+   "history": "The bicentenary of the first colony on Mars proved to be a lightning rod for debate on Martian identity and independence. Generations had grown up on Mars who had never seen a blue sky or an ocean, who had never lived outside a Labyrinth. For Red Dust and their supporters, the bicentennial was nothing more than a reminder of Earth’s place as a colonial power, and of the generations of true children of Mars who had never known political autonomy. In many ways, this sentiment echoed the call of independence the American colonies felt in the 1770s and the republican movement in Aotearoa in the 2030s."
+  },
+  {
+   "number": 11,
+   "title": "The Security of Mars Act",
+   "flashpoint": 3,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Activate all Rebels in 1 Labyrinth. The Rebel Faction with the most forces in that Labyrinth is Ineligible through the next Event Round (executing Faction chooses if tied).",
+   "shaded": "Move 4 MG or CORP cubes from each of up to 2 Labyrinths to any spaces with COIN Bases.",
+   "unshaded_title": "Find them and destroy them!",
+   "shaded_title": "Stand down",
+   "tips": "The eligibility cylinder of a Faction that is made Ineligible through the next Event Round should immediately be moved to the Ineligible Factions box, and is not moved to Eligible Factions at the end of the current Event Round.",
+   "history": "The Martian Government did not have a standing army at the start of the rebellion, so police and security forces bore the brunt of the early conflict. When The Security of Mars Act passed in the Martian Parliament, all this changed. The security forces became a military force, and many legal restrictions on how force could legitimately be used on Mars were waived. Many critics pointed out that the police forces had already been violating their mandate and acting like a military, so in reality not much had changed."
+  },
+  {
+   "number": 12,
+   "title": "Red Wednesday Riots",
+   "flashpoint": 4,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Activate all SpecOps and Rebels in one space with SpecOps, then CORP may free Assault there.",
+   "shaded": "RD may place up to 2 Rebels in a Labyrinth, then free Ambush there. Flip all Rebels in that Labyrinth to Hidden after the Ambush is executed.",
+   "unshaded_title": "Resistance crushed",
+   "shaded_title": "A day of infamy",
+   "tips": "Red Dust must Ambush if they choose to execute the shaded effect.",
+   "history": "Every insurrection has its flash points, moments that remain etched in the collective consciousness when people talk about them later. The Red Wednesday Riots are one of those moments. Wednesdays are payday for menial workers in many Labyrinths, and on one particular Wednesday, the core server infrastructure supporting the payment system for Ares Corporation, one of the biggest corporations on Mars, crashed and wouldn’t come back online. Scheduled payments failed and evictions were automatically triggered in many places on Mars. The “hand-to-mouth” existence that Ares had created in its work force backfired, and its workers were hungry, angry, and afraid."
+  },
+  {
+   "number": 13,
+   "title": "The Bombing of Maglev-77",
+   "flashpoint": 0,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Move up to 6 Security to a single space adjacent to a Maglev line. Activate all Rebels in that space, then CORP may free Assault there.",
+   "shaded": "Select a Maglev line, then shift all adjacent spaces 1 level each towards Active Opposition.",
+   "unshaded_title": "Tipoff received",
+   "shaded_title": "Corporations blamed",
+   "tips": "All spaces touching a Maglev line are adjacent to it.",
+   "history": "The maglevs are the arteries of Mars, a monumental undertaking that links the Labyrinths with a covered train system that can operate during dust storms. So when Maglev-77, traveling from Tenzing to Shepard, exploded as it entered the Labyrinth, all hell broke loose. Three hundred commuters died in the initial explosion, and several hundred more locals were"
+  },
+  {
+   "number": 14,
+   "title": "The Rodgers Line",
+   "flashpoint": 1,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Place the Rodgers Line marker between Europa and Tereshkova. Shift Europa and Tereshkova 1 level each towards Active Support, increase Profits by 6, and MG or CORP may House once in both Labyrinths.",
+   "shaded": "Shift Europa and Tereshkova 1 level each towards Active Opposition. Reduce Profits by 3 and MG Resources by 6.",
+   "unshaded_title": "Now boarding to Europa",
+   "shaded_title": "Kickbacks exposed",
+   "tips": "The Rodgers Line marker should be placed on the dotted line between Europa and Tereshkova, and acts as a Maglev line connecting the two Labyrinths.",
+   "history": "For the longest time, the Rodgers maglev line, connecting Europa and Tereshkova Labyrinths, has been “due to open anytime”. Constant delays, over running costs and scandals, have pushed this out, year after year, and many are wondering if it will ever happen. Finishing the line would be a coup for the Martian Government, a way to restore faith in major infrastructure projects and open up commerce between the two Labyrinths."
+  },
+  {
+   "number": 15,
+   "title": "The Automation Rebellion",
+   "flashpoint": 1,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Shift any 2 Deserts 2 levels each towards Active Opposition. Increase Profits by 1 for each CORP Base in a Desert.",
+   "shaded": "Reduce Profits by 6 and remove up to 2 CORP Bases from any Deserts.",
+   "unshaded_title": "Androids replace miners",
+   "shaded_title": "Strike forces settlement",
+   "tips": "Any CORP Bases removed by the shaded effect are placed in Casualties.",
+   "history": "Mining on Mars is an exceptionally important business. Not only are basic building materials needed to expand the Labyrinths, the miners also clear space to expand the underground sections of the Labyrinths. Martian civilization is, at its core, a subterranean one. And the Miners Union is the strongest union on Mars. It is said that the Red Dust movement started in the mines, and current leader Aroha Thompson is a public advocate for Martian self-rule. One of the events that sparked the rebellion occurred when, to break a labor dispute, Ares Corporation used androids as scab labor. The resulting riots left hundreds wounded or dead, as security forces clashed with hammer-wielding miners, hell bent on raging against the machines."
+  },
+  {
+   "number": 16,
+   "title": "Shenzhou",
+   "flashpoint": 2,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Remove all Rebels from Shenzhou and set it to Neutral, then Activate all Rebels adjacent to it. Increase Profits by 3 or place 3 Supply markers on Earth.",
+   "shaded": "Place 1 Damage on Shenzhou, then remove any number of Population markers from Displaced Population.",
+   "unshaded_title": "Corporate loyalty",
+   "shaded_title": "A new exodus",
+   "tips": "Any Population markers removed from Displaced Population by the shaded effect should be returned to the general supply.",
+   "history": "China is the premier corporate power on Mars, and Shenzhou is their corporate capital. While there are corporations from many nation states on Mars, none have quite as profound an influence on a single Labyrinth as the Chinese corporations do in Shenzhou, where the arcology model of living is widespread. Employees live their lives almost entirely within the corporate enclaves, their children schooled by the corporation, growing up to work for the corporation, and then retiring to corporate old folks homes. However, a curious side effect of the Rebellion was an exodus of many employees from Shenzhou. They developed sympathies for the Rebellion, but"
+  },
+  {
+   "number": 17,
+   "title": "The Water Crisis",
+   "flashpoint": 2,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Shift any 2 Deserts 1 level each towards Neutral. Increase Profits by 3 or place 3 Supply markers on Earth.",
+   "shaded": "Shift any 2 Deserts 1 level each towards Active Opposition. RD may draw and play 1 Campaign card.",
+   "unshaded_title": "We control the supply",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Pipes diverted",
+   "tips": "None.",
+   "history": "Mars is a dry barren world, and water is essential to human life. These two contrasting factors have been one of the major limitations of human expansion on Mars. Water systems are tightly controlled and regulated by the Central Water Authority, a non-partisan, independently run organization that has operated under a charter to keep the waters running on Mars for nearly a century."
+  },
+  {
+   "number": 18,
+   "title": "Corporate Militarization",
+   "flashpoint": 2,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Place 2 SpecOps, 2 Security, and a CORP Base in 1 Desert. Activate all Rebels there.",
+   "shaded": "Permanently remove up to 4 Available SpecOps from the game. Reduce Profits by 4.",
+   "unshaded_title": "Black site created",
+   "shaded_title": "Bowing to public pressure",
+   "tips": "Any SpecOps permanently removed by the shaded effect should be returned to the box and may not be used for the remainder of the game.",
+   "history": "When the rebellion began, the Corporations had private security forces, with paramilitary equipment and policestyle training. As it dragged on and on, corporate spending and excess transformed them into full-blown private armies. Secret black sites appeared deep in the Martian wastes, private prisons where Martian law was not enforced. If the general public ever knew what happened in these black sites, including torture"
+  },
+  {
+   "number": 19,
+   "title": "Corporations Quell Dissent",
+   "flashpoint": 2,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Shift each space with Damage and Security 1 level towards Active Support. Increase Profits by 3.",
+   "shaded": "Reduce MG Resources by 3 for each Labyrinth with any CORP forces.",
+   "unshaded_title": "A welcome relief",
+   "unshaded_eg": "EG+",
+   "shaded_title": "We don’t do this for free",
+   "tips": "None.",
+   "history": "Early on in the Rebellion, the Corporations showed little interest in straying outside their direct spheres of control. If an attack happened at one of their sites, they did everything they could to crush it, but the overall management of counter insurgency efforts was left to the Martian Government."
+  },
+  {
+   "number": 20,
+   "title": "The Spin Zone",
+   "flashpoint": 2,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Shift any 2 Labyrinths 1 level each towards Active Support. Increase Profits by 3.",
+   "shaded": "Shift up to 4 spaces with CORP forces 1 level each towards Active Opposition.",
+   "unshaded_title": "Your trusted news source",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Spin and more spin",
+   "tips": "None.",
+   "history": "Mars has a wide variety of news outlets and broadcasters. Media has evolved considerably in the last 200 years and most citizens of Mars have a tailored feed of information coming to them constantly: updates from their local water board, coverage of the latest fashions, and various panel shows about the hot button issues of the day. However, the bulk of Martian News is run by a duopoly, Martian Mediaworks and Mars/ME. All news sources, from apparently pro-independence media"
+  },
+  {
+   "number": 21,
+   "title": "Future of Law Enforcement",
+   "flashpoint": 3,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Place 6 MG Troops or 4 EG Troops in 1 Labyrinth. Increase Profits by 3.",
+   "shaded": "Replace up to 6 MG Troops or CORP Security with Rebels.",
+   "unshaded_title": "Directive 1: Serve the public good",
+   "shaded_title": "Get the hammers",
+   "tips": "None.",
+   "history": "Robots make a lot of sense on Mars, a lot more sense than human beings who need water and oxygen on a world barren of both. Robot forces can go places where humans cannot, and can operate safely in extremely hazardous conditions. The problem is, human beings distrust handing over power to automated forces, and the revised Geneva Conventions prohibit the use of robots with lethal capabilities in all but fixed defensive positions. As a result, robots have rarely been used in active policing or armed conflict situations. Where they are used is to defend static installations, freeing up other forces for offensive actions. Security robots are seen by many as the manifestation of the lack of empathy of the Corporations."
+  },
+  {
+   "number": 22,
+   "title": "The One Card",
+   "flashpoint": 3,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Activate all Rebels in Labyrinths with COIN Control, then MG or CORP may free Assault in one Labyrinth with COIN Control.",
+   "shaded": "Shift any 2 Labyrinths 1 level each towards Active Opposition, then place 2 Rebels in or adjacent to each selected Labyrinth.",
+   "unshaded_title": "They have eyes everywhere",
+   "shaded_title": "Big Brother is watching",
+   "tips": "None.",
+   "history": "Advanced information technology, computing power, and millions of scanners and sensors, all combined with critical scarcity on Mars, has created a culture of surveillance, both in the direct sense and in the realm of marketing. The focal point of these systems is the “One Card” possessed by every Martian citizen. This card opens doors, pays for food, allocates limited resources, and tracks the user. With the sheer number of ways a citizen can be tracked on Mars, and the ease with which critical systems can be isolated by security, the Red Dust Rebellion became an identity war. Known insurgents could be flagged easily, using biometric scanning, but Red Dust and the Reclaimers would continue to come up with countermeasures to slip through the system. Knowing your enemy is the key to victory and the insurgents did all they could to remain “unknown”."
+  },
+  {
+   "number": 23,
+   "title": "The Slush Fund Scandal",
+   "flashpoint": 3,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Replace up to 4 Rebels with either CORP Security or MG Troops.",
+   "shaded": "Remove a CORP Base and up to 4 CORP units from 1 space, then shift that space 1 level towards Active Opposition. Reduce Profits by 2.",
+   "unshaded_title": "Everybody’s got a price",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Everybody’s gonna pay",
+   "tips": "The shaded effect may only select a space with a CORP Base. Any CORP forces removed by the shaded effect are placed in Casualties.",
+   "history": "If you can’t beat them, buy them. More than one dissident group in history has been co-opted by the promise of quick wealth and easy living. Why fight the corporations, when all they want is to offer you a luxury suite and a cushy consulting job? Of course, not all people who are paid for stay bought. And on occasion this practice of paying off insurgents and their supporters led to sensitive information being leaked and facilities compromised."
+  },
+  {
+   "number": 24,
+   "title": "The 24.66 Hour News Cycle",
+   "flashpoint": 4,
+   "faction_order": [
+    "corporations",
+    "marsgov",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Shift up to 3 spaces 1 level each towards Active Support, then increase Profits by 1 for each space now with Active Support.",
+   "shaded": "Remove up to 4 Troops or Security from one space (EG last). Then, if no cubes remain, shift that space 1 level towards Active Opposition.",
+   "unshaded_title": "Our panel of experts agree",
+   "shaded_title": "False narratives exposed",
+   "tips": "The shaded effect may only remove EG Troops once no other cubes remain in the space.",
+   "history": "The Martian day is 24.66 Earth hours long, and information is available all day, every day, to the people of Mars. But someone needs to make that content, a steady stream of new material and new content to keep the workers of Mars occupied and entertained. The 24.66 hour news cycle means news agencies are working around the clock to sustain and push narratives throughout the day. If a major event happens, coverage continues non-stop, with updates beamed out instantly to anyone whose historic preferences indicate they would be interested. The relentless nature of this coverage helps shape public opinion on core issues, and the Corporations, who own the media, do their best to ensure that the narrative sustains their position of privilege. But the old saying, “you can fool some of the people all of the time, or all of the people some of the time” holds true, and sometimes the corporate wallpapering of the truth begins to show cracks."
+  },
+  {
+   "number": 25,
+   "title": "Nano Surveillance Drones",
+   "flashpoint": 0,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Activate all Rebels in spaces containing CORP Bases, then MG or CORP may free Assault in one space with a CORP Base.",
+   "shaded": "Move up to 6 MG Troops or CORP Security from any one Labyrinth to one other Labyrinth with Support.",
+   "unshaded_title": "We have a fly on the wall",
+   "shaded_title": "Deliberate misinformation",
+   "tips": "None.",
+   "history": "Miniaturization technology has advanced considerably in the last 200 odd years. Improvements in materials and manufacturing processes allow for camera equipped drones to be no bigger than a grain of rice. Knowing this, resistance cells employed active scanning measures or electronic jamming during meetings, but slip ups and lapses often happened and were a bountiful source of information for Martian intelligence services. On other occasions, when drones were detected, they"
+  },
+  {
+   "number": 26,
+   "title": "Emissions Law Reform Passed",
+   "flashpoint": 1,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Increase Profits by 1 for each CORP Base in a Desert, then flip up to 2 CORP Bases to their Terraforming side.",
+   "shaded": "Free March or Travel from any one space to one other space with a CORP Terraforming Base, then Activate all Rebels in the space and remove CORP forces equal to the number of Rebels there (Bases last).",
+   "unshaded_title": "If we did this on earth, the EPA would hang us",
+   "shaded_title": "Smash the polluters",
+   "tips": "The shaded effect removes CORP forces equal to the combined total of RD and CR Rebels, and may only remove CORP Bases once no other CORP forces remain in the space.",
+   "history": "On Earth, the climate crisis still rages. Pollution emissions are closely monitored and regulated to avoid a repeat of the crisis of the mid 21st century. On Mars, greenhouse gasses and pollution that would be illegal on Earth are required to advance the cause of terraforming. This pollution is a lightning rod of contention for the Reclaimers, who want to preserve Mars as it is."
+  },
+  {
+   "number": 27,
+   "title": "Green Mars Campaign",
+   "flashpoint": 1,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Flip up to 1 CORP Base in each Unpopulated Desert to its Terraforming side.",
+   "shaded": "Remove all Supply markers from Earth. RD may draw and play 1 Campaign card.",
+   "unshaded_title": "It’s now or never for humanity",
+   "shaded_title": "Investors get cold feet",
+   "tips": "None.",
+   "history": "Mars is preparing for terraforming, but before that can get underway they need to build all the machinery and infrastructure to do so. A major part of that is Greenhouse gas-generating plants out in the deserts of Mars. These colossal gas belching plants will take generations to finish their work."
+  },
+  {
+   "number": 28,
+   "title": "Refugee Crisis",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "MG or CORP may House in 1 Labyrinth, then add or remove up to 3 Population markers to/from Displaced Population.",
+   "shaded": "RD may House in 1 space, then remove all Population markers from Displaced Population and shift 1 Labyrinth 1 level towards Active Opposition for every 3 Population markers removed (round down).",
+   "unshaded_title": "Making the best of it",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Deplorable conditions",
+   "shaded_eg": "EG-",
+   "tips": "Population markers added to or removed from Displaced Population should be taken from or returned to the general supply.",
+   "history": "Early in the conflict, it was theorized that any level of violence could create a situation where many refugees could be created in a moment. Labyrinths are fragile things and Mars is harsh. What no one expected was the sheer level of violence the Rebellion would bring and the lengths the Reclaimers would go to in order to return Mars to the dust."
+  },
+  {
+   "number": 29,
+   "title": "Printing Weapons",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Either reduce RD Resources by 5 or CR must discard 2 Asset cards at random. The targeted Faction is Ineligible through the next Event Round.",
+   "shaded": "Place 4 Rebels and 1 Base (flipped to either Dug-In or Conversion Center) in any 1 Desert.",
+   "unshaded_title": "Manufacturing centers found",
+   "shaded_title": "Arms bazaar",
+   "tips": "The eligibility cylinder of a Faction that is made Ineligible through the next Event Round should immediately be moved to the Ineligible Factions box, and is not moved to Eligible Factions at the end of the current Event Round.",
+   "history": "3D printing and manufacturing has come a long way in 200 years. Fabricators on Mars can make just about anything, and industrial 3D printers are both incredibly valuable and integral to life on Mars being sustainable. However, they can also be used to make all the components for weapons."
+  },
+  {
+   "number": 30,
+   "title": "Homesteaders Revolt",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Set any 2 Deserts to Neutral, then remove up to 2 Rebel forces from each of those Deserts (Bases last).",
+   "shaded": "Shift any 3 Deserts 1 level each towards Active Opposition, then place 1 Rebel and 1 Base in each selected Desert.",
+   "unshaded_title": "Leave us out of your war",
+   "unshaded_eg": "EG+",
+   "shaded_title": "I never trusted the government",
+   "tips": "The unshaded effect may only remove a Base belonging to a Rebel Faction once none of that Faction’s Rebels remain in the selected space.",
+   "history": "The bulk of Mars’ population lives in the big seven Labyrinths, but there are also minor Labyrinths, such as those founded by the Brazilian and Nigerian governments, isolated research outposts, and a few truly independent homesteads. These minor Labyrinths and facilities dot the landscape, some totally remote, some with small maglev connections to the main lines. The same core conditions exist, a scarcity of space and resources, but each has their own unique sub-culture and values. Some from the main Labyrinths dismissively call them “the villages of Mars”. The Red Dust Rebellion left none of these places unaffected, whether it was logistical shortages, fear of violence, or complete revolt. The Rebellion touched everyone."
+  },
+  {
+   "number": 31,
+   "title": "Martian Nationalism",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Place 4 EG Troops on Phobos, then remove one active RD Campaign card from play.",
+   "shaded": "Place 3 Rebels total in any Populated spaces. Increase RD Resources by 6.",
+   "unshaded_title": "Earth fears independence",
+   "unshaded_eg": "EG+",
+   "shaded_title": "We are children of Mars",
+   "shaded_eg": "EG-",
+   "tips": "None.",
+   "history": "Tribalism, nationalism, and a “them and us” mentality has been at the heart of virtually every armed conflict in history. National identity is a huge part of how people see themselves in the world, and Martian identity is no different. One could argue that the entire cause of the conflict was the sense of Martian identity that developed over time, the feeling that someone from Mars lived a totally different sort of life to those on Earth."
+  },
+  {
+   "number": 32,
+   "title": "Shepard-Tereshkova",
+   "flashpoint": 2,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Place 2 Rebels in either Shepard or Tereshkova, then place 2 MG Troops in the other Labyrinth. Shift the Labyrinth where the Rebels were placed 2 levels towards Active Opposition, then shift the other Labyrinth 2 levels towards Active Support. The executing Faction may free Assault (if COIN) or free Attack (if Rebel) in one affected Labyrinth.",
+   "shaded": "",
+   "unshaded_title": "Red against blue",
+   "history": "Russia and the United States of America have always had a tense relationship, but in the lead up to Martian colonization, things became completely bizarre. Both identified a section of Mars desirable for a colony, near an area where vast amounts of subterranean water were detected, and both claimed the area as their own. Neither side backed down, so Shepard and Tereshkova were built only 50 kilometers apart, connected these days by a high-speed maglev that takes five minutes to travel between the two Labyrinths."
+  },
+  {
+   "number": 33,
+   "title": "The Red Dahlia",
+   "flashpoint": 3,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Activate all RD Rebels.",
+   "shaded": "RD may free Ambush in any number of Labyrinths, then must Activate all RD Rebels in any Labyrinths where they Ambushed.",
+   "unshaded_title": "Militants caught off guard",
+   "shaded_title": "The Christmas Offensive",
+   "tips": "The shaded effect still requires a Hidden Rebel in each space selected for Ambush.",
+   "history": "The Red Dahlia bombings were the first wave of violence that kicked off the Red Dust Rebellion, deliberate targeting of Martian Government and Corporate assets by hidden improvised explosive devices. Found within each bombsite was a spray painted emblem of a dahlia with the word “Mars for Martians” written underneath. These attacks stopped suddenly, and the identity of the original Red Dahlia remains a mystery."
+  },
+  {
+   "number": 34,
+   "title": "Long Range Patrols",
+   "flashpoint": 3,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "The executing Faction may move up to 3 of their units from 1 space through a chain of up to 3 contiguous Deserts. Then, they may perform a free Operation other than Recon or March in the final Desert.",
+   "shaded": "",
+   "unshaded_title": "They won’t see us from this approach",
+   "tips": "Each Desert moved through must be adjacent to another, but the origin and destination Deserts do not need to be adjacent.",
+   "history": "Mars is a lot of big wide-open spaces. Long range rovers can move through the wastes largely undetected, allowing for the rapid redeployment of hidden forces from one region to another."
+  },
+  {
+   "number": 35,
+   "title": "The Tombs of Mars",
+   "flashpoint": 3,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "MG or CORP may House in 1 space, then shift up to 2 Deserts with Population markers 1 level each towards Active Support.",
+   "shaded": "RD may House in 1 Desert and place 1 Base there, then increase RD Resources by 4.",
+   "unshaded_title": "Makeshift housing",
+   "shaded_title": "One man’s trash",
+   "tips": "The unshaded effect may only shift spaces with additional yellow Population markers towards Active Support.",
+   "history": "Not every project worked on Mars and not every landing site or expedition area worked out for their inhabitants. Across Mars there are dozens of sites that failed in the early years of colonization. A lot of them are tombs to those brave individuals who came to Mars in the early days. With advances in technology, many of these abandoned sites could be fixed up and made liveable with a bit of effort. When the Reclaimers were on their rampage in late 2266, many fled to these temporary accommodations, hoping that they would be passed over and left alone."
+  },
+  {
+   "number": 36,
+   "title": "Outpost Discovery",
+   "flashpoint": 4,
+   "faction_order": [
+    "marsgov",
+    "corporations",
+    "red_dust",
+    "reclaimer"
+   ],
+   "unshaded": "Move any number of COIN units on Mars to a Desert with a Rebel Base. MG or CORP may free Recon in that Desert, then free Assault there.",
+   "shaded": "RD or CR may move up to 6 COIN units on Mars to a Desert with a friendly Base, then move that Base and any number of friendly Rebels there to an adjacent Desert.",
+   "unshaded_title": "We found them",
+   "shaded_title": "Diversion",
+   "tips": "None.",
+   "history": "In order to keep out radiation, most facilities on Mars are in shielded Labyrinths or buried under piles of regolith. Martians live a largely subterranean existence due to the hostility of the surface. What this means is that hidden facilities tend to be underground and exceptionally hard to detect. During the Rebellion, the insurgents operated large underground bases all over the planet. Some were extremely remote, but others were positioned surprisingly close to major Labyrinths. Whenever the Martian Government caught wind of one of these bases, they did their best to mobilize and shut it down immediately."
+  },
+  {
+   "number": 37,
+   "title": "Bipartisan Resolution",
+   "flashpoint": 0,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Remove 6 Rebels total from any spaces. An equal number of RD and CR Rebels must be removed if possible.",
+   "shaded": "Move up to 3 CR Rebels from one space to an adjacent space with RD forces in it. Then RD or CR may either free Ambush there, or replace the moved CR Rebels with RD Rebels.",
+   "unshaded_title": "Extremism hurts us all",
+   "shaded_title": "A common cause",
+   "tips": "None.",
+   "history": "The Church of the Reclaimer, despite the excesses of its paramilitary arm, presents itself as a normal religion in public. Moderate Reclaimers believe that humanity should adapt to Martian conditions and not terraform the planet to be another earth. The core of their belief is that a creator God created the universe as it is, and that we must find our place within it, without undoing the creator’s work. In the representative bodies of the Martian Government, moderates aligned with Free Mars, Red Dust, and the Church of the Reclaimer worked together to push the independence movement. They would also come out against the excesses of the insurgents at times, as they had little patience for civilian casualties."
+  },
+  {
+   "number": 38,
+   "title": "The Arteries of Mars",
+   "flashpoint": 1,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Increase Profits by 3, then place 2 Security in each of up to 3 spaces adjacent to Maglev lines.",
+   "shaded": "Place 1 Damage and 1 Rebel in each of 2 Labyrinths connected by a single Maglev line, then increase RD Resources by 3.",
+   "unshaded_title": "You can rely on us",
+   "shaded_title": "Cut the lines",
+   "tips": "All spaces touching a Maglev line are adjacent to it.",
+   "history": "Scarcity is a real killer on Mars. The breakdown of an important machine, the lack of spare parts, or simply food and water that needs to be moved around, can cause untold problems. The maglevs are the arteries of Mars, moving people and products around the planet. In order to keep the planet working, those supply lines had to be kept secure. Of course, they were also prime pickings for anyone looking to redirect those scarce resources to further their own ambitions."
+  },
+  {
+   "number": 39,
+   "title": "Hammer the Machines",
+   "flashpoint": 1,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "CORP may Activate all Rebels in one Labyrinth, then Assault there. Increase Profits by 4 if any Rebel Bases are removed by this Assault.",
+   "shaded": "Reduce Profits by 3. Shift any 3 Labyrinths 1 level each towards Active Opposition, then place 1 Damage in each selected Labyrinth.",
+   "unshaded_title": "Dissidents hit en masse",
+   "shaded_title": "Robots smashed",
+   "tips": "None.",
+   "history": "One of the many iconic images of the Rebellion is of a Red Dust rebel holding a hammer, standing on top of the smashed remains of the robot who replaced her. In order to keep people employed, and to develop Mars as a functional colony for humans, the Government has limited the amount of robotic tasks. The purpose of Martian colonization was never just to have an unmanned planet mining resources to return to Earth, so much of the work must be done by humans."
+  },
+  {
+   "number": 40,
+   "title": "Spaceport Strikes",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Place 4 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round). Increase Profits by 2.",
+   "shaded": "Reduce Profits by 3 and MG Resources by 9.",
+   "unshaded_title": "Contracts enforced",
+   "unshaded_eg": "EG+",
+   "shaded_title": "The long lockout",
+   "shaded_eg": "EG-",
+   "tips": "The Earth Government Controller determines which pieces are sent from Earth to Transit during an Aldrin Cycler phase caused by the unshaded effect, and no pieces will be sent if there is no Earth Government Controller.",
+   "history": "Mars is still very dependent on the import of goods. While basic needs such as food and water are supplied locally, and 3D printing and manufacturing can produce other essentials, luxury goods and rare commodities must still be imported from Earth at a premium cost. The major import though, is labor. The primary spaceport is on Phobos, where goods and migrants are moved from shuttles to reusable rockets headed to the surface of Mars."
+  },
+  {
+   "number": 41,
+   "title": "Gandhi-Sharma",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Shift Sharma and Gandhi 1 level each towards Active Support. RD is Ineligible through next Event Round.",
+   "shaded": "Shift Gandhi and Sharma 1 level each towards Active Opposition. Replace all MG forces in Sharma with RD forces (replace Troops with Rebels and Bases with Bases).",
+   "unshaded_title": "Collusion exposed",
+   "shaded_title": "A free, tolerant Mars",
+   "tips": "The eligibility cylinder of a Faction that is made Ineligible through the next Event Round should immediately be moved to the Ineligible Factions box, and is not moved to Eligible Factions at the end of the current Event Round.",
+   "history": "Founded by the Indian government, Gandhi-Sharma is named after the founder of the modern Indian state and the first Indian in Space. As one of Earth’s most powerful nations, and the center of global democracy, Indian principles of democracy and self-determination have led this Labyrinth to generally be sympathetic to the Rebellion. The universities of Gandhi Labyrinth are second to none, and the students and faculty contain many of the most fervent and committed believers in Martian independence."
+  },
+  {
+   "number": 42,
+   "title": "The Martians",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Shift 2 spaces with EG Troops 1 level each towards Active Support.",
+   "shaded": "Shift 2 spaces with EG Troops 1 level each towards Active Opposition.",
+   "unshaded_title": "Earth is still home",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Self determination",
+   "shaded_eg": "EG-",
+   "tips": "None.",
+   "history": "With all the corporate bosses and security, Martian Government police forces, Red Dust rebels and Reclaimer fanatics, it’s easy to forget the average people of Mars. Like most armed conflicts, the majority of people just want to make it through, to live a good life, and to look after their families. They want a peaceful resolution to the conflict, and in between the violence and bloodshed of the Rebellion, numerous peaceful protests were held."
+  },
+  {
+   "number": 43,
+   "title": "The Tubes",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "corporations",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "MG or CORP may move any COIN forces from a Desert to an adjacent Desert, then may free Recon or free Assault in the destination Desert.",
+   "shaded": "RD or CR may move up to 3 Rebel Bases from any spaces to any adjacent Deserts.",
+   "unshaded_title": "Sudden redeployment",
+   "shaded_title": "It’s safer underground",
+   "tips": "None.",
+   "history": "Lava tubes dot the Martian underground, natural tunnels created by volcanic activity. Most early settlements on Mars used these tubes as their foundation, and the amount of work required to make a Lava tube safe for humans is a lot less than digging a completely new underground base. Some of the nastiest fighting of the Rebellion occurred far away from the Labyrinths, inside these lava tubes."
+  },
+  {
+   "number": 44,
+   "title": "New Córdoba",
+   "flashpoint": 2,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Remove up to 6 Rebel forces from New Córdoba (Bases last).",
+   "shaded": "Shift New Córdoba 1 level towards Active Opposition, then place 2 Rebels in each of New Córdoba and both adjacent Deserts.",
+   "unshaded_title": "Tolerance maintained",
+   "shaded_title": "False imprisonments",
+   "tips": "The unshaded effect may only remove a Base belonging to a Rebel Faction once none of that Faction’s Rebels remain in the selected space.",
+   "history": "Sultan bin Salman Al Saud was the first Saudi in space, and when the push to colonize Mars was at its peak, Saudi Hegemony over the Middle East was also at its zenith. The name “Salman” was chosen for a new Labyrinth as a statement to the rest of the Arab world of the primacy of Saudi Arabia."
+  },
+  {
+   "number": 45,
+   "title": "The Red Desert",
+   "flashpoint": 3,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "MG or CORP may move any number of COIN units from adjacent spaces to 1 Desert, then Activate all Rebels in that Desert and free Assault there.",
+   "shaded": "RD or CR may free March or Travel to 1 Desert, then free Ambush there (even if all Rebels are Active).",
+   "unshaded_title": "Search and destroy",
+   "shaded_title": "Surgical strike",
+   "tips": "The shaded effect may be used to Ambush even if all friendly Rebels are Active, but must still Activate a Hidden Rebel if possible.",
+   "history": "With all the human presence on Mars, and all the Labyrinths, maglevs, stations and outposts, people sometimes forget that 99.99% of Mars is still a barren inhospitable wasteland. Entire columns of troops and machinery can move about unseen and unobserved, and attack can come from any direction."
+  },
+  {
+   "number": 46,
+   "title": "The Mystery of Outpost 27",
+   "flashpoint": 3,
+   "faction_order": [
+    "red_dust",
+    "marsgov",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Remove a CORP Base and all units from 1 Unpopulated Desert. Increase Profits by 6 and CORP remains Eligible.",
+   "shaded": "Reduce Profits by 1 for each CORP Base in a space with Rebel forces.",
+   "unshaded_title": "Massive explosion",
+   "shaded_title": "Data stolen, servers trashed",
+   "tips": "All CORP forces removed by the unshaded effect are placed in Casualties. If the unshaded effect is executed CORP will remain Eligible for the next Event Round, regardless of whether or not they acted in the current Event Round.",
+   "history": "One of many ideas proposed for accelerated terraforming are controlled nuclear explosions in and around the Martian polar caps. There are many issues with this idea, but it is considered a potential quick fix for terraforming. Outpost 27 was the location of a secret Corporate site conducting illegal experimental work into this concept."
+  },
+  {
+   "number": 47,
+   "title": "Sudden Storm",
+   "flashpoint": 3,
+   "faction_order": [
+    "corporations",
+    "red_dust",
+    "marsgov",
+    "reclaimer"
+   ],
+   "unshaded": "Place all available Storm markers on their Raging Storm side in any spaces (maximum 1 Storm per space). Executing Faction remains Eligible.",
+   "shaded": "",
+   "unshaded_title": "All is dust",
+   "tips": "The eligibility cylinder of a Faction that remains Eligible should be returned to Eligible Factions at the end of the current Event Round, regardless of its current location.",
+   "history": "Dust storms on Mars are terrifying events, and while the winds never get as fast as a hurricane on earth, the sheer volume of fine dust particles in the air plays havoc with machinery and navigation. Storms can appear at short notice and cause havoc with communications and movement."
+  },
+  {
+   "number": 48,
+   "title": "Europa",
+   "flashpoint": 4,
+   "faction_order": [
+    "marsgov",
+    "red_dust",
+    "corporations",
+    "reclaimer"
+   ],
+   "unshaded": "Shift Europa 2 levels towards Active Support, then place 3 Supply markers on Earth.",
+   "shaded": "Shift Europa 2 levels towards Active Opposition, then RD draws 4 Campaign cards and plays 1 (shuffle the rest back into the deck).",
+   "unshaded_title": "Rockstar economy",
+   "unshaded_eg": "EG+",
+   "shaded_title": "Middle class activism",
+   "shaded_eg": "EG-",
+   "tips": "A space at Active Support that shifts to Neutral would also be affected by this card.",
+   "history": "Major dust storms periodically sweep across Mars, forcing everyone to stop what they are doing and take shelter. These naturally enforced ceasefires give an opportunity for rest, repairs, and redeployment. ‘Haboob’ is the Arabic word for an intense dust storm on Earth, reminiscent of the even larger and more powerful Martian dust storms."
+  },
+  {
+   "number": 49,
+   "title": "Dust Storm",
+   "flashpoint": 0,
+   "faction_order": [],
+   "dust_storm": true,
+   "unshaded": "",
+   "shaded": ""
+  },
+  {
+   "number": 50,
+   "title": "Dust Storm",
+   "flashpoint": 0,
+   "faction_order": [],
+   "dust_storm": true,
+   "unshaded": "",
+   "shaded": ""
+  },
+  {
+   "number": 51,
+   "title": "Dust Storm",
+   "flashpoint": 0,
+   "faction_order": [],
+   "dust_storm": true,
+   "unshaded": "",
+   "shaded": ""
+  }
+ ]
+}

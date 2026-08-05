@@ -1,0 +1,71 @@
+{
+ "_note": "Schieramento iniziale standard (Rulebook §3.1, p.18) verificato contro le Faction mat. I totali risultanti sono quelli stampati sull'Edge Track al setup: Supporto+EG 12, Opposizione+Basi RD 14, CR Controllo+Basi 7, Basi nemiche 10, Profits 0, RD 14 Risorse, MG 18 Risorse.",
+ "resources": {"marsgov": 18, "red_dust": 14},
+ "tracks": {
+  "eg_confidence": 3,
+  "eg_confidence_side": "EG-",
+  "flashpoint": 0,
+  "profits": 0,
+  "dust_storm_rounds": 0
+ },
+ "displaced_population": 4,
+ "edge_track_setup": {
+  "enemy_bases": 10, "profits": 0, "cr_control_plus_bases": 7,
+  "support_plus_eg": 12, "oppose_plus_bases": 14,
+  "red_dust_resources": 14, "marsgov_resources": 18
+ },
+ "available": {
+  "marsgov": {"mg_base": 1, "mg_troop": 12},
+  "corporations": {"corp_base": 6, "specops": 6, "security": 4},
+  "earthgov": {"eg_troop": 8},
+  "red_dust": {"rd_base": 4, "rd_rebel": 14},
+  "reclaimer": {"cr_base": 11, "cr_rebel": 9}
+ },
+ "off_map": {
+  "earth": {"eg_troop": 2, "security": 1, "specops": 1, "satellite": 2, "supply": 1, "population": 1},
+  "transit": {"eg_troop": 2, "security": 1, "specops": 1, "satellite": 1, "supply": 3},
+  "phobos": {"eg_troop": 4, "security": 2},
+  "orbit": {"satellite": 1}
+ },
+ "spaces": {
+  "europa":            {"forces": {"mg_troop": 2, "security": 1}, "support": "passive_support"},
+  "tenzing":           {"forces": {"mg_troop": 3, "security": 1, "cr_rebel": 1}, "support": "active_support"},
+  "tereshkova":        {"forces": {"mg_troop": 2, "rd_rebel": 1}, "support": "neutral"},
+  "shepard":           {"forces": {"mg_troop": 1, "rd_rebel": 2}, "support": "passive_opposition"},
+  "ascraeus_mons":     {"forces": {"cr_base": 1, "cr_rebel": 2}, "damage": 1, "support": "neutral"},
+  "tharsis_tholus":    {"forces": {"mg_base": 1, "mg_troop": 2}, "damage": 1, "support": "neutral"},
+  "arsia_mons":        {"forces": {}, "support": "neutral"},
+  "pavonis_mons":      {"forces": {}, "support": "passive_support"},
+  "syria_planum":      {"forces": {}, "support": "active_support"},
+  "noctis_labyrinthus":{"forces": {"rd_base": 1, "rd_rebel": 2}, "support": "neutral"},
+  "daedalia_planum":   {"forces": {"rd_rebel": 1}, "support": "neutral"},
+  "sinai_planum":      {"forces": {"rd_rebel": 1}, "support": "neutral"},
+
+  "new_cordoba":       {"forces": {"mg_troop": 2, "rd_rebel": 1, "cr_base": 1, "cr_rebel": 2}, "support": "neutral"},
+  "shenzhou":          {"forces": {"mg_troop": 2, "corp_base": 1, "security": 2, "rd_rebel": 1}, "support": "neutral"},
+  "rutherford":        {"forces": {}, "support": "neutral"},
+  "radau":             {"forces": {"rd_base": 1, "rd_rebel": 1}, "damage": 1, "support": "neutral"},
+  "marth":             {"forces": {"corp_base": 1, "security": 2}, "damage": 1, "support": "neutral"},
+  "trouvelot":         {"forces": {"cr_base": 1, "cr_rebel": 1}, "damage": 1, "support": "neutral"},
+
+  "gandhi":            {"forces": {"mg_troop": 1, "rd_base": 1, "rd_rebel": 2}, "support": "passive_opposition"},
+  "sharma":            {"forces": {"mg_troop": 1, "rd_base": 1, "rd_rebel": 3}, "support": "active_opposition"},
+  "alpheus_colles":    {"forces": {"rd_base": 1, "rd_rebel": 1}, "support": "passive_opposition"},
+  "coronae_montes":    {"forces": {"mg_base": 1, "mg_troop": 2, "cr_rebel": 2}, "damage": 1, "support": "neutral"},
+  "hellas_chaos":      {"forces": {"corp_base": 1, "security": 2}, "damage": 1, "support": "neutral"},
+
+  "wilderness":        {"forces": {"cr_base": 1, "cr_rebel": 3}, "support": "neutral"}
+ },
+ "approaching_storms": {
+  "_note": "§3.2: due tiri (d6 bianco = settore, d6 nero = spazio); se esce due volte lo stesso spazio si piazza una Raging Storm e i Reclaimer rimuovono un'unità nemica da quello spazio.",
+  "rolls": 2
+ },
+ "decks": {
+  "campaign": {"size": 12, "in_play_at_setup": 1},
+  "asset": {"size": 30, "opening_hand": 3},
+  "event": {
+   "_note": "§3.3: tolte le 3 Dust Storm, si mescolano le 48 restanti, si formano 3 pile da 12 (le altre 12 escono dal gioco senza essere viste), si mescola 1 Dust Storm nelle 6 carte in fondo a ogni pila, poi si impilano: mazzo finale di 39 carte.",
+   "piles": 3, "pile_size": 12, "removed": 12, "dust_storm_in_bottom": 6, "total": 39
+  }
+ }
+}

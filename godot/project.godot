@@ -1,0 +1,31 @@
+; Engine configuration file.
+; Motore COIN generico (condiviso con Cuba Libre / All Bridges Burning)
+; + modulo Red Dust Rebellion.
+
+config_version=5
+
+[application]
+
+config/name="Red Dust Rebellion — Digital"
+config/description="Motore generico per la serie COIN di GMT. Modulo attivo: Red Dust Rebellion."
+config/game_id="red_dust_rebellion"
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[autoload]
+
+GameRegistry="*res://coin_engine/GameRegistry.gd"
+
+[display]
+
+window/size/viewport_width=1500
+window/size/viewport_height=900
+window/stretch/mode="canvas_items"
+
+[debug]
+
+gdscript/warnings/unused_parameter=0
+
+[rendering]
+
+; Necessario per esportare l'app macOS universale (Intel + Apple Silicon).
+textures/vram_compression/import_etc2_astc=true
