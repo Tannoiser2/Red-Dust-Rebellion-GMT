@@ -1,0 +1,224 @@
+{
+  "_note": "Event Instructions (§8.5.5), dalla scheda del gioco fisico: cosa fa una Fazione NP su una carta Evento specifica. La maggior parte sono indicazioni su quale colonna usare per scegliere gli spazi, e finiscono nel Log perché siano leggibili. Le voci con `critical_if`, `performed_if` o `perform` sono invece calcolabili e le applica il motore: cambiano se l'Evento è Critico, se è considerato Performed, e quale delle due opzioni si gioca.",
+  "cards": {
+    "1": {
+      "corporations": {
+        "text": "Use Exploit to select spaces to shift towards Active Support."
+      }
+    },
+    "3": {
+      "corporations": {
+        "text": "Perform shaded effect.",
+        "perform": "shaded"
+      }
+    },
+    "5": {
+      "marsgov": {
+        "text": "Critical if any Satellites currently in Orbit, otherwise not effective.",
+        "critical_if": "satellites_in_orbit"
+      }
+    },
+    "6": {
+      "red_dust": {
+        "text": "If MG is player, reduce MG Resources by 6. Otherwise, remove all Supply markers from Transit."
+      }
+    },
+    "8": {
+      "red_dust": {
+        "text": "NP RD will not gain any Resources or increase Agitate Total."
+      },
+      "reclaimer": {
+        "text": "Increase Asset Total by 1."
+      }
+    },
+    "12": {
+      "marsgov": {
+        "text": "Use Remove or Replace to select one space with SpecOps and Hidden Rebels."
+      },
+      "corporations": {
+        "text": "Use Remove or Replace to select one space with SpecOps and Hidden Rebels."
+      },
+      "red_dust": {
+        "text": "Use Ambush to select one Labyrinth, place 2 RD Rebels there, then draw a Curiosity card for Ambush instructions."
+      }
+    },
+    "13": {
+      "marsgov": {
+        "text": "Use Remove to select a destination space, then Move Priorities treating Security as MG Troops and all spaces as adjacent."
+      },
+      "corporations": {
+        "text": "Use Remove to select a destination space, then Move Priorities treating all spaces as adjacent."
+      },
+      "red_dust": {
+        "text": "Use Shift Towards Active Opposition to select one space adjacent to a Maglev line, then do the same again to select a second space if necessary to determine a single Maglev line."
+      }
+    },
+    "14": {
+      "corporations": {
+        "text": "House using Place Population only at CORP Bases."
+      }
+    },
+    "15": {
+      "marsgov": {
+        "text": "Perform shaded effect.",
+        "perform": "shaded"
+      },
+      "red_dust": {
+        "text": "Perform unshaded effect.",
+        "perform": "unshaded"
+      }
+    },
+    "16": {
+      "red_dust": {
+        "text": "Do not remove any Population markers from Displaced Population."
+      },
+      "reclaimer": {
+        "text": "Remove all Population markers from Displaced Population."
+      }
+    },
+    "17": {
+      "marsgov": {
+        "text": "Use Shift Towards Active Support to select two Deserts with Opposition (if possible, otherwise select Neutral), then place Supply."
+      },
+      "corporations": {
+        "text": "Use Exploit to select any two Deserts, then increase Profits."
+      }
+    },
+    "18": {
+      "marsgov": {
+        "text": "Perform shaded effect.",
+        "perform": "shaded"
+      }
+    },
+    "20": {
+      "corporations": {
+        "text": "Use Exploit to select spaces to shift towards Active Support."
+      }
+    },
+    "24": {
+      "corporations": {
+        "text": "Use Exploit to select spaces to shift towards Active Support."
+      }
+    },
+    "26": {
+      "corporations": {
+        "text": "Critical only if 2+ non-Terraforming CORP Bases in Deserts, otherwise Performed.",
+        "critical_if": "two_basic_corp_bases_in_deserts"
+      },
+      "red_dust": {
+        "text": "Use Remove or Replace to select a destination space with a CORP Base reachable from one origin space with the most moveable RD Rebels, then use Move Priorities to move Rebels there."
+      },
+      "reclaimer": {
+        "text": "Use Remove or Replace to select a destination space with a CORP Base reachable from one origin space with the most moveable CR Rebels, then use Move Priorities to move Rebels (only) there."
+      }
+    },
+    "28": {
+      "marsgov": {
+        "text": "Add three Population markers to Displaced Population."
+      },
+      "red_dust": {
+        "text": "Performed if 4+ Population markers in Displaced Population, otherwise not effective.",
+        "performed_if": "four_in_displaced_population"
+      }
+    },
+    "29": {
+      "marsgov": {
+        "text": "Select player Faction first, then CR."
+      },
+      "corporations": {
+        "text": "Select player Faction first, then CR."
+      }
+    },
+    "30": {
+      "marsgov": {
+        "text": "Select Deserts with most Opposition, then use Remove or Replace."
+      },
+      "corporations": {
+        "text": "Select Deserts with most Opposition, then use Remove or Replace."
+      },
+      "red_dust": {
+        "text": "Use Shift Towards Active Opposition to select spaces with room for Available RD Bases first."
+      },
+      "reclaimer": {
+        "text": "Use Place Bases to select Unpopulated Deserts only."
+      }
+    },
+    "31": {
+      "marsgov": {
+        "text": "Remove a Campaign card that affects MG Operations if possible, then at random."
+      }
+    },
+    "34": {
+      "marsgov": {
+        "text": "Use Move Priorities and Recon Destination to select a destination with Active Rebels, then Assault there after moving."
+      },
+      "corporations": {
+        "text": "Use Move Priorities and Recon Destination to select a destination with Active Rebels, then Assault there after moving."
+      },
+      "red_dust": {
+        "text": "Use Move Priorities and March Destination to select a Populated destination not at Active Opposition, then Campaign there after moving."
+      },
+      "reclaimer": {
+        "text": "Use Move Priorities and Travel Destination to select a destination with an enemy Base, then Attack there after moving."
+      }
+    },
+    "36": {
+      "marsgov": {
+        "text": "Select a Desert using Remove or Replace, then use Move Priorities to move units there, treating all spaces as adjacent. Recon without moving any units, then Assault."
+      },
+      "corporations": {
+        "text": "Select a Desert using Remove or Replace, then use Move Priorities to move units there, treating all spaces as adjacent. Recon without moving any units, then Assault."
+      }
+    },
+    "38": {
+      "red_dust": {
+        "text": "Use Place Damage to select one Labyrinth adjacent to a Maglev line, then again to select a second Labyrinth if necessary to determine a single Maglev line."
+      },
+      "reclaimer": {
+        "text": "Use Place Damage to select one Labyrinth adjacent to a Maglev line, then again to select a second Labyrinth if necessary to determine a single Maglev line."
+      }
+    },
+    "39": {
+      "corporations": {
+        "text": "Use Remove or Replace to select one Labyrinth with Rebels and CORP units."
+      },
+      "reclaimer": {
+        "text": "Use Shift Towards Neutral to select Labyrinths at Support to shift if possible, then select Labyrinths with least Population."
+      }
+    },
+    "45": {
+      "marsgov": {
+        "text": "Use Remove or Replace to select a Desert with Rebel forces and adjacent to moveable units, then use Move Priorities to move units there from adjacent spaces."
+      },
+      "corporations": {
+        "text": "Use Remove or Replace to select a Desert with Rebel forces and adjacent to moveable units, then use Move Priorities to move units there from adjacent spaces."
+      }
+    },
+    "46": {
+      "marsgov": {
+        "text": "Perform shaded effect.",
+        "perform": "shaded"
+      }
+    }
+  },
+  "assets": {
+    "7": {
+      "text": "Critical only if 15+ CR Rebels on map and any enemy Bases in Deserts, otherwise Performed. Select a Desert with enemy Bases using Attack, then use Move Priorities to move units to there and any adjacent spaces."
+    },
+    "8": {
+      "text": "Use Place Damage, but skip the «Fewest enemy forces» row."
+    },
+    "11": {
+      "text": "Critical only if CR forces in 3+ Labyrinths."
+    },
+    "12": {
+      "text": "Use Place Damage to select a Labyrinth, then Remove to select an adjacent Desert."
+    },
+    "13": {
+      "text": "Use NP Dust Storm Round Redeployment instructions to move up to 6 CR Rebels to one Desert."
+    },
+    "29": {
+      "text": "Use Place Damage to select one Labyrinth, then Move Priorities to move three CR Rebels there. Remove three Population markers."
+    }
+  }
+}

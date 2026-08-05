@@ -216,8 +216,12 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Le Fazioni NP giocano gli Eventi: scelgono fra opzione normale e
       ombreggiata quella che risulta efficace per loro, e saltano gli Eventi
       marcati ⊘
-- [ ] Da trascrivere: Event Instructions, Capability & Campaign Effects,
-      istruzioni NP di Flashpoint e Dust Storm Round
+- [x] **Event Instructions** (§8.5.5): 25 carte Evento e 6 Asset card in
+      `data/np_event_instructions.json`. Le indicazioni su quale colonna usare
+      finiscono nel Log perché siano leggibili al tavolo; le condizioni
+      calcolabili (`critical_if`, `performed_if`, `perform`) le applica il motore
+- [ ] Da trascrivere: Capability & Campaign Effects, istruzioni NP di Flashpoint
+      e Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
       Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il

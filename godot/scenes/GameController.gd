@@ -693,6 +693,10 @@ func np_take_turn() -> Dictionary:
 			events.log_lines.clear()
 			res["event_option"] = "ombreggiato" if which == 1 else "non ombreggiato"
 			res["event_ok"] = ev_res.get("ok", false)
+			# Le istruzioni della carta, se ci sono, vanno lette al tavolo.
+			var note: Dictionary = np.event_instruction(fid, state.current_card)
+			if not note.is_empty():
+				emit_signal("log_line", "  · Istruzione di carta: %s" % note.get("text", ""))
 
 	# Si registra l'azione nella sequenza, come farebbe un giocatore.
 	match String(res.get("action", "")):
@@ -743,6 +747,10 @@ func _np_context() -> Dictionary:
 func _np_event_option(fid: String, card: int) -> int:
 	if np.event_not_performed(fid, card):
 		return -1
+	# La tabella Event Instructions può imporre quale delle due opzioni giocare.
+	var forced := np.event_forced_option(fid, card)
+	if forced != "":
+		return 1 if forced == "shaded" else 0
 	for shaded in [false, true]:
 		var opt: Dictionary = events.option(card, shaded)
 		if opt.is_empty():

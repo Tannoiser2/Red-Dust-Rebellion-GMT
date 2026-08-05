@@ -26,6 +26,7 @@ const PIECE_FILE := "np_piece_priorities.json"
 const MOVE_FILE := "np_move_priorities.json"
 const ELIGIBILITY_FILE := "np_eligibility.json"
 const SYMBOLS_FILE := "np_event_symbols.json"
+const INSTRUCTIONS_FILE := "np_event_instructions.json"
 
 ## §8.4.1: valori iniziali dei contatori surrogati.
 const START_SUPPLY := 0
@@ -46,6 +47,8 @@ var move_priorities: Dictionary = {}
 var eligibility_table: Dictionary = {}
 ## §8.5.5: ★ Critical e ⊘ Not Performed, per carta e per Fazione.
 var event_symbols: Dictionary = {}
+## §8.5.5 Event Instructions: cosa fa una Fazione NP su una carta specifica.
+var event_instructions: Dictionary = {}
 var log_lines: Array[String] = []
 
 
@@ -61,6 +64,7 @@ func _init(p_state: GameState, p_module: RDRModule,
 	move_priorities = _load(MOVE_FILE)
 	eligibility_table = _load(ELIGIBILITY_FILE)
 	event_symbols = _load(SYMBOLS_FILE).get("cards", {})
+	event_instructions = _load(INSTRUCTIONS_FILE)
 
 
 func _load(file_name: String) -> Dictionary:
@@ -358,9 +362,42 @@ func _piece_categories(faction: String, e: Dictionary) -> Array:
 	return out
 
 
-## §8.5.5: l'Evento è Critico per questa Fazione? (simbolo ★ sulla carta)
+## §8.5.5: l'Evento è Critico per questa Fazione? Il simbolo ★ è stampato sulla
+## carta, ma la tabella Event Instructions può renderlo condizionato.
 func event_critical(faction: String, card: int) -> bool:
-	return String((event_symbols.get(str(card), {}) as Dictionary).get(faction, "")) == "critical"
+	var printed := String((event_symbols.get(str(card), {}) as Dictionary).get(faction, "")) \
+		== "critical"
+	var note := event_instruction(faction, card)
+	if note.has("critical_if"):
+		return _instruction_condition(String(note["critical_if"]))
+	return printed
+
+
+## Istruzione della tabella per quella carta e quella Fazione ({} se non c'è).
+func event_instruction(faction: String, card: int) -> Dictionary:
+	var row: Dictionary = (event_instructions.get("cards", {}) as Dictionary).get(str(card), {})
+	return row.get(faction, {})
+
+
+## Quale opzione giocare, se la tabella lo impone: "shaded", "unshaded" o "".
+func event_forced_option(faction: String, card: int) -> String:
+	return String(event_instruction(faction, card).get("perform", ""))
+
+
+func _instruction_condition(cond: String) -> bool:
+	match cond:
+		"satellites_in_orbit":
+			return module.count_in(state, "orbit", "satellite") > 0
+		"two_basic_corp_bases_in_deserts":
+			var n := 0
+			for sid in module.mars_spaces(state):
+				var s := String(sid)
+				if module.is_desert(state, s):
+					n += module.count_in(state, s, "corp_base", "basic")
+			return n >= 2
+		"four_in_displaced_population":
+			return int(state.tracks.get("displaced_population", 0)) >= 4
+	return false
 
 
 ## §8.5.5: questa Fazione non esegue l'Evento? (simbolo ⊘ sulla carta)

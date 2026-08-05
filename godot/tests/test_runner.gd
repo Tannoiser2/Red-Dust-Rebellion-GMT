@@ -83,6 +83,7 @@ func _init() -> void:
 	test_np_eligibility()
 	test_np_effective_events()
 	test_np_event_symbols()
+	test_np_event_instructions()
 	test_np_cards()
 	test_campaign_effects()
 
@@ -2359,6 +2360,42 @@ func test_np_event_symbols() -> void:
 				skip += 1
 		ok(crit >= 2, "%s ha %d Eventi Critici" % [fid3, crit])
 		ok(skip >= 3, "%s ha %d Eventi che non esegue" % [fid3, skip])
+
+
+func test_np_event_instructions() -> void:
+	print("Non-Player — Event Instructions (§8.5.5)")
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "corporations", "red_dust", "reclaimer"])
+	ok(not np.event_instructions.is_empty(), "la tabella delle istruzioni è caricata")
+	eq((np.event_instructions.get("cards", {}) as Dictionary).size(), 25,
+		"25 carte hanno istruzioni")
+	eq((np.event_instructions.get("assets", {}) as Dictionary).size(), 6,
+		"…più 6 Asset card dei Reclaimer")
+
+	# #1 dice alle Corporations quale colonna usare; il testo finisce nel Log.
+	var one: Dictionary = np.event_instruction("corporations", 1)
+	ok(String(one.get("text", "")).contains("Exploit"), "#1 istruisce le CORP sull'Exploit")
+	eq(np.event_instruction("red_dust", 1).is_empty(), true, "…e non dice nulla al Red Dust")
+
+	# #3 impone alle Corporations l'opzione ombreggiata.
+	eq(np.event_forced_option("corporations", 3), "shaded",
+		"#3: le CORP giocano l'opzione ombreggiata")
+	eq(np.event_forced_option("marsgov", 3), "", "…mentre MarsGov non è vincolato")
+	# #15 vincola le due Fazioni a opzioni opposte.
+	eq(np.event_forced_option("marsgov", 15), "shaded", "#15: MarsGov gioca l'ombreggiata")
+	eq(np.event_forced_option("red_dust", 15), "unshaded", "…e il Red Dust la normale")
+
+	# #5 è Critica per MarsGov solo se ci sono Satelliti in Orbita.
+	var sats := module.count_in(s, "orbit", "satellite")
+	ok(sats > 0, "allo schieramento ci sono Satelliti in Orbita (%d)" % sats)
+	eq(np.event_critical("marsgov", 5), true, "#5 è Critica per MarsGov con i Satelliti su")
+	module.remove_pieces(s, "orbit", "satellite", 99, "casualties")
+	eq(np.event_critical("marsgov", 5), false, "…e non lo è più senza")
+
+	# #28 è «Performed» per il Red Dust solo con 4+ marker in Displaced Population.
+	var note28: Dictionary = np.event_instruction("red_dust", 28)
+	eq(String(note28.get("performed_if", "")), "four_in_displaced_population",
+		"#28 porta la sua condizione")
 
 
 func test_np_cards() -> void:
