@@ -410,6 +410,40 @@ func _initialize() -> void:
 		"…e converte davvero Ribelli RD (%d → %d)" % [rd_before_a, rd_after_a])
 	_ok(gc.cards.discard_pile().has(10), "…finendo negli scarti")
 
+	# --- Partita in solo: le Fazioni Non-Player giocano da sé (§8.0) --------
+	gc.new_game("standard", 20240424, ["marsgov", "corporations", "reclaimer"])
+	await process_frame
+	_ok(gc.np != null and gc.np.is_np("marsgov"), "le Fazioni Non-Player sono create")
+	_ok(gc.np.is_player("red_dust"), "il Red Dust resta al giocatore")
+	_ok(gc.np_ops.cards.size() == 48, "il bot ha tutte e 48 le facce delle carte")
+	_ok(gc.np.draw_card("marsgov") != "", "il mazzo Curiosity di NP MarsGov pesca")
+
+	var turns := 0
+	var errors: Array = []
+	var guard_np := 0
+	while gc.sequence != null and guard_np < 24:
+		guard_np += 1
+		var fid_np: String = gc.sequence.pending_faction()
+		if fid_np == "":
+			gc.end_card()
+			await process_frame
+			continue
+		if not gc.np.is_np(fid_np):
+			gc.do_pass()          # il turno del giocatore: qui passa
+			await process_frame
+			continue
+		var res_np: Dictionary = gc.np_take_turn()
+		await process_frame
+		if not res_np.get("ok", false):
+			errors.append("%s: %s" % [fid_np, res_np.get("error", "")])
+		else:
+			turns += 1
+		if turns >= 6:
+			break
+	_ok(errors.is_empty(), "sei turni di bot senza errori (%s)" % ", ".join(errors))
+	_ok(turns >= 6, "il bot ha giocato %d turni" % turns)
+	_ok(gc.state != null, "la partita è ancora coerente dopo i turni del bot")
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()

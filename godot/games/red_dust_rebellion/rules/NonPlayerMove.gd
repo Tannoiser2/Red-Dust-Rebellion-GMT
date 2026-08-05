@@ -364,6 +364,139 @@ func plan_pair(faction: String, op_id: String, origin: String, dest: String,
 	return moves
 
 
+## Ciclo completo A → B → keep/get → C dell'Operazione di movimento.
+## Restituisce {ok, pairs: [{from, to, moved}], trace}.
+func run_operation(faction: String, op_id: String, activation_number: int,
+		limited: bool = false) -> Dictionary:
+	var column := String(DEST_COLUMN.get(op_id, ""))
+	if column == "":
+		return {"ok": false, "error": "%s non è un'Operazione di movimento." % op_id,
+			"pairs": [], "trace": []}
+	var steps: Dictionary = np.move_priorities.get("steps", {}).get(faction, {})
+	# §8.5.7: i Reclaimer scelgono prima l'origine, gli altri la destinazione.
+	var origin_first := String(steps.get("a", "destination")) == "origin"
+	var pairs: Array = []
+	var trace: Array[String] = []
+	var used_dest: Array = []
+	var used_origin: Array = []
+	var cap: int = np.limited_space_cap(faction) if limited else 8
+
+	while pairs.size() < cap:
+		var dest := ""
+		var origin := ""
+		if origin_first:
+			origin = _pick_origin_first(faction, op_id, used_origin)
+			if origin == "":
+				break
+			dest = _pick_destination(faction, op_id, column, used_dest + [origin])
+		else:
+			dest = _pick_destination(faction, op_id, column, used_dest)
+			if dest == "":
+				break
+			origin = choose_origin(faction, op_id, dest, used_origin + [dest])
+		if dest == "" or origin == "":
+			break
+
+		var notes: Array = []
+		var moves := plan_pair(faction, op_id, origin, dest, notes)
+		if moves.is_empty():
+			# Nessuna forza da muovere: quell'estremità non serve più.
+			used_origin.append(origin)
+			continue
+		var res := _execute(faction, op_id, dest, origin, moves)
+		if not res.get("ok", false):
+			trace.append("%s → %s rifiutata: %s" % [origin, dest, res.get("error", "")])
+			used_origin.append(origin)
+			continue
+		var moved := 0
+		for m in moves:
+			moved += int(m["count"])
+		pairs.append({"from": origin, "to": dest, "moved": moved})
+		trace.append("%s → %s: %d unità (%s)" % [
+			_name(origin), _name(dest), moved, ", ".join(PackedStringArray(notes))])
+		used_dest.append(dest)
+		used_origin.append(origin)
+
+		# §8.5.7 passo C: si torna al passo A o al passo B secondo l'esito.
+		if not _step_c_new_destination(faction, dest, origin):
+			used_dest.erase(dest)   # si riprova la stessa destinazione da un'altra origine
+		if activation_number > 0:
+			var check := np.activation_check(faction, activation_number, limited)
+			if not bool(check["ok"]):
+				break
+	return {"ok": true, "pairs": pairs, "trace": trace}
+
+
+## Passo C: true se si sceglie una nuova destinazione, false una nuova origine.
+func _step_c_new_destination(faction: String, dest: String, origin: String) -> bool:
+	match faction:
+		"marsgov", "corporations":
+			return state.spaces[dest].control == "coin"
+		"red_dust":
+			var ctrl: String = state.spaces[dest].control
+			return ctrl == "" or ctrl == faction
+		"reclaimer":
+			# Se restano Ribelli muovibili nell'origine si cerca un'altra
+			# destinazione, altrimenti una nuova origine.
+			return _count_types(origin, ["cr_rebel"]) \
+				- keep_in_origin(faction, origin, "travel") > 0
+	return true
+
+
+func _pick_destination(faction: String, op_id: String, column: String,
+		exclude: Array) -> String:
+	var pool: Array = []
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if exclude.has(s) or not ops.act.selectable(s, ops.act.storm_free(faction)):
+			continue
+		if op_id == "secure" and not module.is_labyrinth(state, s):
+			continue
+		if op_id == "recon" and not module.is_desert(state, s):
+			continue
+		if ops.legal_origins_for(op_id, faction, s, movable_types(faction, op_id)).is_empty():
+			continue
+		pool.append(s)
+	if pool.is_empty():
+		return ""
+	return String(np.select_space(faction, column, pool)["space"])
+
+
+## §5.8: il Travel dei Reclaimer sceglie prima l'origine, quella con più forze.
+func _pick_origin_first(faction: String, op_id: String, exclude: Array) -> String:
+	var types := movable_types(faction, op_id)
+	var best := ""
+	var best_n := 0
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if exclude.has(s):
+			continue
+		var n := _count_types(s, types) - keep_in_origin(faction, s, op_id)
+		if n > best_n:
+			best_n = n
+			best = s
+	return best
+
+
+func _execute(faction: String, op_id: String, dest: String, origin: String,
+		moves: Array) -> Dictionary:
+	match op_id:
+		"secure":
+			return ops.secure({"faction": faction, "dest": [dest], "moves": moves})
+		"recon":
+			return ops.recon({"faction": faction, "dest": [dest], "moves": moves})
+		"march":
+			return ops.march({"dest": [dest], "moves": moves})
+		"travel":
+			return ops.travel({"origins": [origin], "moves": moves})
+	return {"ok": false, "error": "Operazione '%s' non gestita." % op_id}
+
+
+func _name(sid: String) -> String:
+	var sd: SpaceDef = state.game_def.space(sid)
+	return sd.name if sd != null else sid
+
+
 ## §8.5.7 passo B: fra gli spazi a portata, quello con più forze muovibili.
 func choose_origin(faction: String, op_id: String, dest: String, exclude: Array) -> String:
 	var types := movable_types(faction, op_id)

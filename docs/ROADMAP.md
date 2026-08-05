@@ -186,8 +186,15 @@ fatto su Cuba Libre e All Bridges Burning.
       una Limitata o passa. Le condizioni su Critical/Performed/effective
       arriveranno da Effective Events ed Event Instructions; finché mancano la
       tabella cade sull'ultima riga e `degraded` lo dichiara
-- [ ] Collegare il motore di movimento a Secure, Recon, March, Travel, Transport
-      e Raid nel ciclo A/B/C completo con i tiri di Activation Number
+- [x] Ciclo A/B/C completo del movimento e collegamento a Secure, Recon, March e
+      Travel, con i tiri di Activation Number fra una coppia e l'altra
+- [x] **Turno completo di una Fazione NP** (`GameController.np_take_turn()`):
+      Eligibility → pescata della carta Curiosity → lettura dell'albero →
+      esecuzione, con tutto il ragionamento nel Log
+- [x] Mazzo Curiosity per Fazione, che gira a ciclo continuo come da §8.9
+- [ ] Istruzioni di Train (MarsGov) e Logistics (CORP): le carte si leggono ma le
+      istruzioni non agiscono ancora — il Log lo dichiara riga per riga
+- [ ] Transport e Raid (Attività Speciali di movimento)
 - [x] Interprete delle carte *Curiosity* (§8.5.3) e **tutte e 48 le facce**
       delle 24 carte in `data/np_cards.json`: riquadri in cima con sì/no verso
       «pesca» o «gira», bivi, blocchi di istruzioni e Attività Speciali. Gli `id`

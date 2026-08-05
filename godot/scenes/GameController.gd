@@ -21,6 +21,10 @@ var specials: RDRSpecials
 var cards: RDRCards
 ## Esecuzione degli Eventi (§7.0).
 var events: RDREvents
+## §8.0: sistema Non-Player *Curiosity*, se ci sono Fazioni gestite dal bot.
+var np: RDRNonPlayer
+var np_ops: RDRNonPlayerOps
+var np_move: RDRNonPlayerMove
 
 ## §Annulla: istantanee dello stato prima di ogni azione. Bastano lo stato di
 ## gioco (GameState sa serializzarsi) e la sequenza della carta; i round e i
@@ -48,7 +52,10 @@ func _ready() -> void:
 
 ## `seed_value` diverso da 0 rende la partita riproducibile (mazzi e dadi):
 ## serve ai test e, in prospettiva, al salvataggio/ripresa.
-func new_game(scenario: String = "standard", seed_value: int = 0) -> void:
+## `np_factions` elenca le Fazioni gestite dal sistema Non-Player: vuoto = partita
+## fra soli giocatori, com'è stato finora.
+func new_game(scenario: String = "standard", seed_value: int = 0,
+		np_factions: Array = []) -> void:
 	module = GameRegistry.create_module()
 	game_def = module.build_game_def()
 	state = GameState.new(game_def)
@@ -78,6 +85,14 @@ func new_game(scenario: String = "standard", seed_value: int = 0) -> void:
 	events = RDREvents.new(state, rdr())
 	events.cards = cards
 	events.rounds = rounds
+
+	np = RDRNonPlayer.new(state, rdr(), rng)
+	np.setup(np_factions)
+	np_ops = RDRNonPlayerOps.new(np, ops)
+	np_move = RDRNonPlayerMove.new(np, ops)
+	np_ops.move = np_move
+	for fid in np_factions:
+		np.setup_deck(String(fid), RDRNonPlayerOps.DECKS.get(String(fid), []))
 	_undo.clear()
 	rounds.begin_game()
 	_drain_log()
@@ -643,6 +658,74 @@ func play_asset_card(number: int, choices = {}) -> Dictionary:
 		res["free_ops"] = ev.get("free_ops", [])
 	refresh()
 	return res
+
+
+## §8.0: la Fazione Non-Player di turno gioca da sé. Restituisce il resoconto,
+## già registrato nella sequenza della carta.
+func np_take_turn() -> Dictionary:
+	if sequence == null or sequence.pending_faction() == "":
+		return {"ok": false, "error": "Non è il turno di nessuno."}
+	var fid := sequence.pending_faction()
+	if not np.is_np(fid):
+		return {"ok": false, "error": "%s non è una Fazione Non-Player." % fid}
+	snapshot("Turno di %s (bot)" % game_def.faction(fid).short_name)
+	var slot := "first" if sequence.is_first_slot() else "second"
+	var res: Dictionary = np_ops.take_turn(fid, slot, _np_context(), _np_rng())
+	for line in np.log_lines + np_ops.log_lines + np_move.log_lines + ops.log_lines:
+		emit_signal("log_line", line)
+	np.log_lines.clear()
+	np_ops.log_lines.clear()
+	np_move.log_lines.clear()
+	ops.log_lines.clear()
+	for line in res.get("trace", []):
+		emit_signal("log_line", "  · %s" % line)
+	if not res.get("ok", false):
+		_undo.pop_back()
+		return res
+
+	# Si registra l'azione nella sequenza, come farebbe un giocatore.
+	match String(res.get("action", "")):
+		"pass":
+			sequence.act_pass()
+		"lim_op":
+			sequence.act(CoinEnums.ActionType.LIMITED_OPERATION)
+		"op_only":
+			sequence.act(CoinEnums.ActionType.OPERATION)
+		"event", "asset_event":
+			sequence.act(CoinEnums.ActionType.EVENT)
+		_:
+			sequence.act(CoinEnums.ActionType.OPERATION_WITH_SPECIAL)
+	emit_signal("log_line", "%s (bot): %s." % [
+		game_def.faction(fid).short_name, res.get("operation", res.get("action", ""))])
+	_after_action()
+	return res
+
+
+## Ciò che il bot sa della carta in corso. Critical/Performed/effective
+## dipendono da tabelle non ancora trascritte: restano fuori, e la Eligibility
+## lo dichiara con `degraded`.
+func _np_context() -> Dictionary:
+	var ctx := {}
+	if sequence != null and not sequence.is_first_slot():
+		ctx["first_chose"] = _np_first_choice
+	if rounds != null:
+		ctx["next_is_dust_storm"] = int(rdr().card_flashpoint.get(rounds.next_card(), -1)) < 0
+	return ctx
+
+
+var _np_first_choice := ""
+var _np_rng_instance: RandomNumberGenerator = null
+
+
+func _np_rng() -> RandomNumberGenerator:
+	if _np_rng_instance == null:
+		_np_rng_instance = RandomNumberGenerator.new()
+		var seed_value := int(state.tracks.get("seed", 0))
+		if seed_value != 0:
+			_np_rng_instance.seed = seed_value + 977
+		else:
+			_np_rng_instance.randomize()
+	return _np_rng_instance
 
 
 ## §7.0: Operazioni gratuite concesse dagli Eventi e non ancora eseguite.

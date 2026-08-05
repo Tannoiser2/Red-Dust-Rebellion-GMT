@@ -409,6 +409,116 @@ func _enemy_base_in(sid: String, faction: String) -> bool:
 	return false
 
 
+## Carte Curiosity di ciascuna Fazione (i fronti; i retri si raggiungono girando).
+const DECKS := {
+	"marsgov": ["A", "B", "C", "D", "E", "F"],
+	"corporations": ["G", "H", "J", "K", "L", "M"],
+	"red_dust": ["N", "P", "Q", "R", "S", "T"],
+	"reclaimer": ["U", "V", "W", "X", "Y", "Z"],
+}
+
+## Motore di movimento, se collegato: serve alle Operazioni che spostano pezzi.
+var move: RDRNonPlayerMove = null
+
+
+## §8.5: il turno completo di una Fazione NP.
+## Decide l'azione con la tabella di Eligibility, pesca una carta Curiosity, la
+## legge (pescandone un'altra o girandola quando la carta lo impone) ed esegue
+## l'Operazione che ne risulta.
+## Restituisce {ok, action, card, operation, pairs/spaces, trace}.
+func take_turn(faction: String, slot: String, ctx: Dictionary = {},
+		rng: RandomNumberGenerator = null) -> Dictionary:
+	var r := rng if rng != null else RandomNumberGenerator.new()
+	var trace: Array[String] = []
+	var decision := np.choose_action(faction, slot, ctx)
+	trace.append("Eligibility: %s → %s" % [decision["label"], decision["action"]])
+	var action := String(decision["action"])
+	if action in ["pass", "event", "asset_event"]:
+		# L'Evento richiede Effective Events ed Event Instructions, non ancora
+		# trascritte: per ora si passa e lo si dichiara.
+		return {"ok": true, "action": action, "trace": trace,
+			"degraded": bool(decision.get("degraded", false))}
+
+	var limited := action == "lim_op"
+	# §8.5.3: si pesca finché una carta non porta a un'Operazione (al massimo
+	# tutto il mazzo, per non girare a vuoto).
+	var card_id := ""
+	var read: Dictionary = {}
+	for attempt in range(DECKS.get(faction, []).size() * 2):
+		card_id = np.draw_card(faction)
+		if card_id == "":
+			break
+		read = read_card(card_id, faction, r)
+		trace.append_array(read.get("trace", []))
+		if String(read.get("outcome", "")) == "flip":
+			card_id = String(read.get("next", ""))
+			if card_id == "":
+				continue
+			read = read_card(card_id, faction, r)
+			trace.append_array(read.get("trace", []))
+		if String(read.get("outcome", "")) == "operation":
+			break
+	if String(read.get("outcome", "")) != "operation":
+		return {"ok": false, "action": action, "trace": trace,
+			"error": "Nessuna carta Curiosity porta a un'Operazione."}
+
+	var op_id := String(read["operation"])
+	var an := int(read.get("activation_number", 0))
+	trace.append("Carta %s → %s (AN %d)" % [card_id, op_id, an])
+	var out := {"ok": true, "action": action, "card": card_id, "operation": op_id,
+		"trace": trace, "degraded": bool(decision.get("degraded", false))}
+
+	if NEEDS_MOVE_PRIORITIES.has(op_id):
+		if move == null:
+			out["ok"] = false
+			out["error"] = "Motore di movimento non collegato."
+			return out
+		var moved := move.run_operation(faction, op_id, an, limited)
+		out["pairs"] = moved.get("pairs", [])
+		trace.append_array(moved.get("trace", []))
+		return out
+
+	out["spaces"] = _run_instructions(faction, op_id, read.get("instructions", []), an, limited)
+	return out
+
+
+## Esegue le istruzioni della carta che sappiamo già eseguire (§8.6).
+func _run_instructions(faction: String, op_id: String, instructions: Array,
+		an: int, limited: bool) -> Array:
+	var used: Array = []
+	for entry in instructions:
+		var i: Dictionary = entry
+		if i.has("only_if_player") and not np.is_player(String(i["only_if_player"])):
+			continue
+		# Le istruzioni col numerale bianco non fanno tirare l'Activation Number.
+		var roll := 0 if bool(i.get("no_an_roll", false)) else an
+		match String(i["id"]):
+			"rally_place_bases":
+				used.append_array(rally_place_bases(faction, roll, limited))
+			"rally_place_rebels", "rally_alternate_place_upgrade":
+				used.append_array(rally_place_rebels(faction, roll, limited))
+			"rally_flip_hidden":
+				used.append_array(rally_flip_hidden(faction, roll, limited))
+			"rally_dig_in":
+				var dug := rally_dig_in()
+				if dug != "":
+					used.append(dug)
+			"attack_support":
+				used.append_array(attack(faction, "support", roll, limited))
+			"attack_three_rebels":
+				used.append_array(attack(faction, "three_rebels", roll, limited))
+			"attack_all_active":
+				used.append_array(attack(faction, "all_active", roll, limited))
+			"campaign":
+				used.append_array(campaign(roll, limited))
+			"preach":
+				used.append_array(preach(roll, limited))
+			_:
+				log_lines.append("NP %s: istruzione «%s» non ancora eseguibile." % [
+					faction, i["id"]])
+	return used
+
+
 ## Si può eseguire questa Operazione per questa Fazione NP, con i dati che ci sono?
 func can_run(faction: String, op_id: String) -> Dictionary:
 	if NEEDS_MOVE_PRIORITIES.has(op_id):

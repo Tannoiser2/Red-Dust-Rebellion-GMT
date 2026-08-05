@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**866 test del modulo + 100 controlli di smoke test della scena, 0 falliti.**
+**866 test del modulo + 107 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -102,8 +102,10 @@ disponibile in UI è il Passo.
 | Non-Player: Piece Priorities §8.5.8 | ✅ tabella e selettore dei pezzi |
 | Non-Player: Move Priorities §8.5.7 | ✅ Keep/Get e scelta dell'origine |
 | Non-Player: Eligibility Table §8.5.2 | ✅ decide Evento / Op+SA / Limitata / Passo |
-| Non-Player: Operazioni §8.6 (Rally, Attack, Campaign, Preach) | ✅ eseguite uno spazio alla volta |
-| Non-Player: Operazioni di movimento | ⬜ serve la tabella Move Priorities |
+| Non-Player: turno completo (Eligibility → carta → Operazione) | ✅ `GameController.np_take_turn()` |
+| Non-Player: Rally, Attack, Campaign, Preach | ✅ uno spazio alla volta |
+| Non-Player: Secure, Recon, March, Travel | ✅ ciclo A/B/C con Keep e Get |
+| Non-Player: Train e Logistics | ⬜ la carta si legge, le istruzioni non agiscono |
 | Non-Player: 24 carte *Curiosity* | ✅ tutte e 48 le facce, con l'interprete |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 

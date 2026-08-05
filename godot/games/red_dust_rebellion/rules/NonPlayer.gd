@@ -128,6 +128,46 @@ func add_asset(delta: int) -> void:
 
 
 # ---------------------------------------------------------------------------
+# §8.5.3 Mazzo delle carte Curiosity
+# ---------------------------------------------------------------------------
+
+## Un mazzo per Fazione NP: sei carte, che si pescano a rotazione. §8.9: «è
+## possibile ciclare tutto il mazzo prima di un rimescolamento, quindi si può
+## finire per pescare la stessa carta più volte».
+func setup_deck(faction: String, card_ids: Array) -> void:
+	var deck: Array = card_ids.duplicate()
+	for i in range(deck.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var tmp = deck[i]
+		deck[i] = deck[j]
+		deck[j] = tmp
+	_decks()[faction] = deck
+
+
+func _decks() -> Dictionary:
+	if not state.tracks.has("curiosity_decks"):
+		state.tracks["curiosity_decks"] = {}
+	return state.tracks["curiosity_decks"]
+
+
+## Pesca la prossima carta della Fazione; il mazzo si richiude a ciclo continuo.
+func draw_card(faction: String) -> String:
+	var decks := _decks()
+	var deck: Array = decks.get(faction, [])
+	if deck.is_empty():
+		return ""
+	var card = deck.pop_front()
+	deck.append(card)   # va in fondo: il mazzo gira
+	return String(card)
+
+
+## §4.3 Reset: il mazzo Curiosity si rimescola.
+func shuffle_deck(faction: String) -> void:
+	var deck: Array = _decks().get(faction, [])
+	setup_deck(faction, deck)
+
+
+# ---------------------------------------------------------------------------
 # §8.5.2 Eligibility dei Reclaimer NP
 # ---------------------------------------------------------------------------
 
