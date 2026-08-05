@@ -77,9 +77,17 @@ fatto su Cuba Libre e All Bridges Burning.
 
 ## Fase 5 — Carte
 
+- [x] 30 Asset card: valore, tipo (capability/event/resource), bonus per
+      l'Operazione nominata, testi — letti dalle immagini del Vassal
+- [x] 12 Campaign card: titoli ed effetti
+- [x] Sistema mazzi (`rules/Cards.gd`): mano da 6, pagamento delle Operazioni
+      scartando carte, scarti per anticipare il turno (con il bonus di #19/#22),
+      Capability permanenti, pescate del Dust Storm Round, rimescolamento
+- [x] Partita riproducibile: `GameController.new_game(scenario, seed)`
 - [ ] Effetti dei 48 Eventi (testi già in `cards.json`)
-- [ ] 30 Asset card (valore, Eventi, Capability) — testi da estrarre
-- [ ] 12 Campaign card — testi da estrarre
+- [ ] Effetti continuativi delle Campaign card (oggi la carta è in gioco e
+      visibile, ma il suo effetto non modifica ancora le regole)
+- [ ] Effetti degli Eventi e delle Capability sulle Asset card
 - [ ] Simboli Non-Player ★/⊘ sulle carte (sottolineato/riquadrato nel Playbook)
 
 ## Fase 6 — Non-Player *Curiosity*

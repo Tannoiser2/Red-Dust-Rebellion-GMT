@@ -21,8 +21,9 @@ func _initialize() -> void:
 			shot_path = arg.substr("--shot=".length())
 
 	var gc = root.get_node("GameController")
-	if gc.state == null:
-		gc.new_game()
+	# Seme fisso: mazzi e dadi riproducibili, così il test non dipende dalla carta
+	# che capita per prima.
+	gc.new_game("standard", 20240424)
 
 	var packed: PackedScene = load("res://scenes/Main.tscn")
 	if packed == null:
@@ -79,6 +80,8 @@ func _initialize() -> void:
 	_ok(card_info.text.contains("Ordine:"), "ordine di Eligibility mostrato")
 	_ok(card_info.text.contains("Tocca a"), "Fazione di turno mostrata")
 	_ok(gc.sequence != null, "sequenza della carta creata")
+	_ok(gc.cards.hand().size() == 3, "mano iniziale dei Reclaimer: 3 Asset card")
+	_ok(gc.cards.campaign_in_play() > 0, "una Campaign card in gioco")
 
 	# Barra delle Operazioni della Fazione di turno (§5.0).
 	var ops_box: HBoxContainer = main.get("_ops_box")
@@ -86,10 +89,32 @@ func _initialize() -> void:
 
 	# Pianificazione: si sceglie un'Operazione, si clicca uno spazio candidato,
 	# si esegue. L'azione deve consumare il turno della Fazione.
-	var fid: String = gc.sequence.pending_faction()
-	var op_id: String = String(gc.UI_OPERATIONS[fid][0])
+	# Si cerca una Fazione di turno che abbia un'Operazione con spazi candidati.
+	# Non tutte ne hanno sempre: l'Assault delle Corporations, per esempio,
+	# richiede forze nemiche Attive, che allo schieramento iniziale non ci sono.
+	# Chi non può agire Passa, esattamente come al tavolo.
+	var fid := ""
+	var op_id := ""
+	var cands := PackedStringArray()
+	for attempt in range(4):
+		fid = gc.sequence.pending_faction()
+		if fid == "":
+			break
+		for candidate in gc.UI_OPERATIONS.get(fid, []):
+			var c: PackedStringArray = gc.operation_candidates(String(candidate), fid)
+			if c.size() > 0:
+				op_id = String(candidate)
+				cands = c
+				break
+		if op_id != "":
+			break
+		gc.do_pass()
+		await process_frame
+	_ok(op_id != "", "una Fazione può eseguire un'Operazione (%s: %s)" % [fid, op_id])
+	if op_id == "":
+		quit(1)
+		return
 	main.call("_start_op", op_id)
-	var cands: PackedStringArray = gc.operation_candidates(op_id, fid)
 	_ok(cands.size() > 0, "%s ha spazi candidati (%d)" % [op_id, cands.size()])
 	main.call("_on_space_clicked", cands[0])
 	_ok((main.get("_op_spaces") as Array).size() == 1, "spazio aggiunto al piano")
@@ -102,18 +127,19 @@ func _initialize() -> void:
 	_ok(gc.sequence == null or gc.sequence.pending_faction() != fid,
 		"l'Operazione ha consumato il turno di %s" % fid)
 
-	# Se tutte le Fazioni Passano, la carta avanza e restano tutte Disponibili.
+	# Passando con le Fazioni rimaste, la carta avanza.
 	var card_before: int = gc.state.current_card
 	for i in range(4):
 		gc.do_pass()
 	await process_frame
 	_ok(gc.state.current_card != card_before, "passando tutti, si passa alla carta seguente")
-	# MarsGov ha eseguito un'Operazione poco sopra: diventa Non Disponibile,
-	# mentre chi ha Passato resta Disponibile (§4.2).
-	_ok(gc.state.eligibility["marsgov"] == CoinEnums.Eligibility.INELIGIBLE,
-		"chi agisce diventa Non Disponibile")
-	_ok(gc.state.eligibility["reclaimer"] == CoinEnums.Eligibility.ELIGIBLE,
-		"chi Passa resta Disponibile")
+	# La Fazione che ha eseguito l'Operazione diventa Non Disponibile; le altre,
+	# che hanno Passato, restano Disponibili (§4.2).
+	_ok(gc.state.eligibility[fid] == CoinEnums.Eligibility.INELIGIBLE,
+		"chi agisce diventa Non Disponibile (%s)" % fid)
+	var passer := "reclaimer" if fid != "reclaimer" else "marsgov"
+	_ok(gc.state.eligibility[passer] == CoinEnums.Eligibility.ELIGIBLE,
+		"chi Passa resta Disponibile (%s)" % passer)
 
 	if shot_path != "":
 		await process_frame

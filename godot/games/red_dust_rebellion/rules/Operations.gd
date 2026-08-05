@@ -10,9 +10,10 @@ extends RefCounted
 ## `{ok: bool, error: String, spent: int}`. Le validazioni sono fatte prima di
 ## toccare lo stato: se `ok` è false nulla è stato modificato.
 ##
-## NOTA sui Reclaimer: pagano le Risorse scartando Asset card (§1.5). Finché il
-## mazzo Asset non è implementato il costo viene registrato in
-## `state.tracks["cr_unpaid"]` e annotato nel log, non sottratto.
+## NOTA sui Reclaimer: pagano le Risorse scartando Asset card (§1.5). Se `cards`
+## è collegato le carte vengono scartate davvero, col valore maggiorato quando la
+## carta nomina l'Operazione in corso; altrimenti il costo finisce in
+## `state.tracks["cr_unpaid"]` e resta solo annotato nel log.
 
 var state: GameState
 var module: RDRModule
@@ -20,7 +21,12 @@ var act: RDRActions
 var rng: RandomNumberGenerator
 ## Serve a Logistics e al Passo delle Corporations per l'Aldrin Cycler.
 var rounds: RDRRounds = null
+## Mazzi Asset e Campaign: se collegati, i Reclaimer pagano davvero e le
+## Campaign card entrano in gioco.
+var cards: RDRCards = null
 var log_lines: Array[String] = []
+## Operazione in corso, per il valore maggiorato delle Asset card (§1.5).
+var _current_op := ""
 
 
 func _init(p_state: GameState, p_module: RDRModule, p_rng: RandomNumberGenerator = null) -> void:
@@ -52,7 +58,13 @@ func _can_pay(faction: String, cost: int) -> bool:
 	if faction == "corporations":
 		return true  # le Corporations non spendono Risorse per le Operazioni
 	if faction == "reclaimer":
-		return true  # paga con Asset card, vedi _pay()
+		# §1.5: deve poter coprire il costo con le Asset card in mano.
+		if cards == null:
+			return true
+		var total := 0
+		for number in cards.hand():
+			total += cards.value_of(int(number), _current_op)
+		return total >= cost
 	return state.get_resources(faction) >= cost
 
 
@@ -60,8 +72,13 @@ func _pay(faction: String, cost: int) -> void:
 	if cost <= 0:
 		return
 	if faction == "reclaimer":
-		state.tracks["cr_unpaid"] = int(state.tracks.get("cr_unpaid", 0)) + cost
-		log_lines.append("I Reclaimer pagherebbero %d Risorse scartando Asset card (mazzo non implementato)." % cost)
+		if cards == null:
+			state.tracks["cr_unpaid"] = int(state.tracks.get("cr_unpaid", 0)) + cost
+			log_lines.append("I Reclaimer pagherebbero %d Risorse scartando Asset card (mazzi non collegati)." % cost)
+			return
+		cards.pay(cost, _current_op)
+		log_lines.append_array(cards.log_lines)
+		cards.log_lines.clear()
 		return
 	if faction == "corporations":
 		return
@@ -509,6 +526,7 @@ func rally_candidates(faction: String) -> PackedStringArray:
 ## mode: "place" (1 Ribelle) · "base" (2 Ribelli → Base) · "fill" (Ribelli fino a
 ## Popolazione + Basi) · "hide" (tutti Nascosti) · "upgrade" (solo Reclaimer).
 func rally(plan: Dictionary) -> Dictionary:
+	_current_op = "rally"
 	var faction := String(plan.get("faction", "red_dust"))
 	var rebel := "rd_rebel" if faction == "red_dust" else "cr_rebel"
 	var base := "rd_base" if faction == "red_dust" else "cr_base"
@@ -546,7 +564,12 @@ func rally(plan: Dictionary) -> Dictionary:
 				if faction == "reclaimer" and module.count_in(state, sid, base, "basic") > 0:
 					state.spaces[sid].remove_piece("reclaimer", base, 1, "basic")
 					state.spaces[sid].add_piece("reclaimer", base, 1, "conversion_center")
-					log_lines.append("I Reclaimer pescano 1 Asset card (mazzo non implementato).")
+					if cards != null:
+						cards.draw_asset(1)
+						log_lines.append_array(cards.log_lines)
+						cards.log_lines.clear()
+					else:
+						log_lines.append("I Reclaimer pescherebbero 1 Asset card (mazzi non collegati).")
 
 	# §5.6: il Red Dust può poi potenziare UNA Base in un Deserto a Dug-In, anche
 	# fuori dagli spazi scelti e anche in un'Operazione Limitata.
@@ -565,6 +588,7 @@ func rally(plan: Dictionary) -> Dictionary:
 
 ## plan = {dest: [sid], moves: [{from,to,count}]}
 func march(plan: Dictionary) -> Dictionary:
+	_current_op = "march"
 	var dest: Array = plan.get("dest", [])
 	if dest.is_empty():
 		return _fail("March: nessuna destinazione scelta.")
@@ -619,6 +643,7 @@ func _moving_rebels_reveal(to_sid: String, rebel: String, n: int) -> void:
 ## §5.8: Travel sceglie le ORIGINI (la Wilderness è gratis) e ignora le tempeste.
 ## plan = {origins: [sid], moves: [{from,to,count,type}]}   type: cr_rebel | cr_base
 func travel(plan: Dictionary) -> Dictionary:
+	_current_op = "travel"
 	var origins: Array = plan.get("origins", [])
 	if origins.is_empty():
 		return _fail("Travel: nessuna origine scelta.")
@@ -667,6 +692,7 @@ func travel(plan: Dictionary) -> Dictionary:
 
 ## plan = {faction, spaces: [sid], ambush: {sid: [d1, d2]}}
 func attack(plan: Dictionary) -> Dictionary:
+	_current_op = "attack"
 	var faction := String(plan.get("faction", "red_dust"))
 	var spaces: Array = plan.get("spaces", [])
 	if spaces.is_empty():
@@ -773,6 +799,7 @@ func _remove_one_for_attack(sid: String, priority: Array[String]) -> String:
 
 ## plan = {spaces: [sid]}
 func campaign(plan: Dictionary) -> Dictionary:
+	_current_op = "campaign"
 	var spaces: Array = plan.get("spaces", [])
 	if spaces.is_empty():
 		return _fail("Campaign: nessuno spazio scelto.")
@@ -802,13 +829,19 @@ func campaign(plan: Dictionary) -> Dictionary:
 			if module.count_in(state, s, "corp_base") > 0:
 				state.tracks["profits"] = clampi(int(state.tracks.get("profits", 0)) - 2, 0, 50)
 	if draws > 0:
-		log_lines.append("Campaign: %d Campaign card pescate, 1 in gioco (mazzo non implementato)." % draws)
+		if cards != null:
+			cards.draw_campaign_into_play(draws)
+			log_lines.append_array(cards.log_lines)
+			cards.log_lines.clear()
+		else:
+			log_lines.append("Campaign: %d carte pescate, 1 in gioco (mazzi non collegati)." % draws)
 	_pay("red_dust", cost)
 	return _done(cost)
 
 
 ## plan = {spaces: [sid]}
 func preach(plan: Dictionary) -> Dictionary:
+	_current_op = "preach"
 	var spaces: Array = plan.get("spaces", [])
 	if spaces.is_empty():
 		return _fail("Preach: nessuno spazio scelto.")

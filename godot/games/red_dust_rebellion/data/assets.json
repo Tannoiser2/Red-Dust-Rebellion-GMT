@@ -1,0 +1,247 @@
+{
+ "_note": "30 carte Asset dei Reclaimer (§1.5), lette dalle immagini del modulo Vassal. value = Risorse fornite scartando la carta; bonus_operation/bonus_value = valore maggiorato se usata per pagare quella specifica Operazione. kind: capability (bonus permanente + Operazione gratuita in 2 spazi una tantum), event (Evento giocabile al posto della carta corrente), resource (solo Risorse). np_star = stella usata dalle regole Non-Player.",
+ "cards": [
+  {
+   "number": 1,
+   "title": "Subdermal Weaponry",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Hit and fade",
+   "text": "CR Attack removes an additional enemy piece for each successful die roll."
+  },
+  {
+   "number": 2,
+   "title": "Dust-Adaptation",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "The wastes will hide us",
+   "text": "CR may select spaces with Raging Storms for any Operations, Special Activities, or Events."
+  },
+  {
+   "number": 3,
+   "title": "Enhanced Metabolism",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "The new Martians",
+   "text": "After each Assault that removes any CR forces, CR may place a Rebel into 1 space where CR forces were removed."
+  },
+  {
+   "number": 4,
+   "title": "The Mind Twister",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Hear us now, we are of Mars",
+   "text": "Purify removes an additional enemy piece in each selected space."
+  },
+  {
+   "number": 5,
+   "title": "Neural Conditioning",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Be at peace, we mean you no harm, obey",
+   "text": "CR Rally in spaces without a CR Base may place Rebels up to Population or flip all CR Rebels to Hidden."
+  },
+  {
+   "number": 6,
+   "title": "Deep Tunneling",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Mars will shelter his chosen",
+   "text": "CR forces cannot be removed by Bombard."
+  },
+  {
+   "number": 7,
+   "title": "Children of the Desert",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Mastery of the land",
+   "text": "Free Travel to 1 Desert and any adjacent Deserts, then free Attack in each destination space.",
+   "np_star": true
+  },
+  {
+   "number": 8,
+   "title": "Weaponized Asteroid",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Catastrophic impact",
+   "text": "Place 2 Damage in a Labyrinth, then remove half the units there (rounded up).",
+   "np_star": true
+  },
+  {
+   "number": 9,
+   "title": "The Reclaimer Faith",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "We are everywhere",
+   "text": "Place 1 CR Base into each of 3 spaces with no other Faction's forces.",
+   "np_star": true
+  },
+  {
+   "number": 10,
+   "title": "Converts",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Become a real child of Mars",
+   "text": "Replace up to 4 RD Rebels with CR Rebels."
+  },
+  {
+   "number": 11,
+   "title": "Church Assets",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "A legitimate faith",
+   "text": "Draw 1 Asset card for each Labyrinth with CR forces, then place 1 CR Base in each of 2 Labyrinths.",
+   "np_star": true
+  },
+  {
+   "number": 12,
+   "title": "The Lost Patrol",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Swallowed without a trace",
+   "text": "Remove all COIN units from 1 Desert, then place 1 Damage on an adjacent Labyrinth."
+  },
+  {
+   "number": 13,
+   "title": "The Ma'adim",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Church luminary martyred",
+   "text": "Flip all CR Rebels to Hidden and move up to 6 CR Rebels to any 1 Desert."
+  },
+  {
+   "number": 14,
+   "title": "The Trackless Wastes",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "travel",
+   "bonus_value": 5
+  },
+  {
+   "number": 15,
+   "title": "Water Reserves",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "rally",
+   "bonus_value": 5
+  },
+  {
+   "number": 16,
+   "title": "Hidden Forces",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "rally",
+   "bonus_value": 5
+  },
+  {
+   "number": 17,
+   "title": "Storm Riders",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "travel",
+   "bonus_value": 5
+  },
+  {
+   "number": 18,
+   "title": "Tipoff",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "attack",
+   "bonus_value": 5
+  },
+  {
+   "number": 19,
+   "title": "Re-Engineering",
+   "value": 4,
+   "kind": "resource",
+   "text": "If discarded to claim First Eligible, draw 1 Asset card."
+  },
+  {
+   "number": 20,
+   "title": "Ideologues",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "preach",
+   "bonus_value": 5
+  },
+  {
+   "number": 21,
+   "title": "Sympathizers",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "preach",
+   "bonus_value": 5
+  },
+  {
+   "number": 22,
+   "title": "Secret Donors",
+   "value": 4,
+   "kind": "resource",
+   "text": "If discarded to claim First Eligible, draw 1 Asset card."
+  },
+  {
+   "number": 23,
+   "title": "MPS Uplink Hacked",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Uplinks hacked",
+   "text": "Treat spaces with Satellites as if they contained an additional CR Base for the purpose of all Operations."
+  },
+  {
+   "number": 24,
+   "title": "AI Unleashed",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "A ghost in the machine",
+   "text": "Ransack additionally reduces MG Resources by 3 or Profits by 1."
+  },
+  {
+   "number": 25,
+   "title": "Genetic Masking",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Forensics baffled",
+   "text": "Spaces with a CR Base count as having 2 fewer COIN units for Secure and Recon."
+  },
+  {
+   "number": 26,
+   "title": "Ares Rockets",
+   "value": 2,
+   "kind": "capability",
+   "subtitle": "Clear the skies of Mars",
+   "text": "CR Attack may remove Satellites from anywhere on Mars."
+  },
+  {
+   "number": 27,
+   "title": "Loyalty",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Desertion",
+   "text": "Remove up to 2 Security or MG Troops each from 4 spaces on Mars without Support."
+  },
+  {
+   "number": 28,
+   "title": "Remote Base",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "Unknown armies",
+   "text": "Place a CR Base and 2 CR Rebels in an Unpopulated Desert. Flip that Base to its Conversion Center side and draw 1 Asset card."
+  },
+  {
+   "number": 29,
+   "title": "Pilgrimage",
+   "value": 3,
+   "kind": "event",
+   "subtitle": "When the walls fell",
+   "text": "Move up to 4 CR Rebels to one Labyrinth no more than 2 spaces away from any of them. Place 1 Damage in that Labyrinth, then remove up to 3 Population markers from Displaced Population."
+  },
+  {
+   "number": 30,
+   "title": "Weapons Cache",
+   "value": 4,
+   "kind": "resource",
+   "bonus_operation": "attack",
+   "bonus_value": 5
+  }
+ ]
+}

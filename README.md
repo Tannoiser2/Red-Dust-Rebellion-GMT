@@ -11,7 +11,14 @@ architettura `coin_engine/` + `games/<gioco>/`, così che il terzo titolo riusi
 
 ## Stato
 
-🚧 **Fase 4 — le Operazioni ci sono.** Tutte e 11 le Operazioni e tutte e 12 le
+🚧 **Fase 5 (in corso) — i mazzi Asset e Campaign ci sono.** Le 30 carte Asset dei
+Reclaimer e le 12 Campaign del Red Dust sono state lette dal modulo Vassal e sono
+in gioco: mano da 6, pagamento delle Operazioni scartando carte (col valore
+maggiorato quando la carta nomina quell'Operazione), scarti per anticipare il
+turno, Capability che restano in gioco, rimescolamento al Dust Storm Round. Gli
+**effetti dei 48 Eventi** restano da implementare.
+
+Fase 4 — Tutte e 11 le Operazioni e tutte e 12 le
 Attività Speciali sono implementate e testate; in interfaccia sono utilizzabili
 quelle che si pianificano scegliendo solo gli spazi (Train, Assault, Rally,
 Attack, Campaign, Preach), mentre quelle di movimento (Secure, Recon, March,
@@ -26,7 +33,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**556 test del modulo + 27 controlli di smoke test della scena, 0 falliti.**
+**600 test del modulo + 30 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -58,7 +65,10 @@ disponibile in UI è il Passo.
 | Movimento: adiacenza, Maglev, Spaceport, tempeste | ✅ |
 | UI: pianificazione a scelta di spazi | ✅ Train, Assault, Rally, Attack, Campaign, Preach |
 | UI: pianificatore di movimento | ⬜ serve a Secure, Recon, March, Travel, Logistics |
-| Eventi (effetti) | ⬜ testi presenti, effetti da implementare |
+| 30 carte Asset + 12 Campaign (dati) | ✅ lette dal Vassal |
+| Mano, pagamento, Capability, rimescolamento §1.5 | ✅ i Reclaimer pagano davvero |
+| Partita riproducibile con un seme | ✅ `new_game(scenario, seed)` |
+| Eventi (effetti delle 48 carte) | ⬜ testi presenti, effetti da implementare |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 

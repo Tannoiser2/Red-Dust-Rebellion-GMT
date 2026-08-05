@@ -28,6 +28,7 @@ const ACCOMPANIES := {
 var state: GameState
 var module: RDRModule
 var act: RDRActions
+var cards: RDRCards = null
 var log_lines: Array[String] = []
 
 
@@ -51,6 +52,27 @@ func _done() -> Dictionary:
 	module.recompute_all_control(state)
 	module.refresh_victory_tracks(state)
 	return {"ok": true, "error": ""}
+
+
+## Pescata/scarto dei Reclaimer, se i mazzi sono collegati.
+func _cr_draw(n: int) -> void:
+	if cards == null:
+		log_lines.append("I Reclaimer pescherebbero %d Asset card (mazzi non collegati)." % n)
+		return
+	cards.draw_asset(n)
+	log_lines.append_array(cards.log_lines)
+	cards.log_lines.clear()
+
+
+func _cr_discard(n: int) -> void:
+	if cards == null:
+		log_lines.append("I Reclaimer scarterebbero %d Asset card (mazzi non collegati)." % n)
+		return
+	for i in range(n):
+		var h: Array = cards.hand()
+		if h.is_empty():
+			break
+		cards.discard_pile().append(h.pop_back())
 
 
 func _profits(delta: int) -> void:
@@ -171,7 +193,7 @@ func public_relations(plan: Dictionary) -> Dictionary:
 		if module.count_in(state, sid, "rd_rebel") + module.count_in(state, sid, "rd_base") > 0:
 			state.add_resources("red_dust", -3, 50)
 		if module.count_in(state, sid, "cr_rebel") + module.count_in(state, sid, "cr_base") > 0:
-			log_lines.append("I Reclaimer scarterebbero 1 Asset card (mazzo non implementato).")
+			_cr_discard(1)
 	return _done()
 
 
@@ -210,7 +232,7 @@ func exploit(plan: Dictionary) -> Dictionary:
 		if st.control == "red_dust":
 			state.add_resources("red_dust", pop, 50)
 		elif st.control == "reclaimer":
-			log_lines.append("I Reclaimer pescherebbero 1 Asset card (mazzo non implementato).")
+			_cr_draw(1)
 	return _done()
 
 
@@ -362,7 +384,7 @@ func purify(plan: Dictionary) -> Dictionary:
 				# Disponibili, non nelle Casualties.
 				module.remove_pieces(state, sid, base_id, 1, "available")
 				module.place_from_available(state, sid, "cr_base", 1, "conversion_center")
-				log_lines.append("I Reclaimer pescano 1 Asset card (mazzo non implementato).")
+				_cr_draw(1)
 				break
 		else:
 			var swaps := 2 if module.count_in(state, sid, "cr_base", "conversion_center") > 0 else 1
@@ -398,7 +420,8 @@ func ransack(plan: Dictionary) -> Dictionary:
 		var s := String(sid)
 		act.activate(s, "cr_rebel", 1)
 		draws += module.marker(state, s, "damage")
-	log_lines.append("Ransack: %d Asset card pescate (mazzo non implementato)." % draws)
+	_cr_draw(draws)
+	log_lines.append("Ransack: %d Asset card." % draws)
 	return _done()
 
 

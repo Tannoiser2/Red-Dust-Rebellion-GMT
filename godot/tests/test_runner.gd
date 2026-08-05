@@ -62,6 +62,13 @@ func _init() -> void:
 	test_campaign_preach()
 	test_special_activities()
 
+	test_cards_setup()
+	test_cards_pay()
+	test_cards_hand_limit()
+	test_cards_eligibility_and_events()
+	test_campaign_deck()
+	test_reclaimer_pays()
+
 	print("\n%d passati, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -1209,3 +1216,162 @@ func test_special_activities() -> void:
 	var amb_bad: Dictionary = sa10.ambush({"faction": "red_dust",
 		"attack_spaces": ["sharma"], "choices": {"gandhi": [1, 1]}})
 	eq(amb_bad["ok"], false, "Ambush rifiutato fuori dagli spazi dell'Attack")
+
+
+# ===========================================================================
+# Fase 5 — mazzi Asset e Campaign (§1.5)
+# ===========================================================================
+
+func cards_for(s: GameState, seed_value: int = 777) -> RDRCards:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	var c := RDRCards.new(s, module, r)
+	c.setup()
+	return c
+
+
+func test_cards_setup() -> void:
+	print("Mazzi Asset e Campaign (§1.5/§3.3)")
+	var s := fresh()
+	var c := cards_for(s)
+	eq(c.assets.size(), 30, "30 carte Asset")
+	eq(c.campaigns.size(), 12, "12 carte Campaign")
+	eq(c.hand().size(), 3, "mano iniziale dei Reclaimer: 3 carte")
+	eq(c.deck().size(), 27, "27 Asset restano nel mazzo")
+	ok(c.campaign_in_play() > 0, "una Campaign card in gioco al setup")
+	eq(state.tracks.get("campaign_deck", []).size(), 0, "lo stato di riferimento non è toccato")
+
+	# I valori letti dalle carte: le Capability valgono 2, gli Eventi 3, le
+	# carte di sola Risorsa 4 (5 per l'Operazione che nominano).
+	eq(c.value_of(1), 2, "Subdermal Weaponry vale 2")
+	eq(c.value_of(7), 3, "Children of the Desert vale 3")
+	eq(c.value_of(14), 4, "The Trackless Wastes vale 4")
+	eq(c.value_of(14, "travel"), 5, "…ma 5 se paga un Travel")
+	eq(c.value_of(14, "rally"), 4, "…e 4 per un'altra Operazione")
+
+
+func test_cards_pay() -> void:
+	print("Pagamento con Asset card (§1.5)")
+	var s := fresh()
+	var c := cards_for(s)
+	# Mano nota: una Capability (2), un Evento (3) e una Risorsa (4/5 per Travel).
+	state.tracks["ignore"] = 0
+	c.state.tracks["asset_hand"] = [1, 7, 14]
+	eq(c.pay(4, "rally"), true, "4 Risorse pagate con una sola carta da 4")
+	eq(c.hand().size(), 2, "una carta scartata")
+	ok(not c.hand().has(14), "spesa per prima la carta di sola Risorsa")
+
+	# Il bonus dell'Operazione nominata riduce le carte necessarie.
+	var s2 := fresh()
+	var c2 := cards_for(s2)
+	c2.state.tracks["asset_hand"] = [14]
+	eq(c2.pay(5, "travel"), true, "The Trackless Wastes copre 5 in un Travel")
+	var s3 := fresh()
+	var c3 := cards_for(s3)
+	c3.state.tracks["asset_hand"] = [14]
+	eq(c3.pay(5, "rally"), false, "…ma non 5 in un Rally")
+	eq(c3.hand().size(), 1, "pagamento rifiutato: la carta resta in mano")
+
+	# Più carte insieme, con l'eccedenza persa.
+	var s4 := fresh()
+	var c4 := cards_for(s4)
+	c4.state.tracks["asset_hand"] = [1, 7]
+	eq(c4.pay(5), true, "2 + 3 coprono un costo di 5")
+	eq(c4.hand().size(), 0, "entrambe scartate")
+	eq(c4.discard_pile().size(), 2, "finiscono negli scarti")
+
+
+func test_cards_hand_limit() -> void:
+	print("Limite di mano e rimescolamento (§1.5/§4.3)")
+	var s := fresh()
+	var c := cards_for(s)
+	c.draw_asset(10)
+	eq(c.hand().size(), 6, "mano limitata a 6 carte")
+	ok(c.discard_pile().size() > 0, "le eccedenti vanno negli scarti")
+
+	# Reset del Dust Storm Round: gli scarti rientrano nel mazzo.
+	var before := c.deck().size() + c.discard_pile().size()
+	c.reshuffle_discards()
+	eq(c.discard_pile().size(), 0, "scarti azzerati")
+	eq(c.deck().size(), before, "tutte le carte tornano nel mazzo")
+
+	# Mazzo esaurito: non si pesca più.
+	var s2 := fresh()
+	var c2 := cards_for(s2)
+	c2.state.tracks["asset_deck"] = []
+	c2.state.tracks["asset_hand"] = []
+	eq(c2.draw_asset(1), 0, "mazzo vuoto: nessuna pescata")
+
+
+func test_cards_eligibility_and_events() -> void:
+	print("Asset per l'Eligibility e Eventi (§4.1/§1.5)")
+	var s := fresh()
+	var c := cards_for(s)
+	c.state.tracks["asset_hand"] = [1, 7, 14]
+	eq(c.discard_for_eligibility(2), 2, "due carte scartate per anticipare il turno")
+	eq(c.hand().size(), 1, "resta una carta")
+
+	# #19 e #22 fanno pescare se scartate per diventare 1ª Disponibile.
+	var s2 := fresh()
+	var c2 := cards_for(s2)
+	c2.state.tracks["asset_hand"] = [19]
+	var deck_before := c2.deck().size()
+	c2.discard_for_eligibility(1)
+	eq(c2.hand().size(), 1, "Re-Engineering fa ripescare una carta")
+	eq(c2.deck().size(), deck_before - 1, "la carta arriva dal mazzo")
+
+	# Una Capability resta in gioco e non torna nel mazzo.
+	var s3 := fresh()
+	var c3 := cards_for(s3)
+	c3.state.tracks["asset_hand"] = [1, 7]
+	var res: Dictionary = c3.play_asset_event(1)
+	eq(res["ok"], true, "Capability giocata")
+	eq(res["capability"], true, "riconosciuta come Capability")
+	eq(c3.has_capability(1), true, "resta in gioco")
+	eq(c3.discard_pile().has(1), false, "non finisce negli scarti")
+	# Un Evento normale invece si scarta.
+	c3.play_asset_event(7)
+	eq(c3.discard_pile().has(7), true, "l'Evento Asset va negli scarti")
+	# Le carte di sola Risorsa non hanno Evento.
+	c3.state.tracks["asset_hand"] = [14]
+	eq(c3.play_asset_event(14)["ok"], false, "una carta di sola Risorsa non ha Evento")
+
+
+func test_campaign_deck() -> void:
+	print("Mazzo Campaign (§5.10/§4.3)")
+	var s := fresh()
+	var c := cards_for(s)
+	var first := c.campaign_in_play()
+	ok(first > 0, "una Campaign in gioco")
+	ok(c.campaign_title(first) != "", "titolo leggibile: %s" % c.campaign_title(first))
+	# Pescandone altre, una entra in gioco e le altre tornano nel mazzo.
+	var second := c.draw_campaign_into_play(3)
+	eq(c.campaign_in_play(), second, "la nuova carta sostituisce la precedente")
+	eq(s.tracks["campaign_deck"].size(), 11, "le altre tornano nel mazzo (12 − 1 in gioco)")
+	# Il Reset la rimuove DAL GIOCO.
+	c.remove_campaign()
+	eq(c.campaign_in_play(), -1, "nessuna Campaign in gioco dopo il Reset")
+
+
+func test_reclaimer_pays() -> void:
+	print("I Reclaimer pagano davvero (§1.5)")
+	var s := fresh()
+	var c := cards_for(s)
+	var o := ops_for(s)
+	o.cards = c
+	c.state.tracks["asset_hand"] = [14, 15]   # 4 + 4, con bonus su Travel e Rally
+	var res: Dictionary = o.rally({"faction": "reclaimer",
+		"spaces": [{"id": "rutherford", "mode": "place"}]})
+	eq(res["ok"], true, "Rally dei Reclaimer eseguito")
+	eq(c.hand().size(), 1, "una Asset card scartata per pagare")
+	eq(int(s.tracks.get("cr_unpaid", 0)), 0, "niente più costi non pagati")
+
+	# Senza carte in mano l'Operazione è rifiutata.
+	var s2 := fresh()
+	var c2 := cards_for(s2)
+	var o2 := ops_for(s2)
+	o2.cards = c2
+	c2.state.tracks["asset_hand"] = []
+	var bad: Dictionary = o2.rally({"faction": "reclaimer",
+		"spaces": [{"id": "rutherford", "mode": "place"}]})
+	eq(bad["ok"], false, "senza Asset card il Rally è rifiutato")

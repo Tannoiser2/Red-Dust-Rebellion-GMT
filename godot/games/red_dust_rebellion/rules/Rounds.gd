@@ -17,6 +17,7 @@ const FLASHPOINT_TRIGGER := 5
 var state: GameState
 var module: RDRModule
 var rng: RandomNumberGenerator
+var cards: RDRCards = null
 var log_lines: Array[String] = []
 
 
@@ -37,6 +38,10 @@ func log_line(text: String) -> void:
 ## §3.3: costruisce il mazzo e rivela Current Event e Next Event ignorando i
 ## valori Flashpoint stampati su queste due carte.
 func begin_game() -> void:
+	if cards != null:
+		cards.setup()
+		log_lines.append_array(cards.log_lines)
+		cards.log_lines.clear()
 	state.draw_deck = RDRDeck.build(rng)
 	state.played_deck.clear()
 	state.current_card = _draw()
@@ -461,7 +466,16 @@ func resources_phase() -> void:
 	state.add_resources("red_dust", rd, 50)
 	_add_profits(corp)
 	log_line("Resources: MarsGov +%d, Red Dust +%d, Corporations +%d Profits." % [mg, rd, corp])
-	log_line("Reclaimer Earnings: pescate di Asset card non ancora implementate.")
+	# §4.3: i Reclaimer pescano 1 Asset per ogni simbolo scoperto sulla traccia
+	# Basi Disponibili, poi scartano fino al limite di 6 carte in mano.
+	if cards != null:
+		var symbols := int(module.available(state, "cr_base") / 4.0)
+		var drawn := cards.draw_asset(maxi(1, symbols))
+		log_line("Reclaimer Earnings: %d Asset card pescate." % drawn)
+		log_lines.append_array(cards.log_lines)
+		cards.log_lines.clear()
+	else:
+		log_line("Reclaimer Earnings: mazzo Asset non collegato.")
 
 
 ## §4.3 fase 4. Sono automatizzati solo gli spostamenti OBBLIGATORI; quelli
@@ -543,8 +557,14 @@ func reset_phase() -> void:
 				state.spaces[sid].remove_piece(fid, type_id, n, "active")
 				state.spaces[sid].add_piece(fid, type_id, n, "hidden")
 
-	state.active_momentum = PackedStringArray()   # Campaign card attive: via dal gioco
-	log_line("Reset: Campaign card rimosse, Asset scartate rimescolate (mazzi non ancora implementati).")
+	# §4.3: la Campaign attiva esce dal gioco, gli Asset scartati rientrano nel mazzo.
+	state.active_momentum = PackedStringArray()
+	if cards != null:
+		cards.remove_campaign()
+		cards.reshuffle_discards()
+		log_line("Reset: Campaign card rimossa, Asset scartate rimescolate.")
+	else:
+		log_line("Reset: mazzi Asset/Campaign non collegati.")
 
 	for f in state.game_def.factions:
 		state.eligibility[f.id] = CoinEnums.Eligibility.ELIGIBLE

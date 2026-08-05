@@ -17,6 +17,8 @@ var sequence: RDRSequence
 ## Operazioni e Attività Speciali della partita in corso.
 var ops: RDROperations
 var specials: RDRSpecials
+## Mazzi Asset (Reclaimer) e Campaign (Red Dust).
+var cards: RDRCards
 
 ## Geometrie della tavola (regions.json / board_layout.json), normalizzate [0..1].
 var regions: Dictionary = {}
@@ -28,7 +30,9 @@ func _ready() -> void:
 	new_game()
 
 
-func new_game(scenario: String = "standard") -> void:
+## `seed_value` diverso da 0 rende la partita riproducibile (mazzi e dadi):
+## serve ai test e, in prospettiva, al salvataggio/ripresa.
+func new_game(scenario: String = "standard", seed_value: int = 0) -> void:
 	module = GameRegistry.create_module()
 	game_def = module.build_game_def()
 	state = GameState.new(game_def)
@@ -40,10 +44,21 @@ func new_game(scenario: String = "standard") -> void:
 	off_map = reg.get("off_map", {})
 	layout = _load_json(GameRegistry.data_path("board_layout.json"))
 
-	rounds = RDRRounds.new(state, rdr())
-	ops = RDROperations.new(state, rdr())
+	var rng := RandomNumberGenerator.new()
+	if seed_value != 0:
+		rng.seed = seed_value
+	else:
+		rng.randomize()
+	state.tracks["seed"] = seed_value
+
+	cards = RDRCards.new(state, rdr(), rng)
+	rounds = RDRRounds.new(state, rdr(), rng)
+	rounds.cards = cards
+	ops = RDROperations.new(state, rdr(), rng)
 	ops.rounds = rounds
+	ops.cards = cards
 	specials = RDRSpecials.new(state, rdr())
+	specials.cards = cards
 	rounds.begin_game()
 	_drain_log()
 	_start_card()
@@ -82,7 +97,11 @@ func do_pass() -> bool:
 			"aldrin_cycler":
 				rounds.aldrin_cycler()
 			"draw_asset":
-				emit_signal("log_line", "I Reclaimer pescherebbero 1 Asset card (mazzo non implementato).")
+				cards.draw_asset(1)
+				for line in cards.log_lines:
+					emit_signal("log_line", line)
+				cards.log_lines.clear()
+				emit_signal("log_line", "I Reclaimer pescano 1 Asset card (%d in mano)." % cards.hand().size())
 	_after_action()
 	return true
 

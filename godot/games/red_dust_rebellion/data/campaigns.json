@@ -1,0 +1,77 @@
+{
+ "_note": "12 carte Campaign del Red Dust (§1.5), lette dalle immagini del modulo Vassal. Restano in gioco fino alla fase di Reset del Dust Storm Round successivo (§4.3).",
+ "cards": [
+  {
+   "number": 1,
+   "title": "Construction Workers Guild",
+   "subtitle": "Workers down tools on CORP projects, help build barricades instead",
+   "text": "Place all new RD Bases on their Dug-In side."
+  },
+  {
+   "number": 2,
+   "title": "Prison Labor Revolt",
+   "subtitle": "Penal labor forces strike back",
+   "text": "Reduce Profits by 1 whenever a CORP Base is placed."
+  },
+  {
+   "number": 3,
+   "title": "Dock Workers Lockout",
+   "subtitle": "Dock workers locked out after demanding better conditions",
+   "text": "Discard half (rounded up) of all Supply markers that reach Phobos, before they are converted to MG Resources."
+  },
+  {
+   "number": 4,
+   "title": "Transport Workers",
+   "subtitle": "Maglevs shut down over work conditions",
+   "text": "Secure may not use Maglev lines."
+  },
+  {
+   "number": 5,
+   "title": "Water Reclamation Workers",
+   "subtitle": "Water rationing hits government strongholds hard",
+   "text": "Labyrinths may not be shifted to Active Support."
+  },
+  {
+   "number": 6,
+   "title": "Mothers of Mars",
+   "subtitle": "Martian mothers protest the loss of innocent lives",
+   "text": "Each Labyrinth selected for Assault also shifts 1 level towards Active Opposition."
+  },
+  {
+   "number": 7,
+   "title": "Torture Video Leaks",
+   "subtitle": "Outrage as CORP black site torture video is leaked on internet",
+   "text": "CORP units do not contribute towards Control in Labyrinths."
+  },
+  {
+   "number": 8,
+   "title": "Earth-Based Endorsements",
+   "subtitle": "Earthers for Martian rights!",
+   "text": "Each Supply marker arriving on Phobos instead increases MG Resources by 2 and RD Resources by 1."
+  },
+  {
+   "number": 9,
+   "title": "Legal Injunctions",
+   "subtitle": "Friendly judge prevents action",
+   "text": "Each space with Opposition that is selected for MG Secure costs 6 MG Resources."
+  },
+  {
+   "number": 10,
+   "title": "General Strike",
+   "subtitle": "Workers all over Mars down tools",
+   "text": "All MG Operations in spaces without Support cost 1 additional MG Resource."
+  },
+  {
+   "number": 11,
+   "title": "Comms Cutoff",
+   "subtitle": "Communications with Earth cut",
+   "text": "Logistics cannot select Transit and CORP Pass does not activate the Aldrin Cycler."
+  },
+  {
+   "number": 12,
+   "title": "Red Wave Elections",
+   "subtitle": "Local elections sweep in Red Dust friendly candidates",
+   "text": "When any space shifts from Passive Support to Neutral, instead set it to Passive Opposition."
+  }
+ ]
+}
