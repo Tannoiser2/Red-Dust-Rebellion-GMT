@@ -181,6 +181,11 @@ fatto su Cuba Libre e All Bridges Burning.
       muovibili, condizioni in rosso della tabella, scelta dei pezzi con le
       Piece Priorities. `RDROperations.legal_origins()` è salita dalle scene alle
       regole perché la usano entrambi
+- [x] **Eligibility Table** (§8.5.2) in `data/np_eligibility.json` e nel motore:
+      decide se la Fazione NP gioca l'Evento, fa Operazione (+ Attività Speciale),
+      una Limitata o passa. Le condizioni su Critical/Performed/effective
+      arriveranno da Effective Events ed Event Instructions; finché mancano la
+      tabella cade sull'ultima riga e `degraded` lo dichiara
 - [ ] Collegare il motore di movimento a Secure, Recon, March, Travel, Transport
       e Raid nel ciclo A/B/C completo con i tiri di Activation Number
 - [ ] Da trascrivere dalle scansioni (già nel repo, ignorate da git): le 24 carte

@@ -1,0 +1,83 @@
+{
+  "_note": "NP Eligibility Table (§8.5.2), dalla scheda del gioco fisico. Si legge dall'alto: la prima riga la cui condizione è vera decide l'azione. Le condizioni su Critical, Performed ed effective dipendono dalle tabelle Effective Events ed Event Instructions: finché non sono trascritte il chiamante le lascia a false e la tabella cade sull'ultima riga (Op+SA per la 1ª Disponibile, Operazione Limitata per la 2ª).",
+  "first": [
+    {
+      "n": 1,
+      "cond": "current_event_critical_and_effective",
+      "action": "event",
+      "label": "Current Event is Critical and effective?"
+    },
+    {
+      "n": 2,
+      "cond": "critical_asset_event",
+      "action": "asset_event",
+      "label": "acting Faction is NP CR: Check for Critical Asset Event",
+      "only_faction": "reclaimer"
+    },
+    {
+      "n": 3,
+      "cond": "current_event_critical_for_second",
+      "action": "op_only",
+      "label": "Current Event is Critical for 2nd Eligible Faction?"
+    },
+    {
+      "n": 4,
+      "cond": "next_event_critical_and_first_if_pass",
+      "action": "pass",
+      "label": "Next Event is Critical for acting Faction and they will be 1st Eligible on it if they pass?"
+    },
+    {
+      "n": 5,
+      "cond": "otherwise",
+      "action": "op_sa",
+      "label": "Otherwise"
+    }
+  ],
+  "second": [
+    {
+      "n": 1,
+      "cond": "next_critical_and_first_if_pass_and_current_not_critical_effective",
+      "action": "pass",
+      "label": "Next Event is Critical for acting Faction, they will be 1st Eligible on it if they pass, and Current Event is not Critical and effective?"
+    },
+    {
+      "n": 2,
+      "cond": "first_chose_event",
+      "action": "op_sa",
+      "label": "1st Eligible chose Event?"
+    },
+    {
+      "n": 3,
+      "cond": "first_chose_op_sa_and_current_critical_or_performed_effective",
+      "action": "event",
+      "label": "1st Eligible chose Op + SA and Current Event is Critical or Performed and effective?"
+    },
+    {
+      "n": 4,
+      "cond": "any_asset_event",
+      "action": "asset_event",
+      "label": "acting Faction is NP CR and 1st Eligible chose Op + SA: Check for any Asset Event",
+      "only_faction": "reclaimer",
+      "requires": "first_chose_op_sa"
+    },
+    {
+      "n": 5,
+      "cond": "first_on_next_if_pass",
+      "action": "pass",
+      "label": "Acting Faction will be 1st Eligible on Next Event if they pass?"
+    },
+    {
+      "n": 6,
+      "cond": "asset_total_5plus_and_next_not_dust_storm",
+      "action": "pass",
+      "label": "acting Faction is NP CR: Asset Total 5+ and Next Event is not Dust Storm?",
+      "only_faction": "reclaimer"
+    },
+    {
+      "n": 7,
+      "cond": "otherwise",
+      "action": "lim_op",
+      "label": "Otherwise"
+    }
+  ]
+}

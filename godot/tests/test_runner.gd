@@ -80,6 +80,7 @@ func _init() -> void:
 	test_np_operations()
 	test_np_piece_priorities()
 	test_np_movement()
+	test_np_eligibility()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -2204,6 +2205,69 @@ func test_np_movement() -> void:
 		"il Travel dei Reclaimer muove anche le Basi")
 	eq(Array(mv.movable_types("reclaimer", "attack")).has("cr_base"), false,
 		"…le altre Operazioni no")
+
+
+func test_np_eligibility() -> void:
+	print("Non-Player — Eligibility Table (§8.5.2)")
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "red_dust", "reclaimer"])
+	ok(not np.eligibility_table.is_empty(), "la tabella di Eligibility è caricata")
+
+	# Senza sapere nulla della carta si cade sull'ultima riga, e lo si dichiara.
+	var blind := np.choose_action("marsgov", "first")
+	eq(String(blind["action"]), "op_sa", "1ª Disponibile al buio: Operazione + Attività Speciale")
+	eq(bool(blind["degraded"]), true, "…e la degradazione è segnalata")
+	eq(String(np.choose_action("marsgov", "second")["action"]), "lim_op",
+		"2ª Disponibile al buio: Operazione Limitata")
+
+	# Riga ①: Evento Critico ed efficace → si gioca l'Evento.
+	var crit := np.choose_action("marsgov", "first",
+		{"current_critical": true, "current_effective": true})
+	eq(String(crit["action"]), "event", "Evento Critico ed efficace: si gioca")
+	eq(int(crit["row"]), 1, "…dalla riga 1")
+	eq(bool(crit["degraded"]), false, "…senza degradazione")
+
+	# Critico ma NON efficace: la riga ① non scatta.
+	eq(String(np.choose_action("marsgov", "first",
+		{"current_critical": true, "current_effective": false})["action"]), "op_sa",
+		"Critico ma non efficace: non si gioca l'Evento")
+
+	# Riga ③: se l'Evento è Critico per la 2ª, la 1ª fa Operazione soltanto,
+	# per non lasciarle l'Evento.
+	eq(String(np.choose_action("marsgov", "first",
+		{"current_critical": false, "current_critical_for_second": true})["action"]), "op_only",
+		"Evento Critico per la 2ª: la 1ª fa solo l'Operazione")
+
+	# Riga ④: se la prossima carta è Critica e passando si sarebbe 1ª, si passa.
+	eq(String(np.choose_action("red_dust", "first",
+		{"next_critical": true, "first_on_next_if_pass": true})["action"]), "pass",
+		"prossima carta Critica e si sarebbe 1ª: si passa")
+	eq(String(np.choose_action("red_dust", "first",
+		{"next_critical": true, "first_on_next_if_pass": false})["action"]), "op_sa",
+		"…ma non se passando non si sarebbe 1ª")
+
+	# 2ª Disponibile riga ②: se la 1ª ha giocato l'Evento, la 2ª fa Op + SA.
+	eq(String(np.choose_action("red_dust", "second", {"first_chose": "event"})["action"]),
+		"op_sa", "se la 1ª ha giocato l'Evento, la 2ª fa Op + SA")
+
+	# 2ª riga ③: dopo un Op+SA della 1ª, l'Evento se è Critico o Performed ed efficace.
+	eq(String(np.choose_action("red_dust", "second",
+		{"first_chose": "op_sa", "current_performed": true, "current_effective": true})["action"]),
+		"event", "dopo Op+SA della 1ª, la 2ª gioca l'Evento Performed ed efficace")
+
+	# 2ª riga ⑥: solo i Reclaimer, e solo con Asset Total 5+.
+	s.tracks["asset_total"] = 6
+	eq(String(np.choose_action("reclaimer", "second", {"next_is_dust_storm": false})["action"]),
+		"pass", "NP CR con Asset Total 5+ passa per accumulare")
+	s.tracks["asset_total"] = 2
+	eq(String(np.choose_action("reclaimer", "second", {"next_is_dust_storm": false})["action"]),
+		"lim_op", "…con Asset Total basso no")
+	s.tracks["asset_total"] = 6
+	eq(String(np.choose_action("reclaimer", "second", {"next_is_dust_storm": true})["action"]),
+		"lim_op", "…e nemmeno se la prossima è un Dust Storm")
+	# La riga ⑥ è solo dei Reclaimer: al Red Dust non si applica.
+	eq(String(np.choose_action("red_dust", "second", {})["action"]), "lim_op",
+		"la riga sull'Asset Total non vale per il Red Dust")
 
 
 func test_np_operations() -> void:

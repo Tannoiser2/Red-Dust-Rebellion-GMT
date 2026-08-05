@@ -26,6 +26,7 @@ extends RefCounted
 const DATA_FILE := "np_priorities.json"
 const PIECE_FILE := "np_piece_priorities.json"
 const MOVE_FILE := "np_move_priorities.json"
+const ELIGIBILITY_FILE := "np_eligibility.json"
 
 ## §8.4.1: valori iniziali dei contatori surrogati.
 const START_SUPPLY := 0
@@ -43,6 +44,7 @@ var missing: Array = []
 ## §8.5.8 Piece Priorities e §8.5.7 Move Priorities, dalle schede del gioco.
 var piece_priorities: Dictionary = {}
 var move_priorities: Dictionary = {}
+var eligibility_table: Dictionary = {}
 var log_lines: Array[String] = []
 
 
@@ -56,6 +58,7 @@ func _init(p_state: GameState, p_module: RDRModule,
 	missing = parsed.get("missing", [])
 	piece_priorities = _load(PIECE_FILE)
 	move_priorities = _load(MOVE_FILE)
+	eligibility_table = _load(ELIGIBILITY_FILE)
 
 
 func _load(file_name: String) -> Dictionary:
@@ -159,6 +162,73 @@ func reclaimer_eligibility_check(cost_first: int, cost_second: int) -> Dictionar
 		log_lines.append("NP CR spende %d di Asset Total per essere %dª Disponibile." % [
 			out["spent"], out["rank"]])
 	return out
+
+
+# ---------------------------------------------------------------------------
+# §8.5.2 Tabella di Eligibility: cosa sceglie di fare una Fazione NP
+# ---------------------------------------------------------------------------
+
+## Decide l'azione della Fazione NP di turno leggendo la tabella dall'alto: vince
+## la prima riga la cui condizione è vera.
+##
+## `slot` è "first" o "second". `ctx` porta ciò che il chiamante sa della carta:
+##   current_critical, current_effective, current_performed,
+##   current_critical_for_second, next_critical, first_on_next_if_pass,
+##   first_chose ("event" | "op_sa" | …), next_is_dust_storm,
+##   critical_asset_event, any_asset_event
+## Le condizioni su Critical/Performed/effective vengono dalle tabelle Effective
+## Events ed Event Instructions: finché non sono trascritte restano false e la
+## tabella cade sull'ultima riga — Op+SA da 1ª, Operazione Limitata da 2ª. È una
+## degradazione dichiarata, non un caso non gestito: `degraded` lo segnala.
+## Restituisce {action, row, label, degraded}.
+func choose_action(faction: String, slot: String, ctx: Dictionary = {}) -> Dictionary:
+	var rows: Array = eligibility_table.get(slot, [])
+	var knows_events := ctx.has("current_critical") or ctx.has("next_critical")
+	for entry in rows:
+		var rule: Dictionary = entry
+		if rule.has("only_faction") and String(rule["only_faction"]) != faction:
+			continue
+		if rule.has("requires") and not _elig_condition(String(rule["requires"]), faction, ctx):
+			continue
+		if not _elig_condition(String(rule["cond"]), faction, ctx):
+			continue
+		return {"action": String(rule["action"]), "row": int(rule["n"]),
+			"label": String(rule["label"]), "degraded": not knows_events}
+	return {"action": "pass", "row": 0, "label": "nessuna riga applicabile",
+		"degraded": not knows_events}
+
+
+func _elig_condition(cond: String, faction: String, ctx: Dictionary) -> bool:
+	var b := func(key: String) -> bool: return bool(ctx.get(key, false))
+	match cond:
+		"otherwise":
+			return true
+		"current_event_critical_and_effective":
+			return b.call("current_critical") and b.call("current_effective")
+		"critical_asset_event":
+			return b.call("critical_asset_event")
+		"any_asset_event":
+			return b.call("any_asset_event")
+		"first_chose_op_sa":
+			return String(ctx.get("first_chose", "")) == "op_sa"
+		"current_event_critical_for_second":
+			return b.call("current_critical_for_second")
+		"next_event_critical_and_first_if_pass":
+			return b.call("next_critical") and b.call("first_on_next_if_pass")
+		"next_critical_and_first_if_pass_and_current_not_critical_effective":
+			return b.call("next_critical") and b.call("first_on_next_if_pass") \
+				and not (b.call("current_critical") and b.call("current_effective"))
+		"first_chose_event":
+			return String(ctx.get("first_chose", "")) == "event"
+		"first_chose_op_sa_and_current_critical_or_performed_effective":
+			return String(ctx.get("first_chose", "")) == "op_sa" \
+				and (b.call("current_critical") or b.call("current_performed")) \
+				and b.call("current_effective")
+		"first_on_next_if_pass":
+			return b.call("first_on_next_if_pass")
+		"asset_total_5plus_and_next_not_dust_storm":
+			return asset_total() >= 5 and not b.call("next_is_dust_storm")
+	return false
 
 
 # ---------------------------------------------------------------------------
