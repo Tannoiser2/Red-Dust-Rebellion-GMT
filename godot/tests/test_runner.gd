@@ -2279,9 +2279,45 @@ func test_np_cards() -> void:
 	var r := RandomNumberGenerator.new()
 	r.seed = 31337
 
-	eq(npo.cards.size(), 12, "le 12 facce dei Reclaimer sono trascritte")
-	for cid in ["U", "V", "W", "X", "Y", "Z", "UU", "VV", "WW", "XX", "YY", "ZZ"]:
-		ok(npo.cards.has(cid), "c'è la carta CR–%s" % cid)
+	eq(npo.cards.size(), 48, "tutte e 48 le facce delle 24 carte sono trascritte")
+	for cid in ["U", "V", "W", "X", "Y", "Z", "UU", "VV", "WW", "XX", "YY", "ZZ",
+			"N", "P", "Q", "R", "S", "T", "NN", "PP", "QQ", "RR", "SS", "TT",
+			"G", "H", "J", "K", "L", "M", "GG", "HH", "JJ", "KK", "LL", "MM",
+			"A", "B", "C", "D", "E", "F", "AA", "BB", "CC", "DD", "EE", "FF"]:
+		ok(npo.cards.has(cid), "c'è la carta %s" % cid)
+
+	# Ogni condizione usata dalle carte deve essere implementata: se ne aggiungo
+	# una nei dati e scordo il codice, questo test se ne accorge.
+	var unknown: Array[String] = []
+	var used: Array[String] = []
+	for cid2 in npo.cards.keys():
+		var card: Dictionary = npo.cards[cid2]
+		for c in card.get("checks", []):
+			used.append(String((c as Dictionary)["cond"]))
+		for b in card.get("blocks", []):
+			if (b as Dictionary).has("branch"):
+				used.append(String(((b as Dictionary)["branch"] as Dictionary)["cond"]))
+	for c2 in used:
+		if not RDRNonPlayerOps.CARD_CONDITIONS.has(c2) and not unknown.has(c2):
+			unknown.append(c2)
+	eq(unknown.size(), 0, "nessuna condizione senza codice (%s)" % ", ".join(unknown))
+	ok(used.size() >= 60, "le carte usano %d condizioni in tutto" % used.size())
+
+	# Ogni faccia deve portare a qualcosa: nessuna carta muta.
+	var mute: Array[String] = []
+	for cid3 in npo.cards.keys():
+		var card3: Dictionary = npo.cards[cid3]
+		if (card3.get("blocks", []) as Array).is_empty():
+			mute.append(String(cid3))
+	eq(mute.size(), 0, "nessuna faccia senza istruzioni (%s)" % ", ".join(mute))
+
+	# Fronte e retro si rimandano sempre a vicenda.
+	var broken: Array[String] = []
+	for cid4 in npo.cards.keys():
+		var flip := String((npo.cards[cid4] as Dictionary).get("flip", ""))
+		if not npo.cards.has(flip) or String((npo.cards[flip] as Dictionary).get("flip", "")) != cid4:
+			broken.append(String(cid4))
+	eq(broken.size(), 0, "fronte e retro si rimandano sempre (%s)" % ", ".join(broken))
 
 	# Fronte e retro si rimandano a vicenda.
 	eq(String((npo.cards["U"] as Dictionary)["flip"]), "UU", "CR–U gira su CR–UU")
@@ -2323,8 +2359,9 @@ func test_np_cards() -> void:
 	ok(bool((rally["instructions"][0] as Dictionary).get("no_an_roll", false)),
 		"…col numerale bianco: dopo non si tira l'Activation Number")
 
-	# Una carta non ancora trascritta lo dice, invece di fingere.
-	var missing: Dictionary = npo.read_card("A", "marsgov", r)
+	# Una carta inesistente lo dice, invece di fingere. (Ora che ci sono tutte e 48,
+	# serve un identificativo che non può esistere.)
+	var missing: Dictionary = npo.read_card("ZZZ", "marsgov", r)
 	eq(missing.get("ok", true), false, "una carta non trascritta è dichiarata mancante")
 	ok(String(missing.get("error", "")).contains("non ancora trascritta"),
 		"…con il motivo esplicito")

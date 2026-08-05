@@ -157,6 +157,246 @@ func _card_condition(cond: String, faction: String, rng: RandomNumberGenerator) 
 						or module.population(state, s3) > 0:
 					return true
 			return false
+
+		# --- pescate dalle Disponibili ---------------------------------
+		"1d6_le_available_bases":
+			return rng.randi_range(1, 6) <= module.available(state, _base(faction))
+		"1d6_le_available_troops":
+			return rng.randi_range(1, 6) <= module.available(state, "mg_troop")
+		"2d6_le_available_troops":
+			return rng.randi_range(1, 6) + rng.randi_range(1, 6) \
+				<= module.available(state, "mg_troop")
+		"2d6_le_available_security":
+			return rng.randi_range(1, 6) + rng.randi_range(1, 6) \
+				<= module.available(state, "security")
+
+		# --- tracciati e marcatori --------------------------------------
+		"displaced_population_any":
+			return int(state.tracks.get("displaced_population", 0)) > 0
+		"eg_confidence_above_4":
+			return module.eg_confidence_value(state) > 4
+		"eg_minus":
+			return int(state.tracks.get("eg_side", -1)) < 0
+
+		# --- conteggi sulla mappa ----------------------------------------
+		"fifteen_rebels_on_map":
+			var n15 := 0
+			for sid in module.mars_spaces(state):
+				n15 += module.count_in(state, String(sid), rebel)
+			return n15 >= 15
+		"three_rebels_at_enemy_base":
+			for sid in module.mars_spaces(state):
+				var s4 := String(sid)
+				if module.count_in(state, s4, rebel) >= 3 and _enemy_base_in(s4, faction):
+					return true
+			return false
+		"three_rebels_with_enemy_forces":
+			for sid in module.mars_spaces(state):
+				var s5 := String(sid)
+				if module.count_in(state, s5, rebel) >= 3 \
+						and ops._enemy_force_count(s5, faction) > 0:
+					return true
+			return false
+		"three_rebels_populated_base_room_no_support":
+			for sid in module.mars_spaces(state):
+				var s6 := String(sid)
+				if module.count_in(state, s6, rebel) < 3:
+					continue
+				if module.population(state, s6) > 0 and state.spaces[s6].support <= 0 \
+						and ops.act.can_place_base(s6) \
+						and module.available(state, _base(faction)) > 0:
+					return true
+			return false
+		"hidden_rebel_at_vulnerable_base":
+			for sid in module.mars_spaces(state):
+				var s7 := String(sid)
+				if module.count_in(state, s7, rebel, "hidden") > 0 \
+						and np._vulnerable_enemy_base(s7, faction):
+					return true
+			return false
+		"rebel_in_pop2_not_active_opposition":
+			for sid in module.mars_spaces(state):
+				var s8 := String(sid)
+				if module.count_in(state, s8, rebel) > 0 \
+						and module.population(state, s8) >= 2 \
+						and state.spaces[s8].support != CoinEnums.Support.ACTIVE_OPPOSITION:
+					return true
+			return false
+		"rebels_in_two_populated_not_active_opposition":
+			var found := 0
+			for sid in module.mars_spaces(state):
+				var s9 := String(sid)
+				if module.count_in(state, s9, rebel) > 0 \
+						and module.population(state, s9) > 0 \
+						and state.spaces[s9].support != CoinEnums.Support.ACTIVE_OPPOSITION:
+					found += 1
+			return found >= 2
+
+		# --- situazioni COIN ---------------------------------------------
+		"space_without_coin_control":
+			for sid in module.mars_spaces(state):
+				if state.spaces[String(sid)].control != "coin":
+					return true
+			return false
+		"coin_control_not_active_support":
+			for sid in module.mars_spaces(state):
+				var sa := String(sid)
+				if state.spaces[sa].control == "coin" \
+						and state.spaces[sa].support != CoinEnums.Support.ACTIVE_SUPPORT:
+					return true
+			return false
+		"labyrinth_support_with_rebel":
+			return _any_space(true, func(sid: String) -> bool:
+				return state.spaces[sid].support > 0 \
+					and (module.count_in(state, sid, "rd_rebel")
+						+ module.count_in(state, sid, "cr_rebel")) > 0)
+		"desert_support_with_rebel":
+			return _any_space(false, func(sid: String) -> bool:
+				return state.spaces[sid].support > 0 \
+					and (module.count_in(state, sid, "rd_rebel")
+						+ module.count_in(state, sid, "cr_rebel")) > 0)
+		"labyrinth_support_hidden_rebels":
+			return _any_space(true, func(sid: String) -> bool:
+				return state.spaces[sid].support > 0 \
+					and (module.count_in(state, sid, "rd_rebel", "hidden")
+						+ module.count_in(state, sid, "cr_rebel", "hidden")) > 0)
+		"non_terraforming_corp_base_in_desert":
+			return _any_space(false, func(sid: String) -> bool:
+				return module.count_in(state, sid, "corp_base", "basic") > 0)
+		"two_populated_corp_bases_corp_gt_mg_no_damage":
+			var ok2 := 0
+			for sid in module.mars_spaces(state):
+				var sb := String(sid)
+				if module.population(state, sb) <= 0:
+					continue
+				if module.count_in(state, sb, "corp_base") == 0:
+					continue
+				if module.marker(state, sb, "damage") > 0:
+					continue
+				var corp := module.count_in(state, sb, "security") \
+					+ module.count_in(state, sb, "specops")
+				if corp > module.count_in(state, sb, "mg_troop"):
+					ok2 += 1
+			return ok2 >= 2
+		"space_coin_control_security_damage":
+			for sid in module.mars_spaces(state):
+				var sc := String(sid)
+				if state.spaces[sc].control == "coin" \
+						and module.count_in(state, sc, "security") > 0 \
+						and module.marker(state, sc, "damage") > 0:
+					return true
+			return false
+		"labyrinth_without_coin_control_reachable_by_mg":
+			return _reachable(faction, "secure", ["mg_troop"], func(sid: String) -> bool:
+				return module.is_labyrinth(state, sid) and state.spaces[sid].control != "coin")
+		"desert_without_corp_base_reachable_by_corp":
+			return _reachable(faction, "recon", ["security", "specops"],
+				func(sid: String) -> bool:
+					return module.is_desert(state, sid) \
+						and module.count_in(state, sid, "corp_base") == 0)
+
+		# --- valutazioni dell'Assault -------------------------------------
+		"assault_could_remove_base":
+			return _assault_any(faction, "base")
+		"assault_could_remove_base_or_two_rebels":
+			return _assault_any(faction, "base_or_two")
+		"assault_could_remove_base_three_rebels_or_at_support":
+			return _assault_any(faction, "base_three_or_support")
+		"assault_could_remove_base_or_rebel_at_support":
+			return _assault_any(faction, "base_or_support")
+	push_warning("NP: condizione di carta non riconosciuta «%s»" % cond)
+	return false
+
+
+## Elenco delle condizioni implementate: il test verifica che le carte non ne
+## usino nessuna fuori da qui.
+const CARD_CONDITIONS := [
+	"available_bases", "1d6_le_available_rebels", "2d6_le_available_rebels",
+	"base_without_hidden_rebel", "rebel_in_non_neutral_space", "ten_rebels_on_map",
+	"three_rebels_in_a_space", "three_rebels_at_enemy_base_or_uncontrolled",
+	"hidden_rebel_at_vulnerable_or_uncontrolled",
+	"rebel_with_support_opposition_or_population",
+	"1d6_le_available_bases", "1d6_le_available_troops", "2d6_le_available_troops",
+	"2d6_le_available_security", "displaced_population_any", "eg_confidence_above_4",
+	"eg_minus", "fifteen_rebels_on_map", "three_rebels_at_enemy_base",
+	"three_rebels_with_enemy_forces", "three_rebels_populated_base_room_no_support",
+	"hidden_rebel_at_vulnerable_base", "rebel_in_pop2_not_active_opposition",
+	"rebels_in_two_populated_not_active_opposition", "space_without_coin_control",
+	"coin_control_not_active_support", "labyrinth_support_with_rebel",
+	"desert_support_with_rebel", "labyrinth_support_hidden_rebels",
+	"non_terraforming_corp_base_in_desert", "two_populated_corp_bases_corp_gt_mg_no_damage",
+	"space_coin_control_security_damage", "labyrinth_without_coin_control_reachable_by_mg",
+	"desert_without_corp_base_reachable_by_corp", "assault_could_remove_base",
+	"assault_could_remove_base_or_two_rebels",
+	"assault_could_remove_base_three_rebels_or_at_support",
+	"assault_could_remove_base_or_rebel_at_support",
+]
+
+
+func _any_space(labyrinth: bool, test: Callable) -> bool:
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if module.is_labyrinth(state, s) != labyrinth:
+			continue
+		if bool(test.call(s)):
+			return true
+	return false
+
+
+## Esiste uno spazio che soddisfa `test` e raggiungibile con quell'Operazione?
+func _reachable(faction: String, op_id: String, types: Array, test: Callable) -> bool:
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if not bool(test.call(s)):
+			continue
+		if ops.legal_origins_for(op_id, faction, s, types).size() > 0:
+			return true
+	return false
+
+
+## §5.5: l'Assault rimuove un Ribelle Attivo per unità COIN presente, e la Base
+## solo quando non restano Ribelli di quella Fazione a difenderla.
+func _assault_any(faction: String, kind: String) -> bool:
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		var hits := 0
+		for t in ops._coin_unit_types(faction):
+			hits += module.count_in(state, s, String(t),
+				"active" if String(t) == "specops" else null)
+		if hits <= 0:
+			continue
+		var active := module.count_in(state, s, "rd_rebel", "active") \
+			+ module.count_in(state, s, "cr_rebel", "active")
+		var at_support: bool = state.spaces[s].support > 0
+		var base := _assault_clears_base(s, hits)
+		match kind:
+			"base":
+				if base:
+					return true
+			"base_or_two":
+				if base or (active >= 2 and hits >= 2):
+					return true
+			"base_three_or_support":
+				if base or (active >= 3 and hits >= 3) or (at_support and active > 0):
+					return true
+			"base_or_support":
+				if base or (at_support and active > 0):
+					return true
+	return false
+
+
+## Una Base Ribelle cade solo se non restano Ribelli suoi: i Nascosti non si
+## possono colpire, quindi bastano i colpi per gli Attivi più uno.
+func _assault_clears_base(sid: String, hits: int) -> bool:
+	for pair in [["rd_base", "rd_rebel"], ["cr_base", "cr_rebel"]]:
+		var base_id := String(pair[0])
+		var rebel_id := String(pair[1])
+		if module.count_in(state, sid, base_id) == 0:
+			continue
+		if module.count_in(state, sid, rebel_id, "hidden") > 0:
+			continue
+		if hits >= module.count_in(state, sid, rebel_id, "active") + 1:
+			return true
 	return false
 
 
