@@ -31,15 +31,15 @@ mancano Operazioni, Attività Speciali e i round periodici.
 | Controllo di coalizione COIN §1.9 | ✅ |
 | Traccia EG Confidence §1.2 (9 caselle, Controller) | ✅ |
 | Vittoria §2.0 (4 metriche + soglia dinamica CR) | ✅ |
-| Operazioni / Attività Speciali | ⬜ da implementare |
-| Round Flashpoint e Dust Storm | ⬜ da implementare |
-| Eventi (effetti) | ⬜ testi presenti, effetti da implementare |
-| Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Mappa renderizzata + 30 zone cliccabili | ✅ 24 su Mars + Aldrin Cycler/Orbita |
 | Pezzi sulla mappa (67 su Mars + 18 fuori) | ✅ texture del Vassal, Nascosto/Attivo, lati potenziati |
 | Marker Supporto/Opposizione e Controllo | ✅ sulle caselle 'Neutral' stampate (coordinate Vassal) |
 | Tracciati: Edge Track, EG Confidence, Flashpoint, SoP | ✅ |
 | Pannello di stato + dettaglio spazio | ✅ |
+| Operazioni / Attività Speciali | ⬜ da implementare |
+| Round Flashpoint e Dust Storm | ⬜ da implementare |
+| Eventi (effetti) | ⬜ testi presenti, effetti da implementare |
+| Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 
 ## Struttura
