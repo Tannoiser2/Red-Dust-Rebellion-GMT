@@ -97,17 +97,24 @@ func legal_actions() -> Array[int]:
 		if final_event_card:
 			out.append(A.LIMITED_OPERATION)
 		else:
-			match _first_action:
-				A.OPERATION:
-					out.append(A.LIMITED_OPERATION)
-				A.OPERATION_WITH_SPECIAL:
-					out.append(A.EVENT)
-				A.EVENT:
-					out.append(A.OPERATION)
-					out.append(A.OPERATION_WITH_SPECIAL)
-				_:
-					out.append(A.LIMITED_OPERATION)
+			out.append_array(second_slot_actions(_first_action))
 	return out
+
+
+## Opzioni della 2ª Fazione Disponibile in base all'azione della 1ª.
+## Override nei giochi che deviano dalla tabella standard (es. Red Dust
+## Rebellion §4.1: dopo Operazione+Att.Speciale la 2ª può anche fare una
+## Operazione Limitata, non solo l'Evento).
+func second_slot_actions(first: int) -> Array[int]:
+	match first:
+		A.OPERATION:
+			return [A.LIMITED_OPERATION]
+		A.OPERATION_WITH_SPECIAL:
+			return [A.EVENT]
+		A.EVENT:
+			return [A.OPERATION, A.OPERATION_WITH_SPECIAL]
+		_:
+			return [A.LIMITED_OPERATION]
 
 
 func is_legal(action: int) -> bool:

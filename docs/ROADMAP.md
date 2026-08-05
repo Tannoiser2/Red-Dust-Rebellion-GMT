@@ -35,15 +35,24 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] `tests/scene_smoke.gd`: monta la scena e sa salvare uno screenshot
 - [ ] Zoom/pan sulla mappa e finestra delle carte (rimandati)
 
-## Fase 3 — Sequenza di gioco
+## Fase 3 — Sequenza di gioco ✅
 
-- [ ] Costruzione del mazzo §3.3 (3 pile da 12, Dust Storm nelle ultime 6)
-- [ ] Event Round: ordine di Eligibility dalla carta, opzioni 1ª/2ª, Passo,
-      Limited Operation, Desert Efficiency, marker Haboob
-- [ ] Traccia Flashpoint e innesco del Flashpoint Round
-- [ ] Flashpoint Round (§4.2), 8 fasi
-- [ ] Dust Storm Round (§4.3), 5 fasi + check di vittoria
-- [ ] Tempeste: tiri d6 bianco/nero, Approaching → Raging, limite di 6
+- [x] Costruzione del mazzo §3.3 (3 pile da 12, Dust Storm nelle ultime 7 di
+      ciascuna, 12 Eventi fuori dal gioco) — `rules/Deck.gd`
+- [x] Event Round: ordine di Eligibility dalla carta, opzioni 1ª/2ª (con la
+      deviazione RDR: dopo Op+SA la 2ª può anche fare una Limitata), Passo coi
+      bonus per Fazione, Desert Efficiency, scarto Asset dei Reclaimer per
+      anticipare il turno — `rules/Sequence.gd`
+- [x] Traccia Flashpoint, innesco del round, marker Haboob
+- [x] Flashpoint Round (§4.2), 8 fasi — `rules/Rounds.gd`
+- [x] Dust Storm Round (§4.3), 5 fasi + check di vittoria + fine partita al terzo
+- [x] Tempeste: tabella d6 bianco/nero, Approaching → Raging, limite di 6 marker
+- [x] UI: carta corrente/prossima, ordine di Eligibility, turno, pulsanti Passa e
+      Concludi carta; il log mostra le fasi dei round
+- [ ] Support Phase (Pacify / Lobby / Agitate): meccaniche pronte ma sono scelte
+      dei giocatori, in attesa dell'interfaccia delle azioni
+- [ ] Redeploy facoltativi (Truppe MG extra, Ribelli verso le proprie Basi, Basi
+      CR nella Wilderness): automatizzati solo gli spostamenti obbligatori
 
 ## Fase 4 — Operazioni e Attività Speciali
 

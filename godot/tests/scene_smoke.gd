@@ -74,6 +74,21 @@ func _initialize() -> void:
 	_ok(status.text.contains("EarthGov"), "pannello di stato popolato")
 	_ok(status.text.contains("Vittoria"), "totali di vittoria mostrati")
 
+	# Carta corrente e turno (§4.1).
+	var card_info: RichTextLabel = main.get("_card_info")
+	_ok(card_info.text.contains("Ordine:"), "ordine di Eligibility mostrato")
+	_ok(card_info.text.contains("Tocca a"), "Fazione di turno mostrata")
+	_ok(gc.sequence != null, "sequenza della carta creata")
+
+	# Se tutte le Fazioni Passano, la carta avanza e restano tutte Disponibili.
+	var card_before: int = gc.state.current_card
+	for i in range(4):
+		gc.do_pass()
+	await process_frame
+	_ok(gc.state.current_card != card_before, "passando tutti, si passa alla carta seguente")
+	_ok(gc.state.eligibility["marsgov"] == CoinEnums.Eligibility.ELIGIBLE,
+		"chi Passa resta Disponibile")
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()

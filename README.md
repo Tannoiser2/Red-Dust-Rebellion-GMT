@@ -11,13 +11,15 @@ architettura `coin_engine/` + `games/<gioco>/`, così che il terzo titolo riusi
 
 ## Stato
 
-🚧 **Fase 2 — la partita si vede.** La mappa di Mars è renderizzata con i poligoni
-del Vassal, lo schieramento iniziale è sui suoi spazi, i marker Supporto/Controllo
-stanno nelle caselle stampate e i tracciati (Edge Track, EarthGov Confidence,
-Flashpoint, Sequence of Play) mostrano i valori reali. Non si può ancora *giocare*:
-mancano Operazioni, Attività Speciali e i round periodici.
+🚧 **Fase 3 — la partita avanza.** Oltre alla mappa renderizzata, il mazzo si
+costruisce come da regolamento e le carte scorrono: ordine di Eligibility letto
+dalla carta, Passo con i bonus di ciascuna Fazione, traccia Flashpoint, Flashpoint
+Round e Dust Storm Round completi, tempeste tirate coi due dadi, check di vittoria
+e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
+Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
+disponibile in UI è il Passo.
 
-**86 test del modulo + 15 controlli di smoke test della scena, 0 falliti.**
+**437 test del modulo + 20 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -36,8 +38,14 @@ mancano Operazioni, Attività Speciali e i round periodici.
 | Marker Supporto/Opposizione e Controllo | ✅ sulle caselle 'Neutral' stampate (coordinate Vassal) |
 | Tracciati: Edge Track, EG Confidence, Flashpoint, SoP | ✅ |
 | Pannello di stato + dettaglio spazio | ✅ |
+| Mazzo §3.3 (3 pile da 12, Dust Storm in fondo) | ✅ 39 carte |
+| Event Round §4.1 (ordine, 1ª/2ª, Passo, LimOp) | ✅ incluse le deviazioni RDR |
+| Scarto Asset dei Reclaimer per anticipare il turno | ✅ |
+| Traccia Flashpoint e Haboob | ✅ |
+| Flashpoint Round §4.2 (8 fasi) | ✅ |
+| Dust Storm Round §4.3 (5 fasi) + fine partita | ✅ |
+| Tempeste §3.2 (tabella d6 bianco/nero, max 6) | ✅ |
 | Operazioni / Attività Speciali | ⬜ da implementare |
-| Round Flashpoint e Dust Storm | ⬜ da implementare |
 | Eventi (effetti) | ⬜ testi presenti, effetti da implementare |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |

@@ -31,6 +31,25 @@ func _init() -> void:
 	test_eg_confidence()
 	test_victory()
 
+	test_deck()
+	test_card_flow()
+	test_flashpoint_trigger()
+	test_haboob()
+	test_sequence()
+	test_pass()
+	test_reclaimer_order()
+	test_aldrin_cycler()
+	test_corporate_casualties()
+	test_eg_confidence_phase()
+	test_terraforming()
+	test_attrition()
+	test_conversion()
+	test_storm_table()
+	test_storm_rolls()
+	test_dust_storm_resources()
+	test_dust_storm_round()
+	test_game_end()
+
 	print("\n%d passati, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -247,3 +266,470 @@ func test_victory() -> void:
 	eq(module.tiebreak_order()[0], "reclaimer", "le parità vanno ai Reclaimer")
 	eq(module.pass_resources("marsgov"), 3, "MarsGov Passa: +3 Risorse")
 	eq(module.pass_resources("red_dust"), 1, "Red Dust Passa: +1 Risorsa")
+
+
+# ===========================================================================
+# Fase 3 — mazzo, sequenza di gioco, round periodici
+# ===========================================================================
+
+## Stato fresco (lo schieramento iniziale) per i test che modificano la partita.
+func fresh() -> GameState:
+	var s := GameState.new(gd)
+	module.apply_setup(s, "standard")
+	return s
+
+
+func rounds_for(s: GameState, seed_value: int = 12345) -> RDRRounds:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	return RDRRounds.new(s, module, r)
+
+
+func test_deck() -> void:
+	print("Mazzo (§3.3)")
+	var rng := RandomNumberGenerator.new()
+	for seed_value in [1, 2, 99, 12345]:
+		rng.seed = seed_value
+		var deck := RDRDeck.build(rng)
+		eq(deck.size(), 39, "39 carte nel mazzo (seed %d)" % seed_value)
+		var seen := {}
+		var storms := 0
+		for n in deck:
+			ok(not seen.has(n), "nessun doppione (carta %d, seed %d)" % [n, seed_value])
+			seen[n] = true
+			if RDRDeck.is_dust_storm(n):
+				storms += 1
+		eq(storms, 3, "3 Dust Storm nel mazzo (seed %d)" % seed_value)
+		eq(RDRDeck.removed_from_play(deck).size(), 12,
+			"12 Eventi fuori dal gioco (seed %d)" % seed_value)
+		# Ogni Dust Storm sta nelle 7 carte in fondo alla propria pila da 13:
+		# posizioni 6-12, 19-25, 32-38 contando dall'ALTO del mazzo.
+		for i in range(deck.size()):
+			if not RDRDeck.is_dust_storm(deck[i]):
+				continue
+			var from_top := deck.size() - 1 - i
+			var pile := int(from_top / 13.0)
+			var pos_in_pile := from_top - pile * 13
+			ok(pos_in_pile >= 6, "Dust Storm nelle ultime 7 della pila %d (pos %d, seed %d)" % [
+				pile + 1, pos_in_pile, seed_value])
+
+
+func test_card_flow() -> void:
+	print("Flusso delle carte (§4.0)")
+	var s := fresh()
+	var r := rounds_for(s)
+	r.begin_game()
+	eq(s.draw_deck.size(), 37, "37 carte restano nel mazzo dopo le due rivelate")
+	ok(s.current_card > 0, "Current Event rivelata")
+	ok(r.next_card() > 0, "Next Event rivelata")
+	eq(int(s.tracks["flashpoint"]), 0, "Flashpoint ignorato sulle due carte iniziali")
+
+	# La rivelazione della Next Event fa avanzare la traccia Flashpoint.
+	var before := int(s.tracks["flashpoint"])
+	r.advance_card()
+	var revealed := r.next_card()
+	if revealed > 0 and not RDRDeck.is_dust_storm(s.current_card):
+		var fp: int = int(module.card_flashpoint.get(revealed, 0))
+		var after := int(s.tracks["flashpoint"])
+		ok(after == mini(before + fp, 5) or after == 0,
+			"traccia Flashpoint avanzata di %d (o azzerata dal round)" % fp)
+
+
+func test_flashpoint_trigger() -> void:
+	print("Innesco del Flashpoint Round (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	r.begin_game()
+	# Con la traccia a 4, qualsiasi carta di valore ≥1 fa scattare il round.
+	s.tracks["flashpoint"] = 4
+	var deck_before := s.draw_deck.size()
+	var fired := false
+	for i in range(12):
+		if s.draw_deck.is_empty():
+			break
+		r.advance_card()
+		for line in r.log_lines:
+			if line.contains("Flashpoint Round"):
+				fired = true
+		if fired:
+			break
+	ok(fired, "il Flashpoint Round scatta entro poche carte")
+	eq(int(s.tracks["flashpoint"]), 0, "traccia azzerata dopo il round")
+	ok(deck_before > s.draw_deck.size(), "il mazzo si consuma")
+
+
+func test_haboob() -> void:
+	print("Haboob (§4.0)")
+	var s := fresh()
+	var r := rounds_for(s)
+	r.begin_game()
+	# Forziamo una Dust Storm come Next Event.
+	s.tracks["next_card"] = 49
+	r._update_haboob()
+	eq(r.haboob_active(), true, "Haboob attivo con una Dust Storm in arrivo")
+	s.tracks["next_card"] = 1
+	r._update_haboob()
+	eq(r.haboob_active(), false, "Haboob spento con un Evento normale")
+
+
+func test_sequence() -> void:
+	print("Sequenza della carta (§4.1)")
+	var s := fresh()
+	# Carta 1: ordine stampato M C D R.
+	var seq := RDRSequence.new(s, module, gd.card(1))
+	eq(seq.pending_faction(), "marsgov", "1ª Disponibile = MarsGov")
+	eq(seq.is_first_slot(), true, "primo slot")
+	var first_opts := seq.legal_actions()
+	ok(first_opts.has(CoinEnums.ActionType.OPERATION), "la 1ª può fare Operazione")
+	ok(first_opts.has(CoinEnums.ActionType.OPERATION_WITH_SPECIAL), "…con Attività Speciale")
+	ok(first_opts.has(CoinEnums.ActionType.EVENT), "…o l'Evento")
+	ok(first_opts.has(CoinEnums.ActionType.PASS), "…o Passare")
+
+	# §4.1: dopo Operazione+SA la 2ª può fare Operazione Limitata OPPURE l'Evento
+	# (nel COIN standard solo l'Evento: è la deviazione gestita da RDRSequence).
+	seq.act(CoinEnums.ActionType.OPERATION_WITH_SPECIAL)
+	eq(seq.pending_faction(), "corporations", "2ª Disponibile = Corporations")
+	var second_opts := seq.legal_actions()
+	ok(second_opts.has(CoinEnums.ActionType.LIMITED_OPERATION), "la 2ª può fare Operazione Limitata")
+	ok(second_opts.has(CoinEnums.ActionType.EVENT), "…oppure l'Evento")
+	ok(not second_opts.has(CoinEnums.ActionType.OPERATION), "…ma non un'Operazione piena")
+
+	# Dopo due Fazioni che agiscono la carta è conclusa.
+	seq.act(CoinEnums.ActionType.LIMITED_OPERATION)
+	eq(seq.is_done(), true, "carta conclusa dopo due azioni")
+	seq.finish()
+	eq(s.eligibility["marsgov"], CoinEnums.Eligibility.INELIGIBLE, "MarsGov non più Disponibile")
+	eq(s.eligibility["red_dust"], CoinEnums.Eligibility.ELIGIBLE, "Red Dust resta Disponibile")
+
+	# Operazione senza SA: la 2ª può solo l'Operazione Limitata.
+	var s2 := fresh()
+	var seq2 := RDRSequence.new(s2, module, gd.card(1))
+	seq2.act(CoinEnums.ActionType.OPERATION)
+	eq(seq2.legal_actions(), [CoinEnums.ActionType.PASS, CoinEnums.ActionType.LIMITED_OPERATION],
+		"dopo Operazione secca: solo Limitata (o Passo)")
+
+	# Evento: la 2ª torna a poter fare un'Operazione piena.
+	var s3 := fresh()
+	var seq3 := RDRSequence.new(s3, module, gd.card(1))
+	seq3.act(CoinEnums.ActionType.EVENT)
+	ok(seq3.legal_actions().has(CoinEnums.ActionType.OPERATION_WITH_SPECIAL),
+		"dopo l'Evento: Operazione con Attività Speciale")
+
+
+func test_pass() -> void:
+	print("Passo (§4.1)")
+	var s := fresh()
+	var seq := RDRSequence.new(s, module, gd.card(1))
+	var mg_before := s.get_resources("marsgov")
+	seq.act_pass()
+	eq(s.get_resources("marsgov"), mg_before + 3, "MarsGov Passa: +3 Risorse")
+	eq(seq.pending_faction(), "corporations", "tocca alla Fazione successiva")
+	seq.act_pass()
+	ok(seq.pass_effects.has("aldrin_cycler"), "il Passo delle Corporations attiva l'Aldrin Cycler")
+	var rd_before := s.get_resources("red_dust")
+	seq.act_pass()
+	eq(s.get_resources("red_dust"), rd_before + 1, "Red Dust Passa: +1 Risorsa")
+	seq.act_pass()
+	ok(seq.pass_effects.has("draw_asset"), "il Passo dei Reclaimer dà una pescata di Asset")
+	eq(seq.is_done(), true, "tutte le Fazioni hanno Passato: carta conclusa")
+	seq.finish()
+	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		eq(s.eligibility[fid], CoinEnums.Eligibility.ELIGIBLE,
+			"chi Passa resta Disponibile (%s)" % fid)
+
+
+func test_reclaimer_order() -> void:
+	print("Ordine dei Reclaimer (§4.1)")
+	var s := fresh()
+	# Carta 1 = M C D R: servono 3 scarti per diventare 1ª Disponibile.
+	var seq := RDRSequence.new(s, module, gd.card(1))
+	eq(seq.reclaimer_cost_to_reach(1), 3, "3 Asset per essere 1ª con tutti Disponibili")
+	eq(seq.reclaimer_discard(3), true, "scarto accettato")
+	eq(seq.pending_faction(), "reclaimer", "i Reclaimer agiscono per primi")
+
+	# Con due Fazioni già Non Disponibili bastano meno scarti (l'avanzamento è
+	# sull'ordine STAMPATO, ma il rango si conta fra le sole Disponibili).
+	var s2 := fresh()
+	s2.eligibility["corporations"] = CoinEnums.Eligibility.INELIGIBLE
+	s2.eligibility["red_dust"] = CoinEnums.Eligibility.INELIGIBLE
+	var seq2 := RDRSequence.new(s2, module, gd.card(1))
+	eq(seq2.pending_faction(), "marsgov", "senza scarti tocca a MarsGov")
+	eq(seq2.reclaimer_cost_to_reach(1), 3, "servono comunque 3 scarti per superare M C D")
+	eq(seq2.reclaimer_cost_to_reach(2), 0, "…ma sono già 2ª Disponibili senza scartare")
+	eq(seq2.reclaimer_discard(4), true, "il massimo è 3 scarti")
+	eq(seq2.reclaimer_shift, 3, "scarti limitati a 3")
+
+
+func test_aldrin_cycler() -> void:
+	print("Aldrin Cycler (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	var mg_before := s.get_resources("marsgov")
+	r.aldrin_cycler()
+	# Transit → Phobos: le 3 Supply valgono 9 Risorse.
+	eq(s.get_resources("marsgov"), mg_before + 9, "3 Supply su Phobos: +9 Risorse MarsGov")
+	eq(module.count_in(s, "phobos", "eg_troop"), 6, "Phobos: 4+2 Truppe EG")
+	eq(module.count_in(s, "phobos", "security"), 3, "Phobos: 2+1 Security")
+	eq(module.count_in(s, "orbit", "satellite"), 2, "il Satellite arrivato passa in Orbit")
+	eq(module.marker(s, "phobos", "supply"), 0, "nessuna Supply resta su Phobos")
+	# Una Popolazione parte da Earth verso Transit.
+	eq(module.marker(s, "earth", "population"), 0, "la Popolazione lascia Earth")
+	eq(module.marker(s, "transit", "population"), 1, "…ed è in Transit")
+	# Il Controller (Corporations al setup) spedisce 5 pezzi: le proprie unità prima.
+	eq(module.count_in(s, "earth", "security"), 0, "la Security parte da Earth")
+	eq(module.count_in(s, "earth", "specops"), 0, "lo SpecOps parte da Earth")
+	eq(module.count_in(s, "transit", "satellite"), 2, "i 2 Satelliti sono in Transit")
+	eq(module.count_in(s, "earth", "eg_troop"), 2, "le Truppe EG restano su Earth (ultima priorità)")
+
+
+func test_corporate_casualties() -> void:
+	print("Corporate Casualties (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	s.tracks["profits"] = 20
+	s.spaces["casualties"].add_piece("corporations", "corp_base", 2, "basic")
+	s.spaces["casualties"].add_piece("corporations", "security", 5, "")
+	s.spaces["casualties"].add_piece("corporations", "specops", 2, "hidden")
+	r.corporate_casualties()
+	# 2 Basi + (5 Security / 2 arrotondato per difetto) = 2 + 2 = 4 Profits persi.
+	eq(int(s.tracks["profits"]), 16, "−4 Profits (2 Basi + 2 coppie di Security)")
+	eq(module.count_in(s, "casualties", "security"), 0, "le Casualties si svuotano")
+	eq(module.available(s, "corp_base"), 8, "le Basi tornano fra le Disponibili (6+2)")
+
+
+func test_eg_confidence_phase() -> void:
+	print("Fase EarthGov Confidence (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	# Al setup il marcatore è su EG−: scende di una casella (3 → 2).
+	r.earthgov_confidence_phase()
+	eq(int(s.tracks["eg_confidence"]), 2, "EG− fa scendere di una casella")
+	eq(module.eg_controller(s), "corporations", "il Controller resta Corporations")
+	# La casella 2 dà 6 Truppe EG, 1 Supply e 0 Popolazione su Earth.
+	eq(module.count_in(s, "earth", "eg_troop"), 8, "2 già presenti + 6 rinforzi")
+	eq(module.marker(s, "earth", "supply"), 2, "1 già presente + 1 rinforzo")
+
+	# Salendo da 5 a 6 il controllo passa a MarsGov.
+	var s2 := fresh()
+	var r2 := rounds_for(s2)
+	s2.tracks["eg_confidence"] = 5
+	s2.tracks["eg_side"] = 1
+	eq(module.eg_controller(s2), "corporations", "casella 5: Controller Corporations")
+	r2.earthgov_confidence_phase()
+	eq(int(s2.tracks["eg_confidence"]), 6, "EG+ fa salire di una casella")
+	eq(module.eg_controller(s2), "marsgov", "casella 6: il controllo passa a MarsGov")
+
+	# Fondo traccia: le Truppe EG lasciano Mars.
+	var s3 := fresh()
+	var r3 := rounds_for(s3)
+	s3.tracks["eg_confidence"] = 1
+	s3.tracks["eg_side"] = -1
+	module.place_from_available(s3, "europa", "eg_troop", 2)
+	r3.earthgov_confidence_phase()
+	eq(int(s3.tracks["eg_confidence"]), 0, "il marcatore tocca il fondo")
+	eq(module.eg_controller(s3), "", "nessun EarthGov Controller")
+	eq(module.count_in(s3, "europa", "eg_troop"), 0, "le Truppe EG lasciano la mappa")
+
+
+func test_terraforming() -> void:
+	print("Terraforming (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	s.tracks["profits"] = 10
+	# Due Basi Terraforming nello stesso Deserto: 2 + 1 Profits.
+	s.spaces["marth"].remove_piece("corporations", "corp_base", 1, "basic")
+	s.spaces["marth"].add_piece("corporations", "corp_base", 2, "terraforming")
+	# Un Conversion Center in un Deserto costa 1 Profit.
+	s.spaces["ascraeus_mons"].remove_piece("reclaimer", "cr_base", 1, "basic")
+	s.spaces["ascraeus_mons"].add_piece("reclaimer", "cr_base", 1, "conversion_center")
+	r.terraforming()
+	eq(int(s.tracks["profits"]), 12, "+3 dalle Terraforming, −1 dal Conversion Center")
+
+
+func test_attrition() -> void:
+	print("Attrition (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	# Al setup nessun Deserto perde pezzi: dove sono Spopolati o c'è una Base COIN,
+	# o ci sono solo forze immuni (Reclaimer).
+	var mg_before := 0
+	for sid in module.mars_spaces(s):
+		mg_before += module.count_in(s, sid, "mg_troop")
+	r.attrition()
+	var mg_after := 0
+	for sid in module.mars_spaces(s):
+		mg_after += module.count_in(s, sid, "mg_troop")
+	eq(mg_after, mg_before, "lo schieramento iniziale non subisce Attrition")
+
+	# Deserto Spopolato senza Base COIN: perde 1 Truppa MG e 1 Security.
+	var s2 := fresh()
+	var r2 := rounds_for(s2)
+	module.place_from_available(s2, "ascraeus_mons", "mg_troop", 2)
+	module.place_from_available(s2, "ascraeus_mons", "security", 2)
+	var cr_before := module.count_in(s2, "ascraeus_mons", "cr_rebel")
+	r2.attrition()
+	eq(module.count_in(s2, "ascraeus_mons", "mg_troop"), 1, "−1 Truppa MarsGov")
+	eq(module.count_in(s2, "ascraeus_mons", "security"), 1, "−1 Security")
+	eq(module.count_in(s2, "ascraeus_mons", "cr_rebel"), cr_before,
+		"i Ribelli Reclaimer sono immuni all'Attrition")
+	eq(module.count_in(s2, "casualties", "security"), 1, "la Security va nelle Casualties")
+
+	# Con una Base COIN nello stesso Deserto non si perde nulla.
+	var s3 := fresh()
+	var r3 := rounds_for(s3)
+	module.place_from_available(s3, "ascraeus_mons", "mg_troop", 1)
+	module.place_from_available(s3, "ascraeus_mons", "mg_base", 1)
+	r3.attrition()
+	eq(module.count_in(s3, "ascraeus_mons", "mg_troop"), 1, "la Base COIN protegge dall'Attrition")
+
+
+func test_conversion() -> void:
+	print("Conversion (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	# New Córdoba è Popolata: con un Conversion Center arriva un CR Rebel.
+	s.spaces["new_cordoba"].remove_piece("reclaimer", "cr_base", 1, "basic")
+	s.spaces["new_cordoba"].add_piece("reclaimer", "cr_base", 1, "conversion_center")
+	var before := module.count_in(s, "new_cordoba", "cr_rebel")
+	r.conversion()
+	eq(module.count_in(s, "new_cordoba", "cr_rebel"), before + 1, "+1 CR Rebel")
+	# La Wilderness è sempre Spopolata: nessun reclutamento.
+	var s2 := fresh()
+	var r2 := rounds_for(s2)
+	s2.spaces["wilderness"].remove_piece("reclaimer", "cr_base", 1, "basic")
+	s2.spaces["wilderness"].add_piece("reclaimer", "cr_base", 1, "conversion_center")
+	var w_before := module.count_in(s2, "wilderness", "cr_rebel")
+	r2.conversion()
+	eq(module.count_in(s2, "wilderness", "cr_rebel"), w_before, "Wilderness Spopolata: nessun CR Rebel")
+
+
+func test_storm_table() -> void:
+	print("Tabella delle tempeste (§3.2)")
+	var s := fresh()
+	var r := rounds_for(s)
+	# Ogni combinazione dei due dadi deve indicare uno spazio esistente.
+	var hit := {}
+	for white in range(1, 7):
+		for black in range(1, 7):
+			var sid := r.space_for_roll(white, black)
+			ok(sid != "", "tiro %d/%d mappato su uno spazio" % [white, black])
+			if sid != "":
+				hit[sid] = true
+	eq(hit.size(), 23, "i 23 spazi settoriali sono tutti raggiungibili")
+	ok(not hit.has("wilderness"), "la Wilderness non è nella tabella")
+	# I settori doppi: 1 e 2 sono Arabia Terra, 5 e 6 Hellas Planitia.
+	eq(r.space_for_roll(1, 1), r.space_for_roll(2, 1), "d6 bianco 1 e 2: stesso settore")
+	eq(r.space_for_roll(5, 5), r.space_for_roll(6, 5), "d6 bianco 5 e 6: stesso settore")
+	eq(r.space_for_roll(1, 1), "new_cordoba", "1/1 = New Córdoba")
+	eq(r.space_for_roll(3, 1), "ascraeus_mons", "3/1 = Ascraeus Mons")
+	eq(r.space_for_roll(4, 1), "europa", "4/1 = Europa")
+	# Hellas Chaos occupa due risultati del dado nero.
+	eq(r.space_for_roll(5, 3), "hellas_chaos", "5/3 = Hellas Chaos")
+	eq(r.space_for_roll(5, 4), "hellas_chaos", "5/4 = Hellas Chaos")
+
+
+func test_storm_rolls() -> void:
+	print("Tiri delle tempeste (§4.2)")
+	var s := fresh()
+	var r := rounds_for(s, 7)
+	r.storm_rolls(4)
+	ok(r.storms_on_map() > 0, "sono comparse tempeste")
+	ok(r.storms_on_map() <= 4, "al massimo un marker per tiro")
+	# Il limite di 6 marker sulla mappa non si supera mai.
+	var s2 := fresh()
+	var r2 := rounds_for(s2, 11)
+	r2.storm_rolls(40)
+	eq(r2.storms_on_map(), 6, "limite di 6 marker tempesta")
+
+	# Un secondo risultato sullo stesso spazio porta la tempesta a Raging.
+	var s3 := fresh()
+	var r3 := rounds_for(s3)
+	module.set_marker(s3, "radau", "storm", 1)
+	eq(module.storm(s3, "radau"), 1, "tempesta in arrivo su Radau")
+	r3._reclaimer_strike("radau")
+	eq(module.count_in(s3, "radau", "rd_rebel"), 0,
+		"i Reclaimer rimuovono una forza nemica sul secondo risultato")
+
+	# Fase tempeste: le Raging spariscono, le Approaching diventano Raging.
+	var s4 := fresh()
+	var r4 := rounds_for(s4)
+	module.set_marker(s4, "radau", "storm", 2)
+	module.set_marker(s4, "marth", "storm", 1)
+	s4.tracks["next_card"] = -1
+	r4.dust_storm_phase()
+	eq(module.storm(s4, "radau"), 0, "la Raging Storm si dissolve")
+	eq(module.storm(s4, "marth"), 2, "l'Approaching diventa Raging")
+
+
+func test_dust_storm_resources() -> void:
+	print("Dust Storm Round — Resources (§4.3)")
+	var s := fresh()
+	var r := rounds_for(s)
+	var mg := s.get_resources("marsgov")
+	var rd := s.get_resources("red_dust")
+	r.resources_phase()
+	# MarsGov: Popolazione degli spazi con Controllo COIN e senza Opposizione
+	# (Europa 2 + Tenzing 3 + Tereshkova 2 + Shenzhou 3 = 10).
+	eq(s.get_resources("marsgov"), mg + 10, "MarsGov +10")
+	# Red Dust: Popolazione in Opposizione Attiva (Sharma 2) + 5 Basi RD.
+	eq(s.get_resources("red_dust"), rd + 7, "Red Dust +7")
+	# Corporations: 2 Profits per Base in un Labirinto (solo Shenzhou).
+	eq(int(s.tracks["profits"]), 2, "Corporations +2 Profits")
+
+
+func test_dust_storm_round() -> void:
+	print("Dust Storm Round completo (§4.3)")
+	var s := fresh()
+	var r := rounds_for(s)
+	r.begin_game()
+	var mg_before := s.get_resources("marsgov")
+	r.dust_storm_round()
+	eq(int(s.tracks["dust_storm_rounds"]), 1, "primo Dust Storm Round contato")
+	eq(int(s.tracks.get("game_over", 0)), 0, "nessuno vince al primo round")
+	# Displaced Population: 4 marker → −6 Risorse MarsGov, poi +10 dalla fase Risorse.
+	eq(s.get_resources("marsgov"), mg_before - 6 + 10, "penalità Displaced + entrate")
+	# Redeploy: le Truppe EG lasciano Mars.
+	for sid in module.mars_spaces(s):
+		eq(module.count_in(s, sid, "eg_troop"), 0, "nessuna Truppa EG su Mars (%s)" % sid)
+	# Il Redeploy spazza via tutte le tempeste; quelle presenti a fine round sono
+	# state tirate DOPO, nella fase di Reset (§4.3), sui Flashpoint delle due
+	# nuove carte — quindi non se ne pretende zero qui.
+	var s_storm := fresh()
+	var r_storm := rounds_for(s_storm)
+	module.set_marker(s_storm, "radau", "storm", 2)
+	module.set_marker(s_storm, "marth", "storm", 1)
+	r_storm.redeploy_phase()
+	eq(r_storm.storms_on_map(), 0, "il Redeploy rimuove tutti i marker tempesta")
+	# Reset: tutti Disponibili, Ribelli Nascosti, nuove carte rivelate.
+	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		eq(s.eligibility[fid], CoinEnums.Eligibility.ELIGIBLE, "%s di nuovo Disponibile" % fid)
+	var active := 0
+	for sid in s.spaces.keys():
+		for type_id in ["rd_rebel", "cr_rebel", "specops"]:
+			active += module.count_in(s, sid, type_id, "active")
+	eq(active, 0, "tutti i Ribelli e gli SpecOps sono Nascosti")
+	ok(s.current_card > 0, "nuova Current Event rivelata")
+	eq(module.marker(s, "earth", "population"),
+		module.eg_confidence_value(s), "la Popolazione su Earth pareggia la EG Confidence")
+
+
+func test_game_end() -> void:
+	print("Fine partita (§2.0/§4.3)")
+	# Terzo Dust Storm Round senza vincitori: vince il margine più alto.
+	var s := fresh()
+	var r := rounds_for(s)
+	r.begin_game()
+	s.tracks["dust_storm_rounds"] = 2
+	r.dust_storm_round()
+	eq(int(s.tracks["dust_storm_rounds"]), 3, "terzo Dust Storm Round")
+	eq(int(s.tracks["game_over"]), 1, "la partita finisce")
+	ok(String(s.tracks.get("winner", "")) != "", "un vincitore è determinato")
+
+	# Vittoria anticipata: Profits oltre 36 al check.
+	var s2 := fresh()
+	var r2 := rounds_for(s2)
+	r2.begin_game()
+	s2.tracks["profits"] = 45
+	var over := r2.victory_phase()
+	eq(over, true, "il check di vittoria chiude la partita")
+	eq(String(s2.tracks.get("winner", "")), "corporations", "vincono le Corporations")

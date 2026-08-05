@@ -12,6 +12,9 @@ var _tracks: TrackOverlay
 var _side: VBoxContainer
 var _status: RichTextLabel
 var _space_info: RichTextLabel
+var _card_info: RichTextLabel
+var _btn_pass: Button
+var _btn_end: Button
 var _log: RichTextLabel
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
@@ -80,6 +83,21 @@ func _build_ui() -> void:
 	_side.add_child(_title("Red Dust Rebellion  ·  %s" % BUILD_VERSION))
 	_status = _rich(240)
 	_side.add_child(_status)
+
+	_side.add_child(_title("Carta e turno"))
+	_card_info = _rich(120)
+	_side.add_child(_card_info)
+
+	var actions := HBoxContainer.new()
+	_btn_pass = Button.new()
+	_btn_pass.text = "Passa"
+	_btn_pass.pressed.connect(func(): GameController.do_pass())
+	actions.add_child(_btn_pass)
+	_btn_end = Button.new()
+	_btn_end.text = "Concludi carta"
+	_btn_end.pressed.connect(func(): GameController.end_card())
+	actions.add_child(_btn_end)
+	_side.add_child(actions)
 
 	_side.add_child(_title("Spazio selezionato"))
 	_space_info = _rich(150)
@@ -178,6 +196,7 @@ func _on_state_changed() -> void:
 		(_views[sid] as RegionView).refresh(GameController.state, m)
 	_tracks.queue_redraw()
 	_refresh_status()
+	_refresh_card_info()
 	if _selected != "":
 		_refresh_space_info(_selected)
 
@@ -218,6 +237,47 @@ func _refresh_status() -> void:
 	lines.append("Supporto totale %d  ·  Opposizione totale %d" % [
 		m.total_support(st), m.total_opposition(st)])
 	_status.text = "\n".join(lines)
+
+
+## Carta corrente, prossima carta, ordine di Eligibility e turno in corso (§4.1).
+func _refresh_card_info() -> void:
+	var gc := GameController
+	var r: RDRRounds = gc.rounds
+	if r == null:
+		return
+	var lines: Array[String] = []
+	var cur: CardDef = gc.game_def.card(r.current_card())
+	if cur != null:
+		var m: RDRModule = gc.rdr()
+		lines.append("[b]#%d %s[/b]  ⚡%d" % [
+			cur.number, cur.title, int(m.card_flashpoint.get(cur.number, 0))])
+		var order: Array[String] = []
+		for fid in cur.faction_order:
+			var mark := ""
+			if gc.state.eligibility.get(fid, CoinEnums.Eligibility.ELIGIBLE) \
+					!= CoinEnums.Eligibility.ELIGIBLE:
+				mark = "~"
+			order.append("%s%s%s" % [mark, gc.game_def.faction(fid).short_name, mark])
+		lines.append("Ordine: %s   [i](~non disponibile~)[/i]" % " › ".join(order))
+	var nxt: CardDef = gc.game_def.card(r.next_card())
+	if nxt != null:
+		lines.append("Prossima: #%d %s" % [nxt.number, nxt.title])
+	if r.haboob_active():
+		lines.append("[color=#e0b070]Haboob: Recon e March vietati.[/color]")
+	if r.is_game_over():
+		lines.append("[b]Partita finita.[/b] Vincitore: %s" % String(gc.state.tracks.get("winner", "—")))
+	elif gc.sequence != null:
+		var pending := gc.sequence.pending_faction()
+		if pending != "":
+			lines.append("Tocca a [b]%s[/b] (%s Disponibile)" % [
+				gc.game_def.faction(pending).short_name,
+				"1ª" if gc.sequence.is_first_slot() else "2ª"])
+		else:
+			lines.append("Carta conclusa: premi «Concludi carta».")
+	_card_info.text = "\n".join(lines)
+	var can_act: bool = gc.sequence != null and gc.sequence.pending_faction() != ""
+	_btn_pass.disabled = not can_act
+	_btn_end.disabled = gc.rounds == null or gc.rounds.is_game_over()
 
 
 ## Conta gli spazi della mappa di Mars (23 + Wilderness). Phobos è escluso:

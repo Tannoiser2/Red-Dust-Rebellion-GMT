@@ -45,6 +45,11 @@ var maglev: Array = []
 var printed_pop: Dictionary = {}
 ## Numero di caselle Infrastruttura per spazio (2 nei Deserti, 4 nei Labirinti).
 var infra_boxes: Dictionary = {}
+## Valore Flashpoint stampato su ciascuna carta Evento: numero carta -> 0..4.
+var card_flashpoint: Dictionary = {}
+## Tabella dei tiri Dust Storm: space_id -> [[d6 bianco, d6 nero], …].
+## Hellas Chaos occupa due risultati del dado nero (3 e 4).
+var storm_table: Dictionary = {}
 
 
 # ---------------------------------------------------------------------------
@@ -74,11 +79,17 @@ func build_game_def() -> GameDef:
 		gd.add_space(sd)
 		printed_pop[sd.id] = int(s.get("pop", 0))
 		infra_boxes[sd.id] = int(s.get("infra", 0))
+		if s.has("storm_die"):
+			var rolls: Array = [s["storm_die"]]
+			if s.has("storm_die_alt"):
+				rolls.append(s["storm_die_alt"])
+			storm_table[sd.id] = rolls
 	maglev = spaces_data.get("maglev", [])
 
 	var cards_data: Dictionary = _load_json(DATA_DIR + "cards.json")
 	for c in cards_data.get("cards", []):
 		gd.add_card(CardDef.from_dict(c))
+		card_flashpoint[int(c.get("number", 0))] = int(c.get("flashpoint", 0))
 
 	gd.tracks = {
 		"eg_confidence": {"min": 0, "max": 8},
@@ -345,6 +356,154 @@ func maglev_links(state: GameState, sid: String) -> PackedStringArray:
 		elif String(link["b"]) == sid:
 			out.append(String(link["a"]))
 	return out
+
+
+# ---------------------------------------------------------------------------
+# Forze Disponibili e movimento dei pezzi (§1.3)
+# ---------------------------------------------------------------------------
+
+## Forze Disponibili di una Fazione per tipo di pezzo.
+func available(state: GameState, type_id: String) -> int:
+	var pool: Dictionary = state.tracks.get("available", {})
+	var fid: String = PIECE_OWNER.get(type_id, "")
+	return int(pool.get(fid, {}).get(type_id, 0))
+
+
+## Preleva fino a `n` pezzi dalle Disponibili; restituisce quanti ne ha presi.
+## §1.3: "Forces may only be placed from Available".
+func take_available(state: GameState, type_id: String, n: int) -> int:
+	var pool: Dictionary = state.tracks.get("available", {})
+	var fid: String = PIECE_OWNER.get(type_id, "")
+	if not pool.has(fid):
+		return 0
+	var have := int(pool[fid].get(type_id, 0))
+	var took: int = mini(have, n)
+	pool[fid][type_id] = have - took
+	return took
+
+
+func to_available(state: GameState, type_id: String, n: int) -> void:
+	if n <= 0:
+		return
+	var pool: Dictionary = state.tracks.get("available", {})
+	var fid: String = PIECE_OWNER.get(type_id, "")
+	if not pool.has(fid):
+		pool[fid] = {}
+	pool[fid][type_id] = int(pool[fid].get(type_id, 0)) + n
+
+
+## Piazza pezzi in uno spazio prelevandoli dalle Disponibili. Restituisce quanti
+## ne ha effettivamente piazzati (0 se le Disponibili sono vuote).
+func place_from_available(state: GameState, sid: String, type_id: String, n: int,
+		piece_state: String = "") -> int:
+	var took := take_available(state, type_id, n)
+	if took > 0:
+		var st: SpaceState = state.spaces[sid]
+		st.add_piece(PIECE_OWNER[type_id], type_id, took, _state_or_default(state, type_id, piece_state))
+	return took
+
+
+## Rimuove pezzi da uno spazio e li manda in `dest`: "available", "casualties"
+## oppure l'id di un altro spazio. §1.2: le forze CORP ed EarthGov rimosse vanno
+## nelle Casualties, non direttamente fra le Disponibili.
+func remove_pieces(state: GameState, sid: String, type_id: String, n: int,
+		dest: String = "available", piece_state = null) -> int:
+	var st: SpaceState = state.spaces[sid]
+	var fid: String = PIECE_OWNER.get(type_id, "")
+	var removed := 0
+	var states: Array = st.pieces.get(fid, {}).get(type_id, {}).keys()
+	if piece_state != null:
+		states = [String(piece_state)]
+	for s in states:
+		if removed >= n:
+			break
+		removed += st.remove_piece(fid, type_id, n - removed, String(s))
+	if removed > 0:
+		if dest == "available":
+			to_available(state, type_id, removed)
+		else:
+			state.spaces[dest].add_piece(fid, type_id, removed,
+				_state_or_default(state, type_id, ""))
+	return removed
+
+
+## Sposta pezzi fra due spazi conservandone lo stato Nascosto/Attivo.
+func move_pieces(state: GameState, from_sid: String, to_sid: String, type_id: String,
+		n: int, piece_state = null) -> int:
+	var fid: String = PIECE_OWNER.get(type_id, "")
+	var src: SpaceState = state.spaces[from_sid]
+	var dst: SpaceState = state.spaces[to_sid]
+	var moved := 0
+	var states: Array = src.pieces.get(fid, {}).get(type_id, {}).keys()
+	if piece_state != null:
+		states = [String(piece_state)]
+	for s in states:
+		if moved >= n:
+			break
+		var k := src.remove_piece(fid, type_id, n - moved, String(s))
+		if k > 0:
+			dst.add_piece(fid, type_id, k, String(s))
+			moved += k
+	return moved
+
+
+## Conta i pezzi di un tipo in uno spazio (tutti gli stati, o uno solo).
+func count_in(state: GameState, sid: String, type_id: String, piece_state = null) -> int:
+	var fid: String = PIECE_OWNER.get(type_id, "")
+	return state.spaces[sid].count(fid, type_id, piece_state)
+
+
+func _state_or_default(state: GameState, type_id: String, piece_state: String) -> String:
+	if piece_state != "":
+		return piece_state
+	var pt: PieceTypeDef = state.game_def.piece_type(type_id)
+	return pt.default_state if pt != null else ""
+
+
+## Marker generici di uno spazio (danno, popolazione, tempesta, supply…).
+func marker(state: GameState, sid: String, name: String) -> int:
+	return int(state.spaces[sid].markers.get(name, 0))
+
+
+func set_marker(state: GameState, sid: String, name: String, value: int) -> void:
+	if value <= 0:
+		state.spaces[sid].markers.erase(name)
+	else:
+		state.spaces[sid].markers[name] = value
+
+
+func add_marker(state: GameState, sid: String, name: String, delta: int) -> void:
+	set_marker(state, sid, name, marker(state, sid, name) + delta)
+
+
+## Spazi di Mars (23 settoriali + Wilderness): esclude Aldrin Cycler, Orbita,
+## box di servizio e Phobos.
+func mars_spaces(state: GameState) -> PackedStringArray:
+	var out := PackedStringArray()
+	for s in state.game_def.spaces:
+		if s.type == CoinEnums.SpaceType.COUNTRY or s.id == "phobos":
+			continue
+		out.append(s.id)
+	return out
+
+
+func is_desert(state: GameState, sid: String) -> bool:
+	var sd: SpaceDef = state.game_def.space(sid)
+	return sd != null and sd.terrain == "desert"
+
+
+func is_labyrinth(state: GameState, sid: String) -> bool:
+	var sd: SpaceDef = state.game_def.space(sid)
+	return sd != null and sd.terrain == "labyrinth"
+
+
+## §1.10: 0 = nessuna tempesta, 1 = Approaching, 2 = Raging.
+func storm(state: GameState, sid: String) -> int:
+	return marker(state, sid, "storm")
+
+
+func has_raging_storm(state: GameState, sid: String) -> bool:
+	return storm(state, sid) == 2
 
 
 func _load_json(path: String) -> Dictionary:
