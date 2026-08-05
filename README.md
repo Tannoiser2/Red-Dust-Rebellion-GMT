@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**674 test del modulo + 45 controlli di smoke test della scena, 0 falliti.**
+**674 test del modulo + 66 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -58,7 +58,10 @@ disponibile in UI è il Passo.
 | Mappa renderizzata + 30 zone cliccabili | ✅ 24 su Mars + Aldrin Cycler/Orbita |
 | Pezzi sulla mappa (67 su Mars + 18 fuori) | ✅ texture del Vassal, Nascosto/Attivo, lati potenziati |
 | Marker Supporto/Opposizione e Controllo | ✅ sulle caselle 'Neutral' stampate (coordinate Vassal) |
-| Tracciati: Edge Track, EG Confidence, Flashpoint, SoP | ✅ |
+| Tracciati: Edge Track, EG Confidence, Flashpoint | ✅ marcatori dentro le caselle stampate |
+| Cilindri della Sequence of Play | ✅ nelle 9 caselle, si muovono durante la carta |
+| Carte Evento in vista (corrente + prossima) | ✅ anteprime cliccabili, ingrandimento a schermo intero |
+| Spostamenti a trascinamento sulla mappa | ✅ con le frecce di anteprima |
 | Pannello di stato + dettaglio spazio | ✅ |
 | Mazzo §3.3 (3 pile da 12, Dust Storm in fondo) | ✅ 39 carte |
 | Event Round §4.1 (ordine, 1ª/2ª, Passo, LimOp) | ✅ incluse le deviazioni RDR |

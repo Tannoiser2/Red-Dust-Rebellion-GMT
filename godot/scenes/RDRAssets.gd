@@ -79,6 +79,13 @@ static func tex(file_name: String) -> Texture2D:
 	return t
 
 
+## Immagine della carta Evento numero `n` (assets/cards/01.jpg … 51.jpg).
+static func card_tex(number: int) -> Texture2D:
+	if number < 1 or number > 51:
+		return null
+	return tex("cards/%02d.jpg" % number)
+
+
 static func piece_tex(type_id: String, state: String = "") -> Texture2D:
 	var key := "%s:%s" % [type_id, state] if state != "" else type_id
 	if not PIECE_FILES.has(key):

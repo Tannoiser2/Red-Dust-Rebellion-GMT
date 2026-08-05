@@ -9,10 +9,14 @@ var _map_root: Control
 var _map_tex: TextureRect
 var _regions_layer: Control
 var _tracks: TrackOverlay
+var _moves: MovesOverlay    ## frecce degli spostamenti dichiarati
 var _side: VBoxContainer
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
+var _card_now: TextureRect          ## anteprima della carta in corso
+var _card_next: TextureRect         ## anteprima della prossima carta
+var _card_zoom: Control             ## ingrandimento a schermo intero
 var _btn_pass: Button
 var _btn_end: Button
 var _ops_box: HFlowContainer
@@ -82,6 +86,11 @@ func _build_ui() -> void:
 	_tracks.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_tracks)
 
+	# Sopra a tutto: le frecce degli spostamenti ancora da eseguire.
+	_moves = MovesOverlay.new()
+	_moves.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_map_root.add_child(_moves)
+
 	# --- Pannello laterale --------------------------------------------------
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(340, 0)
@@ -99,6 +108,13 @@ func _build_ui() -> void:
 	_side.add_child(_status)
 
 	_side.add_child(_title("Carta e turno"))
+	# Le due carte in vista, come sul tavolo: quella in corso e la prossima
+	# (serve a decidere, il suo Flashpoint conta già). Un clic le ingrandisce.
+	var cards_row := HBoxContainer.new()
+	cards_row.add_theme_constant_override("separation", 6)
+	_card_now = _add_card_slot(cards_row, "In corso", 1.0)
+	_card_next = _add_card_slot(cards_row, "Prossima", 0.55)
+	_side.add_child(cards_row)
 	_card_info = _rich(120)
 	_side.add_child(_card_info)
 
@@ -137,6 +153,82 @@ func _build_ui() -> void:
 	_side.add_child(_title("Log"))
 	_log = _rich(200)
 	_side.add_child(_log)
+
+
+## Colonna con etichetta e anteprima cliccabile di una carta Evento.
+## `alpha` distingue a colpo d'occhio la carta in corso da quella che verrà.
+func _add_card_slot(row: HBoxContainer, label: String, alpha: float) -> TextureRect:
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var l := Label.new()
+	l.text = label
+	l.add_theme_font_size_override("font_size", 11)
+	l.add_theme_color_override("font_color", Color("9aa4ad"))
+	col.add_child(l)
+	var img := TextureRect.new()
+	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	img.custom_minimum_size = Vector2(0, 150)
+	img.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	img.modulate = Color(1, 1, 1, alpha)
+	img.mouse_filter = Control.MOUSE_FILTER_STOP
+	img.tooltip_text = "Clic per ingrandire"
+	img.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			_show_card_zoom(img.texture))
+	col.add_child(img)
+	row.add_child(col)
+	return img
+
+
+## Ingrandimento della carta a schermo intero: la scritta sulle carte Evento è
+## illeggibile in miniatura, e serve leggerla per decidere.
+func _show_card_zoom(tex: Texture2D) -> void:
+	if tex == null:
+		return
+	if _card_zoom != null:
+		_card_zoom.queue_free()
+	_card_zoom = Control.new()
+	_card_zoom.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_card_zoom.mouse_filter = Control.MOUSE_FILTER_STOP
+	var bg := ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.82)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_zoom.add_child(bg)
+	var img := TextureRect.new()
+	img.texture = tex
+	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	img.set_anchors_preset(Control.PRESET_FULL_RECT)
+	img.offset_left = 40
+	img.offset_top = 40
+	img.offset_right = -40
+	img.offset_bottom = -40
+	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_zoom.add_child(img)
+	var hint := Label.new()
+	hint.text = "Clic o Esc per chiudere"
+	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
+	hint.position = Vector2(44, 14)
+	_card_zoom.add_child(hint)
+	_card_zoom.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed:
+			_close_card_zoom())
+	add_child(_card_zoom)
+
+
+func _close_card_zoom() -> void:
+	if _card_zoom != null:
+		_card_zoom.queue_free()
+		_card_zoom = null
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _card_zoom != null and event is InputEventKey and event.pressed \
+			and (event as InputEventKey).keycode == KEY_ESCAPE:
+		_close_card_zoom()
+		get_viewport().set_input_as_handled()
 
 
 func _title(text: String) -> Label:
@@ -182,6 +274,7 @@ func _build_regions() -> void:
 		_regions_layer.add_child(rv)
 		rv.setup(sd, all_regions[sid])
 		rv.space_clicked.connect(_on_space_clicked)
+		rv.piece_dropped.connect(_on_piece_dropped)
 		_views[sid] = rv
 	_relayout_map()
 
@@ -206,6 +299,7 @@ func _relayout_map() -> void:
 	for sid in _views.keys():
 		(_views[sid] as RegionView).relayout()
 	_tracks.queue_redraw()
+	_update_moves_overlay()
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +366,8 @@ func _refresh_card_info() -> void:
 		return
 	var lines: Array[String] = []
 	var cur: CardDef = gc.game_def.card(r.current_card())
+	_card_now.texture = RDRAssets.card_tex(r.current_card())
+	_card_next.texture = RDRAssets.card_tex(r.next_card())
 	if cur != null:
 		var m: RDRModule = gc.rdr()
 		lines.append("[b]#%d %s[/b]  ⚡%d" % [
@@ -353,8 +449,15 @@ func _start_op(op_id: String) -> void:
 	_op_mode = op_id
 	_op_spaces.clear()
 	_op_candidates = gc.operation_candidates(op_id, gc.sequence.pending_faction())
-	_append_log("%s: scegli gli spazi (%d disponibili), poi «Esegui»." % [
-		gc.OPERATION_NAMES.get(op_id, op_id), _op_candidates.size()])
+	if gc.MOVEMENT_OPERATIONS.has(op_id):
+		_append_log("%s: %s. Trascina i pezzi da uno spazio all'altro per dichiarare gli spostamenti, poi «Esegui». (%d spazi disponibili)" % [
+			gc.OPERATION_NAMES.get(op_id, op_id),
+			"scegli le origini" if op_id == "travel" else "scegli le destinazioni",
+			_op_candidates.size()])
+	else:
+		_append_log("%s: scegli gli spazi (%d disponibili), poi «Esegui»." % [
+			gc.OPERATION_NAMES.get(op_id, op_id), _op_candidates.size()])
+	_update_moves_overlay()
 	_paint_op_highlight()
 	_refresh_op_bar()
 
@@ -481,6 +584,7 @@ func _cancel_op() -> void:
 	_op_moves.clear()
 	_op_spaces.clear()
 	_op_candidates = PackedStringArray()
+	_update_moves_overlay()
 	_paint_op_highlight()
 	_refresh_op_bar()
 
@@ -626,6 +730,69 @@ func _choice_label(value: String) -> String:
 	return value.capitalize()
 
 
+## §5.3/§5.4/§5.7/§5.8: trascinare un pezzo da uno spazio all'altro dichiara uno
+## spostamento dell'Operazione di movimento in corso. È il modo naturale di
+## muovere sulla mappa; il modulo qui sotto resta per le quantità grandi.
+func _on_piece_dropped(from_id: String, to_id: String, type_id: String) -> void:
+	var gc := GameController
+	if gc.sequence == null or gc.sequence.pending_faction() == "":
+		return
+	var fid := gc.sequence.pending_faction()
+	if not gc.MOVEMENT_OPERATIONS.has(_op_mode):
+		_append_log("Per spostare i pezzi scegli prima un'Operazione di movimento (%s)." %
+			", ".join(PackedStringArray(gc.MOVEMENT_OPERATIONS).slice(0, 4)))
+		return
+	if not gc.movable_types(_op_mode, fid).has(type_id):
+		_append_log("[color=#e05a4b]%s non muove unità di tipo «%s».[/color]" % [
+			gc.OPERATION_NAMES.get(_op_mode, _op_mode), type_id])
+		return
+	if not gc.legal_origins(_op_mode, fid, to_id, type_id).has(from_id):
+		_append_log("[color=#e05a4b]%s non è un'origine legale per %s con %s.[/color]" % [
+			gc.game_def.space(from_id).name, gc.game_def.space(to_id).name,
+			gc.OPERATION_NAMES.get(_op_mode, _op_mode)])
+		return
+	# §5.8: Travel sceglie le ORIGINI; le altre Operazioni le destinazioni.
+	var key := from_id if _op_mode == "travel" else to_id
+	if not _op_spaces.has(key):
+		if not _op_candidates.has(key):
+			_append_log("[color=#e05a4b]%s non è selezionabile per %s.[/color]" % [
+				gc.game_def.space(key).name, gc.OPERATION_NAMES.get(_op_mode, _op_mode)])
+			return
+		_op_spaces.append(key)
+	# Trascinare più volte lo stesso tragitto ingrossa la stessa freccia.
+	for m in _op_moves:
+		if String(m["from"]) == from_id and String(m["to"]) == to_id \
+				and String(m["type"]) == type_id:
+			m["count"] = int(m["count"]) + 1
+			_after_moves_changed()
+			return
+	_op_moves.append({"from": from_id, "to": to_id, "type": type_id, "count": 1})
+	_after_moves_changed()
+
+
+func _after_moves_changed() -> void:
+	_update_moves_overlay()
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+## Ridisegna le frecce degli spostamenti ancora da eseguire.
+func _update_moves_overlay() -> void:
+	if _moves == null:
+		return
+	var segs: Array = []
+	for m in _op_moves:
+		var f := String(m["from"])
+		var t := String(m["to"])
+		if _views.has(f) and _views.has(t):
+			segs.append({
+				"from": (_views[f] as RegionView).center_point(),
+				"to": (_views[t] as RegionView).center_point(),
+				"count": int(m["count"]),
+			})
+	_moves.set_segments(segs)
+
+
 ## Pianificatore di movimento (§5.3/§5.4/§5.7/§5.8): per ogni spazio scelto come
 ## destinazione si dichiara da dove arrivano le unità, di che tipo e quante.
 func _refresh_move_box() -> void:
@@ -640,15 +807,27 @@ func _refresh_move_box() -> void:
 		return
 
 	var title := Label.new()
-	title.text = "Spostamenti (%d dichiarati)" % _op_moves.size()
+	title.text = "Spostamenti (%d dichiarati) — trascina i pezzi sulla mappa" % _op_moves.size()
 	title.add_theme_font_size_override("font_size", 12)
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_move_box.add_child(title)
-	for m in _op_moves:
+	for i in range(_op_moves.size()):
+		var m: Dictionary = _op_moves[i]
+		var row_m := HBoxContainer.new()
 		var l := Label.new()
-		l.text = "  %d× %s: %s → %s" % [int(m["count"]), String(m["type"]),
+		l.text = "%d× %s: %s → %s" % [int(m["count"]), String(m["type"]),
 			gc.game_def.space(String(m["from"])).name, gc.game_def.space(String(m["to"])).name]
 		l.add_theme_font_size_override("font_size", 11)
-		_move_box.add_child(l)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row_m.add_child(l)
+		var del := Button.new()
+		del.text = "×"
+		del.tooltip_text = "Togli questo spostamento"
+		del.pressed.connect(func():
+			_op_moves.remove_at(i)
+			_after_moves_changed())
+		row_m.add_child(del)
+		_move_box.add_child(row_m)
 
 	# Form: destinazione (fra quelle scelte) · tipo · origine · quantità.
 	var dest_opt := OptionButton.new()

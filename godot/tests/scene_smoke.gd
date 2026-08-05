@@ -205,6 +205,88 @@ func _initialize() -> void:
 		"la coda delle Operazioni gratuite è consultabile (%d in attesa)"
 			% gc.pending_free_ops().size())
 
+	# --- Carte in vista e ingrandimento -----------------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	_ok(main.get("_card_now").texture != null, "l'immagine della carta in corso è mostrata")
+	_ok(main.get("_card_next").texture != null, "…e quella della prossima carta")
+	main.call("_show_card_zoom", main.get("_card_now").texture)
+	await process_frame
+	_ok(main.get("_card_zoom") != null, "il clic ingrandisce la carta a schermo intero")
+	main.call("_close_card_zoom")
+	await process_frame
+	_ok(main.get("_card_zoom") == null, "…e si richiude")
+
+	# --- Sequence of Play: i cilindri stanno nella casella giusta ----------
+	var sop: Dictionary = gc.layout.get("sop", {})
+	# NB: la mappa delle caselle si legge dallo script del nodo, non da
+	# `TrackOverlay.SOP_BOXES`: nominare la classe qui la farebbe compilare prima
+	# che gli autoload esistano (vedi la nota in testa a questo file).
+	var sop_boxes: Dictionary = main.get("_tracks").get_script() \
+		.get_script_constant_map()["SOP_BOXES"]
+	for box in sop_boxes.values():
+		_ok(sop.has(String(box)), "la casella «%s» esiste sulla tavola" % box)
+	# Ogni azione registrabile dalla sequenza deve avere la sua casella.
+	var mapped := true
+	for b in ["1st_op_only", "1st_op_sa", "1st_event", "2nd_limop",
+			"2nd_limop_or_event", "2nd_op_sa", "pass"]:
+		if not sop_boxes.has(b):
+			mapped = false
+	_ok(mapped, "ogni azione della sequenza ha una casella sulla tavola")
+	# Giocando davvero, il cilindro lascia la casella «Disponibile».
+	var first_fid: String = gc.sequence.pending_faction()
+	gc.do_pass()
+	await process_frame
+	_ok(String(gc.sequence.action_box.get(first_fid, "")) == "pass",
+		"chi Passa mette il cilindro nella casella Pass (%s)" % first_fid)
+
+	# --- Spostamenti a trascinamento --------------------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	# Fuori da un'Operazione di movimento il trascinamento non deve fare nulla.
+	main.call("_on_piece_dropped", "shepard", "daedalia_planum", "rd_rebel")
+	_ok((main.get("_op_moves") as Array).is_empty(),
+		"trascinare senza un'Operazione di movimento non dichiara nulla")
+	# Si passa finché non tocca al Red Dust, poi si prova una March.
+	var guard_rd := 0
+	while gc.sequence != null and gc.sequence.pending_faction() != "red_dust" and guard_rd < 5:
+		guard_rd += 1
+		gc.do_pass()
+		await process_frame
+	if gc.sequence != null and gc.sequence.pending_faction() == "red_dust":
+		main.call("_start_op", "march")
+		await process_frame
+		main.call("_on_piece_dropped", "shepard", "daedalia_planum", "rd_rebel")
+		var moves: Array = main.get("_op_moves")
+		_ok(moves.size() == 1, "il trascinamento dichiara uno spostamento")
+		_ok(int(moves[0]["count"]) == 1 and String(moves[0]["type"]) == "rd_rebel",
+			"…di 1 Ribelle Red Dust")
+		main.call("_on_piece_dropped", "shepard", "daedalia_planum", "rd_rebel")
+		_ok(int((main.get("_op_moves") as Array)[0]["count"]) == 2,
+			"trascinare di nuovo lo stesso tragitto ingrossa la stessa freccia")
+		_ok((main.get("_moves").get("_segments") as Array).size() == 1,
+			"sulla mappa compare una freccia")
+		# Una destinazione irraggiungibile va rifiutata senza sporcare il piano.
+		# La si cerca chiedendo al motore, invece di indovinarla: con gli
+		# Spaceport fra Labirinti controllati la March arriva più lontano di
+		# quanto sembri guardando la mappa.
+		var unreachable := ""
+		for sd2 in gc.game_def.spaces:
+			if sd2.id == "shepard" or sd2.type == CoinEnums.SpaceType.COUNTRY:
+				continue
+			if not gc.legal_origins("march", "red_dust", sd2.id, "rd_rebel").has("shepard"):
+				unreachable = sd2.id
+				break
+		_ok(unreachable != "", "esiste una destinazione fuori portata da Shepard (%s)" % unreachable)
+		main.call("_on_piece_dropped", "shepard", unreachable, "rd_rebel")
+		_ok((main.get("_op_moves") as Array).size() == 1,
+			"un tragitto illegale non viene accodato")
+		main.call("_cancel_op")
+		_ok((main.get("_moves").get("_segments") as Array).is_empty(),
+			"annullando, le frecce spariscono")
+	else:
+		_ok(false, "non si è riusciti ad arrivare al turno del Red Dust")
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()

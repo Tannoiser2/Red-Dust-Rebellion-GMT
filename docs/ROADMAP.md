@@ -33,7 +33,18 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Aldrin Cycler (Earth / Transit / Phobos / Orbit) con i suoi 18 pezzi
 - [x] Pannello di stato (vittoria, controllo, risorse) e dettaglio dello spazio
 - [x] `tests/scene_smoke.gd`: monta la scena e sa salvare uno screenshot
-- [ ] Zoom/pan sulla mappa e finestra delle carte (rimandati)
+- [x] Carte in vista: anteprime della carta in corso e della prossima nel
+      pannello, con ingrandimento a schermo intero (le 51 immagini del Vassal)
+- [x] Marcatori dei tracciati DENTRO le caselle stampate, a griglia quando più
+      marcatori condividono la stessa casella
+- [x] Cilindri della Sequence of Play nelle 9 caselle vere (`action_box`), non
+      più solo Disponibile/Non Disponibile
+- [x] Spostamenti a trascinamento dei pezzi, con le frecce sulla mappa
+      (`MovesOverlay`) e la lista degli spostamenti dichiarati
+- [ ] Zoom/pan sulla mappa (rimandato)
+- [ ] Riallineamento alla UI di Cuba Libre: menu iniziale, tema, pannello
+      guidato delle azioni (ActionFlow/SpecialFlow), anteprima di costo ed
+      effetti, Annulla, salvataggio/ripresa, animazioni
 
 ## Fase 3 — Sequenza di gioco ✅
 

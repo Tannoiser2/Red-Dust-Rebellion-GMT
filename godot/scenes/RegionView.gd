@@ -12,6 +12,8 @@ extends Control
 ## Supporto/Danno sulla casella 'Neutral' della traccia Infrastruttura (`sbox`).
 
 signal space_clicked(space_id: String)
+## Un pezzo è stato trascinato da un altro spazio dentro questo (§5.3/§5.7).
+signal piece_dropped(from_id: String, to_id: String, type_id: String)
 
 const PIECE_PX := 26.0        ## lato del pezzo alla scala di riferimento
 const REF_MAP_W := 1500.0     ## larghezza mappa per cui PIECE_PX è tarato
@@ -113,7 +115,8 @@ func refresh(state: GameState, module: RDRModule) -> void:
 			for piece_state in st.pieces[fid][type_id].keys():
 				var tex := RDRAssets.piece_tex(String(type_id), String(piece_state))
 				for i in range(int(st.pieces[fid][type_id][piece_state])):
-					bucket.append({"tex": tex, "type": String(type_id)})
+					bucket.append({"tex": tex, "type": String(type_id),
+						"state": String(piece_state)})
 	_pieces = bases + units
 
 	_sup_marker.texture = RDRAssets.support_tex(_support)
@@ -196,6 +199,51 @@ func _draw() -> void:
 func set_highlight(on: bool) -> void:
 	_hover = on
 	queue_redraw()
+
+
+## Punto attorno a cui sono impilati i pezzi: da qui partono e qui arrivano le
+## frecce degli spostamenti.
+func center_point() -> Vector2:
+	return Vector2(_anchor.x * size.x, _anchor.y * size.y)
+
+
+# ---------------------------------------------------------------------------
+# Trascinamento dei pezzi (§5.3/§5.4/§5.7/§5.8)
+# ---------------------------------------------------------------------------
+
+## Indice del pezzo impilato sotto il puntatore, -1 se lì non c'è nessun pezzo.
+func _piece_at(point: Vector2) -> int:
+	for i in range(mini(_tokens.size(), _pieces.size())):
+		var tr: TextureRect = _tokens[i]
+		if tr.visible and Rect2(tr.position, tr.size).has_point(point):
+			return i
+	return -1
+
+
+## Trascinare un pezzo avvia lo spostamento di UNA unità: la destinazione la
+## decide il rilascio, la legalità la controlla la scena.
+func _get_drag_data(at_position: Vector2) -> Variant:
+	var idx := _piece_at(at_position)
+	if idx < 0:
+		return null
+	var piece: Dictionary = _pieces[idx]
+	var preview := TextureRect.new()
+	preview.texture = piece["tex"]
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.size = Vector2(PIECE_PX, PIECE_PX)
+	set_drag_preview(preview)
+	return {"kind": "piece", "from": space_id, "type": String(piece["type"]),
+		"state": String(piece["state"])}
+
+
+func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
+	return typeof(data) == TYPE_DICTIONARY and data.get("kind", "") == "piece" \
+		and String(data.get("from", "")) != space_id
+
+
+func _drop_data(_at_position: Vector2, data: Variant) -> void:
+	emit_signal("piece_dropped", String(data["from"]), space_id, String(data["type"]))
 
 
 ## Conteggio dei pezzi impilati (per il pannello laterale).
