@@ -34,7 +34,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**619 test del modulo + 40 controlli di smoke test della scena, 0 falliti.**
+**636 test del modulo + 40 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -70,6 +70,8 @@ disponibile in UI è il Passo.
 | Mano, pagamento, Capability, rimescolamento §1.5 | ✅ i Reclaimer pagano davvero |
 | Partita riproducibile con un seme | ✅ `new_game(scenario, seed)` |
 | Eventi §7.0: risoluzione mista | ⚠️ 6 opzioni su 93 automatiche, le altre da risolvere al tavolo |
+| Effetti continuativi delle 12 Campaign card | ✅ tutte attive sulle regole |
+| Capability delle Asset card | ⬜ in gioco ma ancora inerti |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 

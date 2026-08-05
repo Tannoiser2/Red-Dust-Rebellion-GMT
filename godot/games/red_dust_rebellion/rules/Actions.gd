@@ -45,7 +45,18 @@ func shift(sid: String, steps: int) -> int:
 		st.support = CoinEnums.Support.NEUTRAL
 		return 0
 	var before: int = st.support
-	st.support = clampi(before + steps, SUPPORT_MIN, SUPPORT_MAX)
+	var target: int = clampi(before + steps, SUPPORT_MIN, SUPPORT_MAX)
+	# Campaign #5 "Water Reclamation Workers": i Labirinti non possono salire
+	# fino al Supporto Attivo.
+	if module.campaign_active(state, 5) and module.is_labyrinth(state, sid) \
+			and target == CoinEnums.Support.ACTIVE_SUPPORT:
+		target = CoinEnums.Support.PASSIVE_SUPPORT
+	# Campaign #12 "Red Wave Elections": chi scende da Supporto Passivo a
+	# Neutrale finisce invece in Opposizione Passiva.
+	if module.campaign_active(state, 12) and before == CoinEnums.Support.PASSIVE_SUPPORT \
+			and target == CoinEnums.Support.NEUTRAL:
+		target = CoinEnums.Support.PASSIVE_OPPOSITION
+	st.support = target
 	return st.support - before
 
 

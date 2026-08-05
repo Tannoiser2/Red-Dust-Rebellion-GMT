@@ -99,8 +99,13 @@ fatto su Cuba Libre e All Bridges Burning.
 - [ ] Libreria di effetti scritti a mano per le 87 opzioni restanti — è l'unico
       modo per automatizzarle: quasi tutte richiedono scelte di spazi, pezzi o
       Operazioni gratuite
-- [ ] Effetti continuativi delle Campaign card (oggi la carta è in gioco e
-      visibile, ma il suo effetto non modifica ancora le regole)
+- [x] Effetti continuativi di tutte e 12 le Campaign card, agganciati alle
+      regole: Basi RD già Dug-In (#1), Profits erosi dalle Basi CORP (#2),
+      Supply scartate o ripartite (#3/#8), Maglev vietati al Secure (#4),
+      Labirinti bloccati al Supporto Passivo (#5), Assault che sposta verso
+      l'Opposizione (#6), unità CORP escluse dal Controllo nei Labirinti (#7),
+      costi maggiorati per MarsGov (#9/#10), Transit e Aldrin Cycler bloccati
+      (#11), Supporto Passivo che salta il Neutrale (#12)
 - [ ] Effetti degli Eventi e delle Capability sulle Asset card
 - [ ] Simboli Non-Player ★/⊘ sulle carte (sottolineato/riquadrato nel Playbook)
 

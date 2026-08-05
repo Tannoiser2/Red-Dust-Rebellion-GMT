@@ -191,6 +191,10 @@ func control_of(state: GameState, sid: String) -> String:
 		return "coin"  # §1.2: Phobos è permanentemente sotto Controllo COIN
 	var st: SpaceState = state.spaces[sid]
 	var coin := coin_forces(state, st)
+	# Campaign #7 "Torture Video Leaks": le unità CORP non contribuiscono al
+	# Controllo nei Labirinti.
+	if campaign_active(state, 7) and is_labyrinth(state, sid):
+		coin -= count_in(state, sid, "security") + count_in(state, sid, "specops")
 	var rd := control_forces(state, st, "red_dust")
 	var cr := control_forces(state, st, "reclaimer")
 	if coin > rd + cr:
@@ -411,6 +415,9 @@ func place_from_available(state: GameState, sid: String, type_id: String, n: int
 	if took > 0:
 		var st: SpaceState = state.spaces[sid]
 		st.add_piece(PIECE_OWNER[type_id], type_id, took, _state_or_default(state, type_id, piece_state))
+		# Campaign #2 "Prison Labor Revolt": −1 Profit per ogni Base CORP piazzata.
+		if type_id == "corp_base" and campaign_active(state, 2):
+			state.tracks["profits"] = clampi(int(state.tracks.get("profits", 0)) - took, 0, 50)
 	return took
 
 
@@ -506,6 +513,11 @@ func is_desert(state: GameState, sid: String) -> bool:
 func is_labyrinth(state: GameState, sid: String) -> bool:
 	var sd: SpaceDef = state.game_def.space(sid)
 	return sd != null and sd.terrain == "labyrinth"
+
+
+## §1.5: è in gioco la Campaign card numero `n` del Red Dust?
+func campaign_active(state: GameState, n: int) -> bool:
+	return int(state.tracks.get("campaign_in_play", -1)) == n
 
 
 ## §1.10: 0 = nessuna tempesta, 1 = Approaching, 2 = Raging.

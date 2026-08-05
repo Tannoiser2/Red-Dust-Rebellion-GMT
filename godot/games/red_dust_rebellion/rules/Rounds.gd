@@ -155,8 +155,22 @@ func aldrin_cycler() -> void:
 	var supply := module.marker(state, "phobos", "supply")
 	if supply > 0:
 		module.set_marker(state, "phobos", "supply", 0)
-		state.add_resources("marsgov", supply * 3, 50)
-		log_line("Aldrin Cycler: %d Supply su Phobos → +%d Risorse MarsGov." % [supply, supply * 3])
+		# Campaign #3 "Dock Workers Lockout": metà delle Supply arrivate (per
+		# eccesso) è scartata prima della conversione.
+		if module.campaign_active(state, 3):
+			var lost := int(ceil(supply / 2.0))
+			supply -= lost
+			log_line("Campaign «Dock Workers Lockout»: %d Supply scartate." % lost)
+		# Campaign #8 "Earth-Based Endorsements": ogni Supply vale 2 Risorse
+		# MarsGov e 1 Red Dust invece di 3 MarsGov.
+		if module.campaign_active(state, 8):
+			state.add_resources("marsgov", supply * 2, 50)
+			state.add_resources("red_dust", supply, 50)
+			log_line("Aldrin Cycler: %d Supply → +%d MarsGov, +%d Red Dust." % [
+				supply, supply * 2, supply])
+		else:
+			state.add_resources("marsgov", supply * 3, 50)
+			log_line("Aldrin Cycler: %d Supply su Phobos → +%d Risorse MarsGov." % [supply, supply * 3])
 
 	# Una Popolazione da Earth a Transit (al massimo una alla volta in Transit).
 	if module.marker(state, "earth", "population") > 0 and module.marker(state, "transit", "population") == 0:

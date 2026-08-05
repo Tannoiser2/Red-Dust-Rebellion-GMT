@@ -69,6 +69,7 @@ func _init() -> void:
 	test_campaign_deck()
 	test_reclaimer_pays()
 	test_events()
+	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
@@ -1445,3 +1446,116 @@ func test_events() -> void:
 	eq(res6["manual"], true, "segnalato come manuale")
 	ok(String(res6["residual"]) != "", "il testo residuo è restituito")
 	eq(int(s6.tracks["eg_side"]), 1, "il simbolo EG+ è comunque applicato")
+
+
+# ===========================================================================
+# Fase 5 — effetti continuativi delle Campaign card (§1.5/§5.10)
+# ===========================================================================
+
+func with_campaign(n: int) -> GameState:
+	var s := fresh()
+	s.tracks["campaign_in_play"] = n
+	return s
+
+
+func test_campaign_effects() -> void:
+	print("Campaign card — effetti continuativi")
+
+	# #1 Construction Workers Guild: le nuove Basi RD nascono Dug-In.
+	var s1 := with_campaign(1)
+	var o1 := ops_for(s1)
+	o1.rally({"faction": "red_dust", "spaces": [{"id": "shepard", "mode": "base"}]})
+	eq(module.count_in(s1, "shepard", "rd_base", "dug_in"), 1, "#1: Base RD già Dug-In")
+
+	# #2 Prison Labor Revolt: −1 Profit per ogni Base CORP piazzata.
+	var s2 := with_campaign(2)
+	s2.tracks["profits"] = 10
+	module.place_from_available(s2, "rutherford", "corp_base", 1)
+	eq(int(s2.tracks["profits"]), 9, "#2: −1 Profit per Base CORP piazzata")
+
+	# #3 Dock Workers Lockout: metà delle Supply su Phobos è scartata.
+	var s3 := with_campaign(3)
+	var r3 := rounds_for(s3)
+	var mg3 := s3.get_resources("marsgov")
+	r3.aldrin_cycler()
+	# 3 Supply arrivano, 2 vengono scartate (metà per eccesso), 1 vale 3 Risorse.
+	eq(s3.get_resources("marsgov"), mg3 + 3, "#3: solo 1 Supply su 3 convertita")
+
+	# #4 Transport Workers: il Secure non usa i Maglev.
+	# La carta blocca i Maglev, non gli Spaceport: serve una tratta raggiungibile
+	# SOLO via Maglev. Shepard è sotto Controllo Red Dust, quindi il suo Spaceport
+	# non è utilizzabile dal Secure e ci si arriva solo col Maglev da Tenzing.
+	var s4b := fresh()
+	var o4b := ops_for(s4b)
+	ok(o4b.reachable_labyrinths("tenzing", "coin").has("shepard"),
+		"senza la Campaign, Shepard è raggiungibile via Maglev da Tenzing")
+	var s4 := with_campaign(4)
+	var o4 := ops_for(s4)
+	ok(not o4.reachable_labyrinths("tenzing", "coin").has("shepard"),
+		"#4: col Maglev vietato, Shepard non è più raggiungibile")
+	ok(o4.reachable_labyrinths("europa", "coin").has("tereshkova"),
+		"#4: gli Spaceport restano utilizzabili")
+
+	# #5 Water Reclamation Workers: i Labirinti non arrivano al Supporto Attivo.
+	var s5 := with_campaign(5)
+	var a5 := RDRActions.new(s5, module)
+	a5.shift("europa", 1)
+	eq(s5.spaces["europa"].support, CoinEnums.Support.PASSIVE_SUPPORT,
+		"#5: Europa si ferma al Supporto Passivo")
+
+	# #6 Mothers of Mars: ogni Labirinto scelto per l'Assault scivola di 1 livello.
+	var s6 := with_campaign(6)
+	var o6 := ops_for(s6)
+	var a6 := RDRActions.new(s6, module)
+	a6.activate("sharma", "rd_rebel", 3)
+	var before6: int = s6.spaces["sharma"].support
+	o6.assault({"faction": "marsgov", "spaces": ["sharma"]})
+	eq(s6.spaces["sharma"].support, before6, "#6: Sharma è già in Opposizione Attiva")
+	var s6b := with_campaign(6)
+	var o6b := ops_for(s6b)
+	var a6b := RDRActions.new(s6b, module)
+	a6b.activate("tereshkova", "rd_rebel", 1)
+	o6b.assault({"faction": "marsgov", "spaces": ["tereshkova"]})
+	eq(s6b.spaces["tereshkova"].support, CoinEnums.Support.PASSIVE_OPPOSITION,
+		"#6: Tereshkova scivola verso l'Opposizione")
+
+	# #7 Torture Video Leaks: le unità CORP non contano per il Controllo nei Labirinti.
+	var s7 := with_campaign(7)
+	eq(module.control_of(s7, "shenzhou"), "coin", "#7: Shenzhou resta COIN (2 Truppe MG)")
+	module.remove_pieces(s7, "shenzhou", "mg_troop", 2, "available")
+	eq(module.control_of(s7, "shenzhou"), "", "#7: senza Truppe MG le Security non bastano")
+
+	# #8 Earth-Based Endorsements: ogni Supply dà 2 a MarsGov e 1 a Red Dust.
+	var s8 := with_campaign(8)
+	var r8 := rounds_for(s8)
+	var mg8 := s8.get_resources("marsgov")
+	var rd8 := s8.get_resources("red_dust")
+	r8.aldrin_cycler()
+	eq(s8.get_resources("marsgov"), mg8 + 6, "#8: 3 Supply × 2 a MarsGov")
+	eq(s8.get_resources("red_dust"), rd8 + 3, "#8: 3 Supply × 1 a Red Dust")
+
+	# #9 Legal Injunctions: uno spazio in Opposizione scelto per Secure costa 6.
+	var s9 := with_campaign(9)
+	var o9 := ops_for(s9)
+	var mg9 := s9.get_resources("marsgov")
+	o9.secure({"faction": "marsgov", "dest": ["sharma"]})
+	eq(s9.get_resources("marsgov"), mg9 - 6, "#9: Sharma (Opposizione) costa 6")
+
+	# #10 General Strike: +1 Risorsa per ogni spazio senza Supporto.
+	var s10 := with_campaign(10)
+	var o10 := ops_for(s10)
+	var mg10 := s10.get_resources("marsgov")
+	o10.train({"spaces": [{"id": "tharsis_tholus", "troops": 1}]})
+	eq(s10.get_resources("marsgov"), mg10 - 4, "#10: 3 + 1 Risorse")
+
+	# #11 Comms Cutoff: Logistics non può selezionare Transit.
+	var s11 := with_campaign(11)
+	var o11 := ops_for(s11)
+	eq(o11.logistics({"transit": true})["ok"], false, "#11: Transit vietato")
+
+	# #12 Red Wave Elections: da Supporto Passivo si scende a Opposizione Passiva.
+	var s12 := with_campaign(12)
+	var a12 := RDRActions.new(s12, module)
+	a12.shift("europa", -1)
+	eq(s12.spaces["europa"].support, CoinEnums.Support.PASSIVE_OPPOSITION,
+		"#12: Europa salta il Neutrale")

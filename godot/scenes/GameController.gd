@@ -98,7 +98,12 @@ func do_pass() -> bool:
 	for i in range(before, sequence.pass_effects.size()):
 		match sequence.pass_effects[i]:
 			"aldrin_cycler":
-				rounds.aldrin_cycler()
+				# Campaign #11 "Comms Cutoff": il Passo delle Corporations non
+				# attiva l'Aldrin Cycler.
+				if rdr().campaign_active(state, 11):
+					emit_signal("log_line", "Campaign «Comms Cutoff»: l'Aldrin Cycler non si attiva.")
+				else:
+					rounds.aldrin_cycler()
 			"draw_asset":
 				cards.draw_asset(1)
 				for line in cards.log_lines:

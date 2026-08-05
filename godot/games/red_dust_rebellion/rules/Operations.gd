@@ -131,7 +131,8 @@ func train(plan: Dictionary) -> Dictionary:
 			return _fail("Train: %s non è selezionabile." % sid)
 		if int(e.get("troops", 0)) > 0:
 			paid_spaces += 1
-	var cost := paid_spaces * 3
+	var cost := paid_spaces * 3 + _campaign_cost("marsgov", "train", plan.get("spaces", []).map(
+		func(e): return String(e.get("id", ""))))
 	if not _can_pay("marsgov", cost):
 		return _fail("Train: Risorse insufficienti (%d)." % cost)
 
@@ -192,6 +193,8 @@ func logistics(plan: Dictionary) -> Dictionary:
 		module.place_from_available(state, "earth", "specops", spec, "hidden")
 
 	# §5.2: selezionando Transit si risolve l'Aldrin Cycler.
+	if bool(plan.get("transit", false)) and module.campaign_active(state, 11):
+		return _fail("Campaign «Comms Cutoff»: Logistics non può selezionare Transit.")
 	if bool(plan.get("transit", false)):
 		if rounds != null:
 			rounds.aldrin_cycler()
@@ -220,6 +223,22 @@ func logistics(plan: Dictionary) -> Dictionary:
 # Movimento condiviso da Secure / Recon / March / Travel
 # ===========================================================================
 
+## Costo aggiuntivo delle Operazioni MarsGov per le Campaign card attive.
+## #10 "General Strike": +1 Risorsa per spazio senza Supporto.
+## #9 "Legal Injunctions": ogni spazio in Opposizione scelto per Secure costa 6.
+func _campaign_cost(faction: String, op_id: String, spaces: Array) -> int:
+	if faction != "marsgov":
+		return 0
+	var extra := 0
+	for sid in spaces:
+		var st: SpaceState = state.spaces[String(sid)]
+		if module.campaign_active(state, 10) and st.support <= 0:
+			extra += 1
+		if module.campaign_active(state, 9) and op_id == "secure" and st.support < 0:
+			extra += 3   # 3 base + 3 = 6 Risorse per quello spazio
+	return extra
+
+
 ## §5.3/§5.7: destinazioni raggiungibili da `origin`. Un passo di adiacenza,
 ## più tutti i salti che si vogliono via Maglev e Spaceport; ci si ferma appena
 ## si entra in un Labirinto sotto Controllo nemico.
@@ -244,7 +263,9 @@ func reachable_labyrinths(origin: String, control: String) -> PackedStringArray:
 		queue.append(origin)
 	while not queue.is_empty():
 		var cur: String = queue.pop_back()
-		var hops := act.maglev_links(cur)
+		# Campaign #4 "Transport Workers": il Secure non può usare i Maglev.
+		var hops := PackedStringArray() if (control == "coin" and module.campaign_active(state, 4)) \
+			else act.maglev_links(cur)
 		for s in act.spaceport_links(cur, control):
 			hops.append(s)
 		for h in hops:
@@ -339,6 +360,7 @@ func _secure_or_recon(plan: Dictionary, kind: String) -> Dictionary:
 	# §5.3/§5.4: MarsGov paga 3 Risorse per destinazione (nel Secure solo quelle
 	# dove le unità si fermano davvero; qui il piano elenca già quelle).
 	var cost := 3 * dest.size() if faction == "marsgov" else 0
+	cost += _campaign_cost(faction, "secure" if kind == "labyrinth" else "recon", dest)
 	if not _can_pay(faction, cost):
 		return _fail("Risorse insufficienti (%d)." % cost)
 
@@ -421,6 +443,7 @@ func assault(plan: Dictionary) -> Dictionary:
 		if own == 0:
 			return _fail("Assault: nessuna forza propria in %s." % s)
 	var cost := 3 * spaces.size() if faction == "marsgov" else 0
+	cost += _campaign_cost(faction, "assault", spaces)
 	if not _can_pay(faction, cost):
 		return _fail("Assault: Risorse insufficienti (%d)." % cost)
 
@@ -445,6 +468,10 @@ func assault(plan: Dictionary) -> Dictionary:
 			module.move_pieces(state, "orbit", s, "satellite", 1)
 			hits += 2
 
+		# Campaign #6 "Mothers of Mars": ogni Labirinto scelto per l'Assault
+		# scivola di un livello verso l'Opposizione Attiva.
+		if module.campaign_active(state, 6) and module.is_labyrinth(state, s):
+			act.shift(s, -1)
 		var before_rd := module.count_in(state, s, "rd_rebel") + module.count_in(state, s, "rd_base")
 		var before_cr := module.count_in(state, s, "cr_rebel") + module.count_in(state, s, "cr_base")
 		var removed := act.remove_enemy_forces(
@@ -551,7 +578,10 @@ func rally(plan: Dictionary) -> Dictionary:
 			"base":
 				if module.count_in(state, sid, rebel) >= 2 and act.can_place_base(sid):
 					module.remove_pieces(state, sid, rebel, 2, "available")
-					module.place_from_available(state, sid, base, 1)
+					# Campaign #1 "Construction Workers Guild": le nuove Basi RD
+					# si piazzano già sul lato Dug-In.
+					var side := "dug_in" if (base == "rd_base" and module.campaign_active(state, 1)) else ""
+					module.place_from_available(state, sid, base, 1, side)
 			"fill":
 				if has_base:
 					var n := module.population(state, sid) + module.count_in(state, sid, base)
