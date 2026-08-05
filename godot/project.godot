@@ -9,7 +9,7 @@ config_version=5
 config/name="Red Dust Rebellion — Digital"
 config/description="Motore generico per la serie COIN di GMT. Modulo attivo: Red Dust Rebellion."
 config/game_id="red_dust_rebellion"
-run/main_scene="res://scenes/Main.tscn"
+run/main_scene="res://scenes/MainMenu.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 
 [autoload]

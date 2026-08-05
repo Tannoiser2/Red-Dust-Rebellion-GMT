@@ -339,6 +339,53 @@ func _initialize() -> void:
 		"…e la carta riprende dalla Fazione giusta (%s)" % pending_s)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 
+	# --- Anteprima di costo ed effetti -------------------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	var guard_mg := 0
+	while gc.sequence != null and gc.sequence.pending_faction() != "marsgov" and guard_mg < 5:
+		guard_mg += 1
+		gc.do_pass()
+		await process_frame
+	var train_spaces: PackedStringArray = gc.operation_candidates("train", "marsgov")
+	_ok(train_spaces.size() > 0, "Train ha spazi candidati (%d)" % train_spaces.size())
+	var mg_before_p: int = gc.state.get_resources("marsgov")
+	var prev: Dictionary = gc.preview_action("operation", "train", "marsgov", [train_spaces[0]])
+	_ok(prev.get("ok", false), "l'anteprima del Train riesce")
+	_ok(int(prev.get("cost", -1)) > 0, "…e dice quanto costa (%d Risorse)" % int(prev.get("cost", 0)))
+	_ok(gc.state.get_resources("marsgov") == mg_before_p,
+		"l'anteprima NON tocca la partita: le Risorse sono intatte")
+	_ok((prev.get("effects", []) as Array).size() > 0,
+		"…e riassume gli effetti previsti (%s)" % ", ".join(PackedStringArray(prev.get("effects", []))))
+	var bad_prev: Dictionary = gc.preview_action("operation", "train", "marsgov", [])
+	_ok(not bad_prev.get("ok", true), "senza spazi l'anteprima dice che non è eseguibile")
+
+	# --- Salvataggio automatico a fine carta --------------------------------
+	var auto_path: String = gc.AUTOSAVE_PATH
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(auto_path))
+	gc.end_card()
+	await process_frame
+	_ok(gc.has_save(auto_path), "chiudendo la carta scatta il salvataggio automatico")
+
+	# --- Schermata iniziale --------------------------------------------------
+	var menu_scene: PackedScene = load("res://scenes/MainMenu.tscn")
+	_ok(menu_scene != null, "MainMenu.tscn si carica")
+	var menu := menu_scene.instantiate()
+	root.add_child(menu)
+	await process_frame
+	_ok(menu.get_child_count() > 0, "la schermata iniziale si monta")
+	_ok(ProjectSettings.get_setting("application/run/main_scene") == "res://scenes/MainMenu.tscn",
+		"la partita si apre dal menu, non dalla mappa")
+	# Con un renderer vero si salva anche l'immagine della schermata iniziale.
+	if shot_path != "":
+		await process_frame
+		await process_frame
+		var menu_png := shot_path.get_basename() + "_menu.png"
+		if root.get_texture().get_image().save_png(menu_png) == OK:
+			print("screenshot menu: %s" % menu_png)
+	menu.queue_free()
+	await process_frame
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()

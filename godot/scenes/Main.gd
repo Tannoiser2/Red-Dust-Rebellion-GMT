@@ -5,6 +5,22 @@ extends Control
 
 const BUILD_VERSION := "b001"
 
+## Che cosa fa ciascuna Operazione, in una riga: il regolamento è di 40 pagine e
+## nessuno se lo ricorda a memoria mentre gioca (§5.0).
+const OPERATION_TIPS := {
+	"train": "§5.1 Train — MarsGov: piazza Truppe negli spazi con Base MG o nei Labirinti sotto Controllo COIN; può Pacify in uno di essi.",
+	"logistics": "§5.2 Logistics — Corporations: compra su Earth e potenzia le Basi nei Deserti scelti.",
+	"secure": "§5.3 Secure — porta cubi COIN nei Labirinti (adiacenza, Maglev, Spaceport) e Attiva i Ribelli presenti.",
+	"recon": "§5.4 Recon — come Secure ma verso i Deserti; vietato durante l'Haboob.",
+	"assault": "§5.5 Assault — rimuove Ribelli Attivi negli spazi scelti; le Basi si tolgono solo quando non restano Ribelli a difenderle.",
+	"rally": "§5.6 Rally — Ribelli: piazza Ribelli o costruisce una Base negli spazi Popolati senza Supporto (Reclaimer: spazi Neutrali).",
+	"march": "§5.7 March — Red Dust: sposta Ribelli di uno spazio, più i salti Maglev e Spaceport fra Labirinti controllati.",
+	"travel": "§5.8 Travel — Reclaimer: sposta Ribelli e Basi dagli spazi scelti, ignorando le tempeste.",
+	"attack": "§5.9 Attack — tira due dadi: rimuove forze nemiche e può piazzare Danno. Con Ambush si scelgono i dadi.",
+	"campaign": "§5.10 Campaign — Red Dust: sposta gli spazi verso l'Opposizione e mette in gioco una Campaign card.",
+	"preach": "§5.11 Preach — Reclaimer: converte gli spazi Neutrali dove ha Ribelli Nascosti.",
+}
+
 var _board: ScrollContainer   ## area scorrevole della mappa
 var _map_wrap: Control        ## definisce l'estensione scrollabile (base × zoom)
 var _map_root: Control        ## la mappa vera, scalata dallo zoom
@@ -26,9 +42,6 @@ var _card_zoom: Control             ## ingrandimento a schermo intero
 var _btn_pass: Button
 var _btn_end: Button
 var _btn_undo: Button
-
-## Dove finisce la partita salvata (cartella dati dell'app).
-const SAVE_PATH := "user://partita.json"
 var _ops_box: HFlowContainer
 var _op_mode := ""          ## Operazione in corso di pianificazione
 var _op_spaces: Array[String] = []
@@ -43,6 +56,7 @@ var _ev_choices: Dictionary = {}
 var _ev_reqs: Array = []
 var _ev_index := 0
 var _move_box: VBoxContainer
+var _preview: RichTextLabel   ## costo ed effetti previsti dell'azione in preparazione
 var _log: RichTextLabel
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
@@ -172,6 +186,14 @@ func _build_ui() -> void:
 	_ops_box.add_theme_constant_override("v_separation", 4)
 	_side.add_child(_ops_box)
 
+	# Anteprima: costo ed effetti previsti PRIMA di premere «Esegui».
+	_preview = RichTextLabel.new()
+	_preview.bbcode_enabled = true
+	_preview.fit_content = true
+	_preview.custom_minimum_size = Vector2(0, 18)
+	_preview.add_theme_font_size_override("normal_font_size", 11)
+	_side.add_child(_preview)
+
 	_move_box = VBoxContainer.new()
 	_move_box.add_theme_constant_override("separation", 2)
 	_side.add_child(_move_box)
@@ -189,6 +211,9 @@ func _build_ui() -> void:
 	pm.add_item("Nuova partita", 0)
 	pm.add_item("Salva", 1)
 	pm.add_item("Riprendi l'ultima salvata", 2)
+	pm.add_item("Riprendi il salvataggio automatico", 3)
+	pm.add_separator()
+	pm.add_item("Torna al menu", 4)
 	pm.id_pressed.connect(_on_game_menu)
 	buttons.add_child(game_menu)
 
@@ -500,10 +525,15 @@ func _on_game_menu(id: int) -> void:
 			GameController.new_game()
 			_cancel_op()
 		1:
-			GameController.save_game(SAVE_PATH)
+			GameController.save_game(GameController.SAVE_PATH)
 		2:
-			GameController.load_game(SAVE_PATH)
+			GameController.load_game(GameController.SAVE_PATH)
 			_cancel_op()
+		3:
+			GameController.load_game(GameController.AUTOSAVE_PATH)
+			_cancel_op()
+		4:
+			get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 
 ## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
@@ -820,10 +850,13 @@ func _confirm_op() -> void:
 	if _op_mode == "logistics":
 		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
 		extra = {}
+	var touched := Array(_op_spaces)
 	var res: Dictionary = GameController.execute_operation(_op_mode, Array(_op_spaces), false, extra)
 	if not res.get("ok", false):
 		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "azione rifiutata"))
 		return
+	for sid in touched:
+		_flash(String(sid), Color(0.4, 1.0, 0.5))
 	_cancel_op()
 
 
@@ -835,10 +868,51 @@ func _paint_op_highlight() -> void:
 
 ## Ricostruisce la barra delle azioni: le Operazioni della Fazione di turno,
 ## oppure «Esegui / Annulla» mentre si stanno scegliendo gli spazi.
+## Costo ed effetti previsti dell'azione in preparazione: si vedono PRIMA di
+## eseguire, simulando l'azione su una copia dello stato.
+func _refresh_preview() -> void:
+	if _preview == null:
+		return
+	var gc := GameController
+	var kind := ""
+	var action_id := ""
+	if _op_mode != "":
+		kind = "operation"
+		action_id = _op_mode
+	elif _sa_mode != "":
+		kind = "special"
+		action_id = _sa_mode
+	if action_id == "" or _op_spaces.is_empty() or gc.sequence == null \
+			or gc.sequence.pending_faction() == "":
+		_preview.text = ""
+		_preview.tooltip_text = ""
+		return
+	var res: Dictionary = gc.preview_action(kind, action_id, gc.sequence.pending_faction(),
+		Array(_op_spaces), {"moves": _op_moves})
+	if not res.get("ok", false):
+		# Errore atteso, mostrato prima di premere «Esegui».
+		_preview.text = "[color=#%s]⚠ non eseguibile[/color]" % RDRTheme.WARN.to_html(false)
+		_preview.tooltip_text = String(res.get("error", ""))
+		return
+	var cost := int(res.get("cost", 0))
+	var effects: Array = res.get("effects", [])
+	var cost_txt := "gratis" if cost == 0 else "costo %d / %d Ris." % [
+		cost, int(res.get("resources", 0))]
+	_preview.text = "[color=#%s]%s[/color]  %s" % [
+		RDRTheme.OK.to_html(false), cost_txt,
+		" · ".join(PackedStringArray(effects)) if not effects.is_empty() else "nessun effetto"]
+	var tip := "Effetti previsti:\n- " + "\n- ".join(PackedStringArray(res.get("log", []))) \
+		if not (res.get("log", []) as Array).is_empty() else "Nessun effetto previsto"
+	if action_id == "attack":
+		tip += "\n\n(L'Attack dipende dai dadi: anteprima indicativa.)"
+	_preview.tooltip_text = tip
+
+
 func _refresh_op_bar() -> void:
 	for c in _ops_box.get_children():
 		c.queue_free()
 	_refresh_instructions()
+	_refresh_preview()
 	var gc := GameController
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
@@ -850,6 +924,7 @@ func _refresh_op_bar() -> void:
 		for op_id in gc.UI_OPERATIONS.get(fid, []):
 			var b := Button.new()
 			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
+			b.tooltip_text = String(OPERATION_TIPS.get(op_id, ""))
 			b.pressed.connect(_start_op.bind(String(op_id)))
 			_ops_box.add_child(b)
 		# §7.0: l'Evento, nelle sue due opzioni, quando è consentito.
@@ -992,7 +1067,15 @@ func _on_piece_dropped(from_id: String, to_id: String, type_id: String) -> void:
 			_after_moves_changed()
 			return
 	_op_moves.append({"from": from_id, "to": to_id, "type": type_id, "count": 1})
+	_flash(from_id, Color(0.35, 0.6, 1.0))
+	_flash(to_id, Color(0.4, 1.0, 0.5))
 	_after_moves_changed()
+
+
+## Accende per un attimo uno spazio: serve a vedere dove è finita l'azione.
+func _flash(sid: String, color: Color) -> void:
+	if _views.has(sid):
+		(_views[sid] as RegionView).flash(color)
 
 
 func _after_moves_changed() -> void:

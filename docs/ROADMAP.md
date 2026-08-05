@@ -51,10 +51,17 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Annulla l'ultima azione (25 passi) con il nome di ciò che si disfa
 - [x] Salvataggio e ripresa (`user://partita.json`): stato + sequenza della
       carta in corso, dal menu «Partita…»
-- [ ] Restano da portare da Cuba Libre: menu iniziale come scena a sé,
-      pannello guidato delle azioni (ActionFlow/SpecialFlow) con anteprima di
-      costo ed effetti prima di eseguire, animazioni dei pezzi, tooltip
-      diffusi, autosalvataggio
+- [x] Anteprima di costo ed effetti: l'azione in preparazione viene simulata su
+      una COPIA dello stato e il pannello dice quanto costa e cosa cambierebbe,
+      prima di premere «Esegui»
+- [x] Schermata iniziale come scena a sé (`MainMenu.tscn`): nuova partita,
+      seme per rigiocarla identica, ripresa del salvataggio o dell'autosalvataggio
+- [x] Salvataggio automatico a ogni cambio carta (`user://autosave.json`)
+- [x] Tooltip di regole sulle Operazioni, col paragrafo del regolamento
+- [x] Lampeggio degli spazi toccati da un'azione o da uno spostamento
+- [ ] Restano da Cuba Libre: animazioni dei pezzi che si spostano davvero da
+      uno spazio all'altro (qui c'è solo il lampeggio), scelta dei ruoli
+      giocatore/bot nel menu (serve prima il Non-Player *Curiosity*)
 
 ## Fase 3 — Sequenza di gioco ✅
 

@@ -28,6 +28,10 @@ var _sbox := Vector2(-1, -1)
 var _control := ""
 var _support: int = 0
 var _hover := false
+## Lampeggio dopo un'azione: dice quali spazi sono stati toccati, che nel
+## groviglio di pedine della tavola non è affatto ovvio.
+var _flash_color := Color.WHITE
+var _flash_a := 0.0
 var _pieces: Array = []       ## un elemento per pezzo: {tex, type}
 var _tokens: Array[TextureRect] = []
 var _sup_marker: TextureRect
@@ -48,6 +52,7 @@ func setup(sd: SpaceDef, reg: Dictionary) -> void:
 		var s: Array = reg["sbox"]
 		_sbox = Vector2(s[0], s[1])
 
+	set_process(false)
 	_sup_marker = _make_marker()
 	_ctrl_marker = _make_marker()
 	_badge = Label.new()
@@ -183,6 +188,21 @@ func relayout() -> void:
 	_badge.position = sp + Vector2(-mw * 0.5, mw * 0.4)
 
 
+## Accende lo spazio per un attimo (verde per chi riceve, blu per chi cede).
+func flash(color: Color) -> void:
+	_flash_color = color
+	_flash_a = 0.7
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	if _flash_a <= 0.0:
+		set_process(false)
+		return
+	_flash_a = maxf(0.0, _flash_a - delta * 1.2)
+	queue_redraw()
+
+
 func _draw() -> void:
 	if _poly.size() < 3:
 		return
@@ -191,6 +211,12 @@ func _draw() -> void:
 		var c := RDRAssets.control_color(_control)
 		c.a = 0.22
 		draw_colored_polygon(poly, c)
+	if _flash_a > 0.0:
+		var fc := _flash_color
+		fc.a = _flash_a * 0.45
+		draw_colored_polygon(poly, fc)
+		fc.a = _flash_a
+		draw_polyline(poly + PackedVector2Array([poly[0]]), fc, 3.0)
 	if _hover:
 		draw_polyline(poly + PackedVector2Array([poly[0]]), Color(1, 1, 1, 0.9), 3.0)
 

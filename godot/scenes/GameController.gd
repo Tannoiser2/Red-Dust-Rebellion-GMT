@@ -31,6 +31,10 @@ var _undo: Array = []
 
 ## Formato dei salvataggi (user://): stato + sequenza della carta in corso.
 const SAVE_VERSION := 1
+const SAVE_PATH := "user://partita.json"
+## Salvataggio automatico a ogni cambio carta: una partita COIN dura ore, e
+## chiudere per sbaglio non deve costare la serata.
+const AUTOSAVE_PATH := "user://autosave.json"
 
 ## Geometrie della tavola (regions.json / board_layout.json), normalizzate [0..1].
 var regions: Dictionary = {}
@@ -200,38 +204,45 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
 
 func _run_operation(op_id: String, fid: String, spaces: Array,
 		extra: Dictionary = {}) -> Dictionary:
+	return _run_operation_on(ops, op_id, fid, spaces, extra)
+
+
+## Stessa Operazione ma su un motore indicato: serve all'anteprima, che la
+## esegue su una COPIA dello stato senza toccare la partita.
+func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Array,
+		extra: Dictionary = {}) -> Dictionary:
 	var moves: Array = extra.get("moves", [])
 	match op_id:
 		"secure":
-			return ops.secure({"faction": fid, "dest": spaces, "moves": moves})
+			return o.secure({"faction": fid, "dest": spaces, "moves": moves})
 		"recon":
-			return ops.recon({"faction": fid, "dest": spaces, "moves": moves})
+			return o.recon({"faction": fid, "dest": spaces, "moves": moves})
 		"march":
-			return ops.march({"dest": spaces, "moves": moves})
+			return o.march({"dest": spaces, "moves": moves})
 		"travel":
-			return ops.travel({"origins": spaces, "moves": moves})
+			return o.travel({"origins": spaces, "moves": moves})
 		"logistics":
 			var plan := {"deserts": spaces, "earth": extra.get("earth", {}),
 				"transit": bool(extra.get("transit", false))}
-			return ops.logistics(plan)
+			return o.logistics(plan)
 		"train":
 			var entries: Array = []
 			for sid in spaces:
 				entries.append({"id": sid, "troops": 4})
-			return ops.train({"spaces": entries})
+			return o.train({"spaces": entries})
 		"assault":
-			return ops.assault({"faction": fid, "spaces": spaces})
+			return o.assault({"faction": fid, "spaces": spaces})
 		"rally":
 			var entries: Array = []
 			for sid in spaces:
 				entries.append({"id": sid, "mode": "place"})
-			return ops.rally({"faction": fid, "spaces": entries})
+			return o.rally({"faction": fid, "spaces": entries})
 		"attack":
-			return ops.attack({"faction": fid, "spaces": spaces})
+			return o.attack({"faction": fid, "spaces": spaces})
 		"campaign":
-			return ops.campaign({"spaces": spaces})
+			return o.campaign({"spaces": spaces})
 		"preach":
-			return ops.preach({"spaces": spaces})
+			return o.preach({"spaces": spaces})
 	return {"ok": false, "error": "Operazione '%s' non ancora disponibile in UI." % op_id}
 
 
@@ -399,36 +410,41 @@ func execute_special(sa_id: String, spaces: Array) -> Dictionary:
 
 
 func _run_special(sa_id: String, spaces: Array) -> Dictionary:
+	return _run_special_on(specials, sa_id, spaces)
+
+
+## Come sopra: l'anteprima esegue su una copia, non sulla partita.
+func _run_special_on(sp: RDRSpecials, sa_id: String, spaces: Array) -> Dictionary:
 	var entries: Array = []
 	match sa_id:
 		"entrench":
 			for sid in spaces:
 				entries.append({"id": sid, "fortify": 9})
-			return specials.entrench({"spaces": entries})
+			return sp.entrench({"spaces": entries})
 		"petition":
-			return specials.petition({})
+			return sp.petition({})
 		"public_relations":
 			for sid in spaces:
 				entries.append({"id": sid, "repairs": 1, "house": true})
-			return specials.public_relations({"spaces": entries})
+			return sp.public_relations({"spaces": entries})
 		"exploit":
-			return specials.exploit({"spaces": spaces})
+			return sp.exploit({"spaces": spaces})
 		"raid":
 			for sid in spaces:
 				entries.append({"id": sid, "targets": ["rd_rebel", "cr_rebel"]})
-			return specials.raid({"spaces": entries})
+			return sp.raid({"spaces": entries})
 		"redistribute":
-			return specials.redistribute({"spaces": spaces})
+			return sp.redistribute({"spaces": spaces})
 		"coordinate":
 			for sid in spaces:
 				entries.append({"id": sid, "action": "", "at_max": "remove"})
-			return specials.coordinate({"spaces": entries})
+			return sp.coordinate({"spaces": entries})
 		"purify":
 			for sid in spaces:
 				entries.append({"id": sid, "mode": "convert"})
-			return specials.purify({"spaces": entries})
+			return sp.purify({"spaces": entries})
 		"ransack":
-			return specials.ransack({"spaces": spaces})
+			return sp.ransack({"spaces": spaces})
 	return {"ok": false, "error": "Attività Speciale '%s' non disponibile in UI." % sa_id}
 
 
@@ -456,6 +472,83 @@ func execute_event(shaded: bool, choices = {}) -> Dictionary:
 	sequence.act(CoinEnums.ActionType.EVENT)
 	_after_action()
 	return res
+
+
+# ---------------------------------------------------------------------------
+# Anteprima delle azioni
+# ---------------------------------------------------------------------------
+
+## Simula un'Operazione (o un'Attività Speciale) su una COPIA dello stato e
+## racconta cosa costerebbe e cosa cambierebbe. Non tocca la partita: serve a
+## non far premere «Esegui» alla cieca.
+## Restituisce {ok, error, cost, resources, affordable, log, effects}.
+func preview_action(kind: String, action_id: String, fid: String, spaces: Array,
+		extra: Dictionary = {}) -> Dictionary:
+	if state == null or spaces.is_empty():
+		return {"ok": false, "error": "Nessuno spazio scelto.", "effects": []}
+	var copy := GameState.from_dict(game_def, state.to_dict())
+	copy.roles = state.roles
+	# Seme fisso: l'anteprima non deve cambiare a ogni ridisegno. Le azioni coi
+	# dadi (Attack) restano comunque indicative.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260805
+	var c := RDRCards.new(copy, rdr(), rng)
+	var r := RDRRounds.new(copy, rdr(), rng)
+	r.cards = c
+	var res: Dictionary
+	if kind == "special":
+		var sp := RDRSpecials.new(copy, rdr())
+		sp.cards = c
+		res = _run_special_on(sp, action_id, spaces)
+		res["log"] = sp.log_lines.duplicate()
+	else:
+		var o := RDROperations.new(copy, rdr(), rng)
+		o.rounds = r
+		o.cards = c
+		res = _run_operation_on(o, action_id, fid, spaces, extra)
+		res["log"] = o.log_lines.duplicate()
+	var cost := int(res.get("spent", 0))
+	res["cost"] = cost
+	res["resources"] = state.get_resources(fid)
+	res["affordable"] = bool(res.get("ok", false))
+	res["effects"] = _effect_summary(state, copy) if bool(res.get("ok", false)) else []
+	return res
+
+
+## Differenze leggibili fra lo stato attuale e quello simulato. Sono le grandezze
+## su cui si decide: Supporto, Opposizione, Controllo, Profits, Risorse, pezzi.
+func _effect_summary(before: GameState, after: GameState) -> Array:
+	var m: RDRModule = rdr()
+	var out: Array = []
+	var pairs := [
+		["Supporto", m.total_support(before), m.total_support(after)],
+		["Opposizione", m.total_opposition(before), m.total_opposition(after)],
+		["Profits", int(before.tracks.get("profits", 0)), int(after.tracks.get("profits", 0))],
+	]
+	for f in game_def.factions:
+		if f.id in ["marsgov", "red_dust"]:
+			pairs.append(["Ris. %s" % f.short_name,
+				before.get_resources(f.id), after.get_resources(f.id)])
+	for p in pairs:
+		if int(p[1]) != int(p[2]):
+			out.append("%s %+d" % [p[0], int(p[2]) - int(p[1])])
+	# Spazi che cambiano padrone: è l'effetto che si vede meno nei numeri.
+	var flips := 0
+	for sid in before.spaces.keys():
+		if before.spaces[sid].control != after.spaces[sid].control:
+			flips += 1
+	if flips > 0:
+		out.append("Controllo cambia in %d spazi" % flips)
+	# Pezzi tolti dalla mappa, per tipo.
+	for type_id in RDRModule.PIECE_OWNER.keys():
+		var b := 0
+		var a := 0
+		for sid in m.mars_spaces(before):
+			b += m.count_in(before, String(sid), String(type_id))
+			a += m.count_in(after, String(sid), String(type_id))
+		if a != b:
+			out.append("%s %+d" % [type_id, a - b])
+	return out
 
 
 # ---------------------------------------------------------------------------
@@ -598,7 +691,28 @@ func end_card() -> void:
 	rounds.advance_card()
 	_drain_log()
 	_start_card()
+	_autosave()
 	refresh()
+
+
+## Salvataggio automatico silenzioso: non sporca il Log a ogni carta.
+func _autosave() -> void:
+	if state == null:
+		return
+	var f := FileAccess.open(AUTOSAVE_PATH, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify({
+		"version": SAVE_VERSION,
+		"state": state.to_dict(),
+		"has_sequence": sequence != null,
+		"sequence": sequence.snapshot() if sequence != null else {},
+	}, "\t"))
+	f.close()
+
+
+static func has_save(path: String) -> bool:
+	return FileAccess.file_exists(path)
 
 
 func _after_action() -> void:
