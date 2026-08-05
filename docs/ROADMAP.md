@@ -158,9 +158,24 @@ fatto su Cuba Libre e All Bridges Burning.
 
 ## Fase 6 — Non-Player *Curiosity*
 
-- [ ] Lettura del `RDR_Curiosity_NP_Rules_Booklet`
-- [ ] Mazzo NP da 24 carte + aid sheet
-- [ ] Bot per le quattro Fazioni
+- [x] Lettura del `RDR_Curiosity_NP_Rules_Booklet` (32 pagine)
+- [x] Trascrizione delle Space Selection Priorities dal libretto renderizzato a
+      600 DPI: **3 tabelle su 4** (`data/np_priorities.json`) — NP Red Dust,
+      NP Reclaimers, NP CORP
+- [x] Motore NP (`rules/NonPlayer.gd`): contatori surrogati (Supply Total per MG,
+      Agitate Total per RD, Asset Total per CR al posto della mano), procedura di
+      Eligibility dei Reclaimer a 3d6, Activation Number con le sue eccezioni e
+      con la conversione dei tiri falliti, selettore di spazi guidato dalle
+      priorità che spiega anche perché ha scelto così
+- [ ] **Manca il gioco fisico**: le 24 carte *Curiosity* (6 per Fazione,
+      bifacciali) che scelgono Operazione e Attività Speciale, la tabella
+      Space Selection Priorities di NP MarsGov, e le tabelle Move Priorities,
+      Piece Priorities, Eligibility, Effective Events, Event Instructions,
+      Capability & Campaign Effects
+- [ ] Esecuzione di Operazioni e Attività Speciali secondo §8.6/§8.7
+- [ ] Round di Flashpoint e Dust Storm per le Fazioni NP (§8.5.9)
+- [ ] L'esempio di gioco del libretto (§8.9, 12 pagine, setup e tiri noti) come
+      test di regressione del sistema
 
 ## Fase 7 — Rifiniture
 

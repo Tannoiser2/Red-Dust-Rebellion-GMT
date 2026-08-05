@@ -75,6 +75,8 @@ func _init() -> void:
 	test_events_free_ops()
 	test_asset_events()
 	test_capabilities()
+	test_np_setup()
+	test_np_priorities()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -1918,6 +1920,130 @@ func test_capabilities() -> void:
 		"#3: un Ribelle CR rientra dopo l'Assault (%d contro %d)" % [
 			cr_post, module.count_in(s3b, ass, "cr_rebel")])
 	ok(cr_post <= cr_pre, "…senza però annullare l'Assault")
+
+
+# ===========================================================================
+# Fase 6 — Non-Player *Curiosity* (§8.0)
+# ===========================================================================
+
+func np_for(s: GameState, factions: Array, seed_value: int = 4711) -> RDRNonPlayer:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	var np := RDRNonPlayer.new(s, module, r)
+	np.setup(factions)
+	return np
+
+
+func test_np_setup() -> void:
+	print("Non-Player — impianto e contatori (§8.2/§8.4)")
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "corporations", "red_dust", "reclaimer"])
+
+	# §8.4.1: i tre contatori surrogati sostituiscono Risorse e mano di carte.
+	eq(np.supply_total(), 0, "Supply Total parte da 0")
+	ok(np.agitate_total() >= 1 and np.agitate_total() <= 3, "Agitate Total parte a 1d3 (%d)"
+		% np.agitate_total())
+	eq(np.asset_total(), 3, "Asset Total parte da 3")
+	np.add_asset(10)
+	eq(np.asset_total(), 6, "l'Asset Total non supera mai 6")
+	np.add_asset(-99)
+	eq(np.asset_total(), 0, "…e non scende sotto 0")
+
+	# Le tabelle disponibili sono tre: quella di MarsGov manca davvero.
+	eq(np.has_table("red_dust"), true, "c'è la tabella NP Red Dust")
+	eq(np.has_table("reclaimer"), true, "c'è la tabella NP Reclaimers")
+	eq(np.has_table("corporations"), true, "c'è la tabella NP CORP")
+	eq(np.has_table("marsgov"), false, "la tabella NP MarsGov manca (non è nel libretto)")
+	ok(Array(np.missing).has("marsgov"), "…ed è dichiarata mancante nei dati")
+
+	# Chi è NP e chi è giocatore: serve alle righe con la spunta rossa.
+	var s2 := fresh()
+	var np2 := np_for(s2, ["red_dust"])
+	eq(np2.is_np("red_dust"), true, "il Red Dust è Non-Player")
+	eq(np2.is_player("marsgov"), true, "…e MarsGov è di un giocatore")
+
+	# §8.5.4: un tiro fallito di NP MG si converte spendendo Supply Total.
+	var s3 := fresh()
+	var np3 := np_for(s3, ["marsgov"], 99)
+	s3.tracks["supply_total"] = 6
+	# Activation Number 6: il tiro fallisce sempre, così si vede la conversione.
+	var conv := np3.activation_check("marsgov", 6)
+	eq(conv["ok"], true, "NP MG converte il tiro fallito col Supply Total")
+	eq(conv["spent"], true, "…spendendone uno")
+	eq(np3.supply_total(), 5, "Supply Total sceso a 5")
+	# Senza contatore il tiro fallito resta fallito.
+	s3.tracks["supply_total"] = 0
+	eq(np3.activation_check("marsgov", 6)["ok"], false,
+		"senza Supply Total il tiro fallito ferma l'Operazione")
+	# §8.5.4: NP CR non converte durante un'Operazione Limitata.
+	var np4 := np_for(fresh(), ["reclaimer"], 7)
+	np4.state.tracks["asset_total"] = 6
+	eq(np4.activation_check("reclaimer", 6, true)["spent"], false,
+		"NP CR non spende Asset Total in un'Operazione Limitata")
+	eq(np4.limited_space_cap("reclaimer"), 5,
+		"le Operazioni Limitate di NP CR si fermano al quinto spazio")
+
+
+func test_np_priorities() -> void:
+	print("Non-Player — Space Selection Priorities (§8.5.6)")
+	var s := fresh()
+	var np := np_for(s, ["red_dust", "reclaimer", "corporations"])
+
+	# Un solo candidato: nessuna tabella da consultare.
+	var one := np.select_space("red_dust", "place_rebels", ["tenzing"])
+	eq(String(one["space"]), "tenzing", "con un solo candidato si sceglie quello")
+
+	# «most Population» discrimina: Tenzing (3) batte Europa (2) e Rutherford (1).
+	# La prima riga che si applica a `place_population` è appunto most Opposition,
+	# quindi si prova su una colonna dove Population viene prima.
+	var pop := np.select_space("red_dust", "place_or_dig_in_bases",
+		["rutherford", "europa", "tenzing"])
+	eq(String(pop["space"]), "tenzing", "«most Population» sceglie lo spazio più popoloso")
+	ok(not (pop["trace"] as Array).is_empty(), "la scelta è spiegata: %s"
+		% ", ".join(PackedStringArray(pop["trace"])))
+
+	# Le righe con la spunta rossa valgono solo se quella Fazione è di un giocatore.
+	# «CR is player: CR Base or CR Control» non deve applicarsi se CR è NP.
+	var s2 := fresh()
+	var np_all := np_for(s2, ["red_dust", "reclaimer"])
+	var np_cr_player := np_for(s2, ["red_dust"])
+	eq(np_all.is_player("reclaimer"), false, "con CR fra le NP la riga rossa non si applica")
+	eq(np_cr_player.is_player("reclaimer"), true, "con CR giocatore sì")
+
+	# «no CR Control» tiene solo gli spazi che i Reclaimer non controllano.
+	var s3 := fresh()
+	var np3 := np_for(s3, ["reclaimer"])
+	var controlled := ""
+	var free_space := ""
+	for sid in module.mars_spaces(s3):
+		if s3.spaces[sid].control == "reclaimer" and controlled == "":
+			controlled = sid
+		elif s3.spaces[sid].control != "reclaimer" and free_space == "":
+			free_space = sid
+	if controlled == "":
+		controlled = "radau"
+		module.place_from_available(s3, controlled, "cr_rebel", 4, "hidden")
+		module.recompute_all_control(s3)
+	var pick3 := np3.select_space("reclaimer", "attack", [controlled, free_space])
+	eq(String(pick3["space"]), free_space,
+		"«no CR Control» scarta lo spazio già controllato (%s)" % controlled)
+
+	# Selezione di più spazi: uno alla volta, senza ripetizioni.
+	var many := np.select_spaces("corporations", "secure_destination",
+		["europa", "tenzing", "shepard", "tereshkova"], 3)
+	eq(many.size(), 3, "si scelgono tre spazi")
+	eq(Array(many).size(), 3, "…tutti diversi")
+	var seen: Array = []
+	for sid in many:
+		ok(not seen.has(sid), "%s scelto una volta sola" % sid)
+		seen.append(sid)
+
+	# Senza tabella (NP MarsGov) si sceglie a caso, ma lo si dichiara.
+	var np_mg := np_for(fresh(), ["marsgov"])
+	var blind := np_mg.select_space("marsgov", "place_cubes", ["europa", "tenzing"])
+	ok(["europa", "tenzing"].has(String(blind["space"])), "senza tabella sceglie comunque")
+	ok(String(blind["row"]).contains("mancante"),
+		"…e dichiara che la tabella manca: «%s»" % blind["row"])
 
 
 # ===========================================================================

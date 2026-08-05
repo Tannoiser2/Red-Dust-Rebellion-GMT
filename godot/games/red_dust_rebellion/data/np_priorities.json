@@ -1,0 +1,646 @@
+{
+  "_note": "Space Selection Priorities del sistema Non-Player Curiosity (§8.5.6), trascritte dal libretto renderizzato a 600 DPI. Ogni riga è un filtro applicato in ordine: `flag` tiene gli spazi che soddisfano la condizione, `max`/`min` tengono quelli a pari merito sul valore, `random` sceglie a caso. Le righe con `only_if_player` sono quelle con la spunta rossa: valgono solo se quella Fazione è di un giocatore. MANCA la tabella NP MARSGOV: non è riprodotta nel libretto (sta sulla scheda foldout del gioco fisico).",
+  "missing": [
+    "marsgov"
+  ],
+  "tables": {
+    "red_dust": {
+      "columns": [
+        "shift_active_opposition",
+        "place_population",
+        "place_or_dig_in_bases",
+        "place_rebels",
+        "march_destination",
+        "redistribute",
+        "ambush",
+        "attack",
+        "place_damage",
+        "remove_or_replace"
+      ],
+      "rows": [
+        {
+          "label": "RD Base with no Hidden RD Rebel",
+          "columns": [
+            "place_rebels",
+            "march_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_without_hidden_rebel",
+            "faction": "red_dust"
+          }
+        },
+        {
+          "label": "not at Active Opposition",
+          "columns": [
+            "shift_active_opposition",
+            "place_rebels",
+            "march_destination",
+            "attack",
+            "place_damage"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "support_not",
+            "level": "active_opposition"
+          }
+        },
+        {
+          "label": "CR is player: CR Base or CR Control",
+          "columns": [
+            "place_rebels",
+            "march_destination",
+            "ambush",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_or_control",
+            "faction": "reclaimer"
+          },
+          "only_if_player": "reclaimer"
+        },
+        {
+          "label": "most Population",
+          "columns": [
+            "shift_active_opposition",
+            "place_or_dig_in_bases",
+            "place_rebels",
+            "march_destination",
+            "redistribute",
+            "place_damage",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "population"
+          }
+        },
+        {
+          "label": "MG is player: most Support",
+          "columns": [
+            "shift_active_opposition",
+            "place_rebels",
+            "ambush",
+            "attack",
+            "place_damage",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "support"
+          },
+          "only_if_player": "marsgov"
+        },
+        {
+          "label": "most RD Bases",
+          "columns": [
+            "place_rebels"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "rd_base"
+            ]
+          }
+        },
+        {
+          "label": "vulnerable enemy Base",
+          "columns": [
+            "place_rebels",
+            "march_destination",
+            "ambush",
+            "attack"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "vulnerable_enemy_base",
+            "faction": "red_dust"
+          }
+        },
+        {
+          "label": "no RD Control",
+          "columns": [
+            "place_rebels",
+            "march_destination",
+            "ambush",
+            "attack",
+            "place_damage",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "no_control",
+            "faction": "red_dust"
+          }
+        },
+        {
+          "label": "most Opposition",
+          "columns": [
+            "place_population",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "opposition"
+          }
+        },
+        {
+          "label": "most RD Rebels",
+          "columns": [
+            "place_population",
+            "place_or_dig_in_bases",
+            "redistribute",
+            "ambush",
+            "attack"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "rd_rebel"
+            ]
+          }
+        },
+        {
+          "label": "1-2 RD Rebels and room for an Available RD Base",
+          "columns": [
+            "place_rebels",
+            "march_destination"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "rebels_and_base_room",
+            "faction": "red_dust",
+            "min": 1,
+            "max": 2
+          }
+        },
+        {
+          "label": "fewest enemy forces",
+          "columns": [
+            "shift_active_opposition",
+            "place_population",
+            "place_rebels",
+            "march_destination",
+            "redistribute",
+            "ambush",
+            "attack",
+            "place_damage",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "min",
+            "metric": "enemy_forces",
+            "faction": "red_dust"
+          }
+        },
+        {
+          "label": "select at random from remaining spaces",
+          "columns": [
+            "shift_active_opposition",
+            "place_population",
+            "place_or_dig_in_bases",
+            "place_rebels",
+            "march_destination",
+            "redistribute",
+            "ambush",
+            "attack",
+            "place_damage",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "random"
+          }
+        }
+      ]
+    },
+    "reclaimer": {
+      "columns": [
+        "place_or_upgrade_bases",
+        "shift_towards_neutral",
+        "place_damage",
+        "place_rebels",
+        "travel_destination",
+        "attack",
+        "ransack",
+        "remove_or_replace"
+      ],
+      "rows": [
+        {
+          "label": "CR Base with no Hidden CR Rebel",
+          "columns": [
+            "shift_towards_neutral",
+            "place_rebels",
+            "travel_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_without_hidden_rebel",
+            "faction": "reclaimer"
+          }
+        },
+        {
+          "label": "vulnerable enemy Base",
+          "columns": [
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "vulnerable_enemy_base",
+            "faction": "reclaimer"
+          }
+        },
+        {
+          "label": "no CR Control",
+          "columns": [
+            "shift_towards_neutral",
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "no_control",
+            "faction": "reclaimer"
+          }
+        },
+        {
+          "label": "most Bases",
+          "columns": [
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "mg_base",
+              "corp_base",
+              "rd_base",
+              "cr_base"
+            ]
+          }
+        },
+        {
+          "label": "MG is player: most Support",
+          "columns": [
+            "shift_towards_neutral",
+            "place_damage",
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "support"
+          },
+          "only_if_player": "marsgov"
+        },
+        {
+          "label": "RD is player: most Opposition",
+          "columns": [
+            "shift_towards_neutral",
+            "place_damage",
+            "place_rebels",
+            "travel_destination",
+            "attack"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "opposition"
+          },
+          "only_if_player": "red_dust"
+        },
+        {
+          "label": "most Damage",
+          "columns": [
+            "ransack"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "damage"
+          }
+        },
+        {
+          "label": "Neutral",
+          "columns": [
+            "place_or_upgrade_bases"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "support_is",
+            "level": "neutral"
+          }
+        },
+        {
+          "label": "CORP is player: Desert",
+          "columns": [
+            "place_or_upgrade_bases",
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "terrain",
+            "value": "desert"
+          },
+          "only_if_player": "corporations"
+        },
+        {
+          "label": "most CR Rebels",
+          "columns": [
+            "place_or_upgrade_bases",
+            "attack",
+            "ransack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "cr_rebel"
+            ]
+          }
+        },
+        {
+          "label": "fewest enemy forces",
+          "columns": [
+            "place_or_upgrade_bases",
+            "place_damage",
+            "place_rebels",
+            "travel_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "min",
+            "metric": "enemy_forces",
+            "faction": "reclaimer"
+          }
+        },
+        {
+          "label": "most Population",
+          "columns": [
+            "place_or_upgrade_bases",
+            "shift_towards_neutral",
+            "place_damage",
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "population"
+          }
+        },
+        {
+          "label": "1-2 CR Rebels and room for an Available CR Base",
+          "columns": [
+            "place_rebels",
+            "travel_destination"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "rebels_and_base_room",
+            "faction": "reclaimer",
+            "min": 1,
+            "max": 2
+          }
+        },
+        {
+          "label": "with Approaching Storm",
+          "columns": [
+            "place_or_upgrade_bases",
+            "place_damage",
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "ransack"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "storm_is",
+            "value": 1
+          }
+        },
+        {
+          "label": "select at random from remaining spaces",
+          "columns": [
+            "place_or_upgrade_bases",
+            "shift_towards_neutral",
+            "place_damage",
+            "place_rebels",
+            "travel_destination",
+            "attack",
+            "ransack",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "random"
+          }
+        }
+      ]
+    },
+    "corporations": {
+      "columns": [
+        "place_or_upgrade_bases",
+        "place_cubes",
+        "secure_destination",
+        "recon_destination",
+        "exploit",
+        "place_population",
+        "remove_or_replace"
+      ],
+      "rows": [
+        {
+          "label": "Rebel at CORP Base",
+          "columns": [
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "rebel_at_base",
+            "faction": "corporations"
+          }
+        },
+        {
+          "label": "CORP Base with 0-3 cubes",
+          "columns": [
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_with_few_cubes",
+            "faction": "corporations",
+            "max": 3
+          }
+        },
+        {
+          "label": "COIN units < Rebel forces where CORP forces",
+          "columns": [
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "coin_units_below_rebels_with_corp"
+          }
+        },
+        {
+          "label": "most CORP forces",
+          "columns": [
+            "place_or_upgrade_bases",
+            "place_population"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "pieces",
+            "types": [
+              "security",
+              "specops",
+              "corp_base"
+            ]
+          }
+        },
+        {
+          "label": "Labyrinth with CORP > MG",
+          "columns": [
+            "place_or_upgrade_bases",
+            "place_population"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "labyrinth_corp_over_mg"
+          }
+        },
+        {
+          "label": "Conversion Center",
+          "columns": [
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "has_conversion_center"
+          }
+        },
+        {
+          "label": "most Population",
+          "columns": [
+            "place_cubes",
+            "secure_destination",
+            "exploit",
+            "place_population",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "population"
+          }
+        },
+        {
+          "label": "RD is player: most Opposition",
+          "columns": [
+            "secure_destination",
+            "recon_destination",
+            "exploit"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "opposition"
+          },
+          "only_if_player": "red_dust"
+        },
+        {
+          "label": "most Support",
+          "columns": [
+            "place_or_upgrade_bases",
+            "exploit"
+          ],
+          "test": {
+            "kind": "max",
+            "metric": "support"
+          }
+        },
+        {
+          "label": "Rebel Base",
+          "columns": [
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "rebel_base_present"
+          }
+        },
+        {
+          "label": "CR is player: CR Base or CR Control",
+          "columns": [
+            "secure_destination",
+            "recon_destination",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "flag",
+            "pred": "base_or_control",
+            "faction": "reclaimer"
+          },
+          "only_if_player": "reclaimer"
+        },
+        {
+          "label": "fewest Rebel forces",
+          "columns": [
+            "place_or_upgrade_bases",
+            "secure_destination",
+            "recon_destination",
+            "exploit",
+            "place_population",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "min",
+            "metric": "rebel_forces"
+          }
+        },
+        {
+          "label": "select at random from remaining spaces",
+          "columns": [
+            "place_or_upgrade_bases",
+            "place_cubes",
+            "secure_destination",
+            "recon_destination",
+            "exploit",
+            "place_population",
+            "remove_or_replace"
+          ],
+          "test": {
+            "kind": "random"
+          }
+        }
+      ]
+    }
+  }
+}
