@@ -19,6 +19,8 @@ var ops: RDROperations
 var specials: RDRSpecials
 ## Mazzi Asset (Reclaimer) e Campaign (Red Dust).
 var cards: RDRCards
+## Esecuzione degli Eventi (§7.0).
+var events: RDREvents
 
 ## Geometrie della tavola (regions.json / board_layout.json), normalizzate [0..1].
 var regions: Dictionary = {}
@@ -59,6 +61,7 @@ func new_game(scenario: String = "standard", seed_value: int = 0) -> void:
 	ops.cards = cards
 	specials = RDRSpecials.new(state, rdr())
 	specials.cards = cards
+	events = RDREvents.new(state, rdr())
 	rounds.begin_game()
 	_drain_log()
 	_start_card()
@@ -212,6 +215,28 @@ func operation_candidates(op_id: String, fid: String) -> PackedStringArray:
 					out3.append(sid)
 			return out3
 	return PackedStringArray()
+
+
+## §7.0: la Fazione di turno gioca l'Evento della carta corrente. Applica gli
+## effetti riconosciuti e restituisce il testo che resta da risolvere al tavolo.
+func execute_event(shaded: bool, targets: Array = []) -> Dictionary:
+	if sequence == null or sequence.pending_faction() == "":
+		return {"ok": false, "error": "Non è il turno di nessuno."}
+	if not sequence.is_legal(CoinEnums.ActionType.EVENT):
+		return {"ok": false, "error": "L'Evento non è consentito adesso."}
+	var fid := sequence.pending_faction()
+	var res: Dictionary = events.play(state.current_card, shaded, targets)
+	if not res.get("ok", false):
+		return res
+	for line in events.log_lines:
+		emit_signal("log_line", line)
+	events.log_lines.clear()
+	emit_signal("log_line", "%s gioca l'Evento #%d (%s)." % [
+		game_def.faction(fid).short_name, state.current_card,
+		"ombreggiato" if shaded else "non ombreggiato"])
+	sequence.act(CoinEnums.ActionType.EVENT)
+	_after_action()
+	return res
 
 
 ## Chiude la carta corrente e passa alla successiva (§4.2 «Next Card»).

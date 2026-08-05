@@ -68,6 +68,7 @@ func _init() -> void:
 	test_cards_eligibility_and_events()
 	test_campaign_deck()
 	test_reclaimer_pays()
+	test_events()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
@@ -1375,3 +1376,72 @@ func test_reclaimer_pays() -> void:
 	var bad: Dictionary = o2.rally({"faction": "reclaimer",
 		"spaces": [{"id": "rutherford", "mode": "place"}]})
 	eq(bad["ok"], false, "senza Asset card il Rally è rifiutato")
+
+
+# ===========================================================================
+# Fase 5 — Eventi (§7.0)
+# ===========================================================================
+
+func test_events() -> void:
+	print("Eventi (§7.0)")
+	var s := fresh()
+	var ev := RDREvents.new(s, module)
+	var cov := ev.coverage()
+	eq(cov["total"], 93, "93 opzioni di Evento (48 carte, alcune con un solo effetto)")
+	ok(cov["automatic"] >= 6, "almeno 6 opzioni risolvibili in automatico (%d)" % cov["automatic"])
+	ok(cov["manual"] > 0, "il resto è dichiarato manuale (%d)" % cov["manual"])
+
+	# #1 ombreggiato: "Reduce Profits by 5 and MG Resources by 9" — tutto automatico.
+	s.tracks["profits"] = 20
+	var mg := s.get_resources("marsgov")
+	var res: Dictionary = ev.play(1, true)
+	eq(res["ok"], true, "Evento #1 ombreggiato eseguito")
+	eq(res["manual"], false, "…ed è interamente automatico")
+	eq(int(s.tracks["profits"]), 15, "−5 Profits")
+	eq(s.get_resources("marsgov"), mg - 9, "−9 Risorse MarsGov")
+
+	# #2 ombreggiato porta anche il simbolo EG−.
+	var s2 := fresh()
+	var ev2 := RDREvents.new(s2, module)
+	s2.tracks["eg_side"] = 1
+	ev2.play(2, true)
+	eq(int(s2.tracks["eg_side"]), -1, "il simbolo EG− è applicato")
+
+	# #10 non ombreggiato sposta 2 spazi a scelta del giocatore.
+	var s3 := fresh()
+	var ev3 := RDREvents.new(s3, module)
+	eq(ev3.targets_needed(10, false), 2, "#10 richiede 2 spazi")
+	# NB: Radau al setup ha un Danno che la rende Spopolata, e uno spazio Spopolato
+	# è sempre Neutrale (§1.8): come bersaglio non si sposterebbe.
+	eq(module.population(s3, "radau"), 0, "Radau è Spopolata dal Danno iniziale")
+	var r_before: int = s3.spaces["rutherford"].support
+	var p_before: int = s3.spaces["pavonis_mons"].support
+	ev3.play(10, false, ["rutherford", "pavonis_mons"])
+	eq(s3.spaces["rutherford"].support, r_before + 1, "Rutherford spostata verso il Supporto")
+	eq(s3.spaces["pavonis_mons"].support, p_before + 1, "Pavonis Mons spostata verso il Supporto")
+
+	# #14 ombreggiato nomina due spazi precisi: nessuna scelta richiesta.
+	var s4 := fresh()
+	var ev4 := RDREvents.new(s4, module)
+	eq(ev4.targets_needed(14, true), 0, "#14 ombreggiato non richiede scelte")
+	var eu: int = s4.spaces["europa"].support
+	ev4.play(14, true)
+	eq(s4.spaces["europa"].support, eu - 1, "Europa spostata verso l'Opposizione")
+
+	# #33 non ombreggiato attiva tutti i Ribelli Red Dust della mappa.
+	var s5 := fresh()
+	var ev5 := RDREvents.new(s5, module)
+	ev5.play(33, false)
+	var hidden := 0
+	for sid in module.mars_spaces(s5):
+		hidden += module.count_in(s5, sid, "rd_rebel", "hidden")
+	eq(hidden, 0, "nessun Ribelle Red Dust resta Nascosto")
+
+	# Un Evento manuale applica solo il simbolo EG e restituisce il testo residuo.
+	var s6 := fresh()
+	var ev6 := RDREvents.new(s6, module)
+	eq(ev6.is_manual(3, false), true, "#3 non ombreggiato è manuale")
+	var res6: Dictionary = ev6.play(3, false)
+	eq(res6["manual"], true, "segnalato come manuale")
+	ok(String(res6["residual"]) != "", "il testo residuo è restituito")
+	eq(int(s6.tracks["eg_side"]), 1, "il simbolo EG+ è comunque applicato")

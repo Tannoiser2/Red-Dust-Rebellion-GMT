@@ -15,8 +15,9 @@ architettura `coin_engine/` + `games/<gioco>/`, così che il terzo titolo riusi
 Reclaimer e le 12 Campaign del Red Dust sono state lette dal modulo Vassal e sono
 in gioco: mano da 6, pagamento delle Operazioni scartando carte (col valore
 maggiorato quando la carta nomina quell'Operazione), scarti per anticipare il
-turno, Capability che restano in gioco, rimescolamento al Dust Storm Round. Gli
-**effetti dei 48 Eventi** restano da implementare.
+turno, Capability che restano in gioco, rimescolamento al Dust Storm Round. Gli Eventi si giocano con una
+**risoluzione mista**: il gioco applica gli effetti che riesce a riconoscere con
+certezza dal testo e mostra il resto perché lo risolvano i giocatori.
 
 Fase 4 — Tutte e 11 le Operazioni e tutte e 12 le
 Attività Speciali sono implementate e testate; in interfaccia sono utilizzabili
@@ -33,7 +34,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**600 test del modulo + 30 controlli di smoke test della scena, 0 falliti.**
+**619 test del modulo + 30 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -68,7 +69,7 @@ disponibile in UI è il Passo.
 | 30 carte Asset + 12 Campaign (dati) | ✅ lette dal Vassal |
 | Mano, pagamento, Capability, rimescolamento §1.5 | ✅ i Reclaimer pagano davvero |
 | Partita riproducibile con un seme | ✅ `new_game(scenario, seed)` |
-| Eventi (effetti delle 48 carte) | ⬜ testi presenti, effetti da implementare |
+| Eventi §7.0: risoluzione mista | ⚠️ 6 opzioni su 93 automatiche, le altre da risolvere al tavolo |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 

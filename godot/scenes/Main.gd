@@ -338,6 +338,24 @@ func _start_op(op_id: String) -> void:
 	_refresh_op_bar()
 
 
+## Gioca l'Evento: gli effetti riconosciuti sono applicati, il resto va risolto
+## al tavolo e finisce nel Log.
+func _play_event(shaded: bool) -> void:
+	var gc := GameController
+	var need: int = gc.events.targets_needed(gc.state.current_card, shaded)
+	if need > 0 and _op_spaces.size() < need:
+		_append_log("Questo Evento richiede %d spazi: selezionali con «%s» e riprova." % [
+			need, gc.OPERATION_NAMES.get(_op_mode, "una Operazione")])
+		return
+	var res: Dictionary = gc.execute_event(shaded, Array(_op_spaces))
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "Evento rifiutato"))
+		return
+	if bool(res.get("manual", false)):
+		_append_log("[color=#e0b070]Evento da completare a mano: %s[/color]" % res.get("residual", ""))
+	_cancel_op()
+
+
 func _cancel_op() -> void:
 	_op_mode = ""
 	_op_spaces.clear()
@@ -377,6 +395,19 @@ func _refresh_op_bar() -> void:
 			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
 			b.pressed.connect(_start_op.bind(String(op_id)))
 			_ops_box.add_child(b)
+		# §7.0: l'Evento, nelle sue due opzioni, quando è consentito.
+		if gc.sequence.is_legal(CoinEnums.ActionType.EVENT):
+			var card: CardDef = gc.game_def.card(gc.state.current_card)
+			if card != null:
+				for shaded in [false, true]:
+					var opt: Dictionary = gc.events.option(card.number, shaded)
+					if opt.is_empty():
+						continue
+					var e := Button.new()
+					e.text = "Ev. ombr." if shaded else "Evento"
+					e.tooltip_text = String(opt.get("text", ""))
+					e.pressed.connect(_play_event.bind(shaded))
+					_ops_box.add_child(e)
 		return
 	var run := Button.new()
 	run.text = "Esegui (%d)" % _op_spaces.size()

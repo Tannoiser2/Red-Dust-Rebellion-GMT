@@ -84,7 +84,17 @@ fatto su Cuba Libre e All Bridges Burning.
       scartando carte, scarti per anticipare il turno (con il bonus di #19/#22),
       Capability permanenti, pescate del Dust Storm Round, rimescolamento
 - [x] Partita riproducibile: `GameController.new_game(scenario, seed)`
-- [ ] Effetti dei 48 Eventi (testi già in `cards.json`)
+- [x] Interprete degli Eventi (`rules/Events.gd`) con effetti atomici: Profits,
+      Risorse, EG+/EG−, Supply e Popolazione su Earth, spostamenti su spazi
+      nominati o scelti, attivazione dei Ribelli
+- [x] Estrazione conservativa degli effetti dai testi
+      (`sources/rules/estrai_effetti_eventi.py`): un'opzione è automatica solo se
+      OGNI sua frase è riconosciuta — **6 opzioni su 93**
+- [x] UI: pulsanti Evento / Evento ombreggiato, con il testo nel tooltip; ciò che
+      non è automatico finisce nel Log come "da risolvere al tavolo"
+- [ ] Libreria di effetti scritti a mano per le 87 opzioni restanti — è l'unico
+      modo per automatizzarle: quasi tutte richiedono scelte di spazi, pezzi o
+      Operazioni gratuite
 - [ ] Effetti continuativi delle Campaign card (oggi la carta è in gioco e
       visibile, ma il suo effetto non modifica ancora le regole)
 - [ ] Effetti degli Eventi e delle Capability sulle Asset card
