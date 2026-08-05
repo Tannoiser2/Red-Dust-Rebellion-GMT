@@ -69,6 +69,10 @@ func _init() -> void:
 	test_campaign_deck()
 	test_reclaimer_pays()
 	test_events()
+	test_events_all_options()
+	test_events_effects()
+	test_events_eligibility()
+	test_events_free_ops()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -1383,14 +1387,30 @@ func test_reclaimer_pays() -> void:
 # Fase 5 — Eventi (§7.0)
 # ===========================================================================
 
+## Interprete degli Eventi già collegato ai mazzi e ai round periodici.
+func events_for(s: GameState, faction: String = "marsgov", seed_value: int = 999) -> RDREvents:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	var c := RDRCards.new(s, module, r)
+	c.setup()
+	c.log_lines.clear()
+	var rd := RDRRounds.new(s, module, r)
+	rd.cards = c
+	var ev := RDREvents.new(s, module)
+	ev.cards = c
+	ev.rounds = rd
+	ev.executing_faction = faction
+	return ev
+
+
 func test_events() -> void:
 	print("Eventi (§7.0)")
 	var s := fresh()
 	var ev := RDREvents.new(s, module)
 	var cov := ev.coverage()
 	eq(cov["total"], 93, "93 opzioni di Evento (48 carte, alcune con un solo effetto)")
-	ok(cov["automatic"] >= 6, "almeno 6 opzioni risolvibili in automatico (%d)" % cov["automatic"])
-	ok(cov["manual"] > 0, "il resto è dichiarato manuale (%d)" % cov["manual"])
+	eq(cov["automatic"], 93, "tutte e 93 le opzioni hanno effetti scritti a mano")
+	eq(cov["manual"], 0, "nessuna opzione resta da risolvere al tavolo")
 
 	# #1 ombreggiato: "Reduce Profits by 5 and MG Resources by 9" — tutto automatico.
 	s.tracks["profits"] = 20
@@ -1438,14 +1458,244 @@ func test_events() -> void:
 		hidden += module.count_in(s5, sid, "rd_rebel", "hidden")
 	eq(hidden, 0, "nessun Ribelle Red Dust resta Nascosto")
 
-	# Un Evento manuale applica solo il simbolo EG e restituisce il testo residuo.
+	# Il simbolo EG+/EG− stampato sulla carta resta il primo effetto applicato.
 	var s6 := fresh()
 	var ev6 := RDREvents.new(s6, module)
-	eq(ev6.is_manual(3, false), true, "#3 non ombreggiato è manuale")
+	eq(ev6.is_manual(3, false), false, "#3 non ombreggiato non è più manuale")
 	var res6: Dictionary = ev6.play(3, false)
-	eq(res6["manual"], true, "segnalato come manuale")
-	ok(String(res6["residual"]) != "", "il testo residuo è restituito")
-	eq(int(s6.tracks["eg_side"]), 1, "il simbolo EG+ è comunque applicato")
+	eq(res6["manual"], false, "risolto per intero")
+	eq(String(res6["residual"]), "", "niente testo residuo")
+	eq(int(s6.tracks["eg_side"]), 1, "il simbolo EG+ è applicato")
+
+
+# ===========================================================================
+# Fase 5 — la libreria di effetti scritti a mano (§7.0)
+# ===========================================================================
+
+## Tutte e 93 le opzioni devono risolversi senza errori su uno stato fresco,
+## riempiendo da sole le scelte che il chiamante non fornisce.
+func test_events_all_options() -> void:
+	print("Eventi — tutte le opzioni si risolvono")
+	var errors: Array[String] = []
+	var without_choices := 0
+	for number in range(1, 49):
+		for shaded in [false, true]:
+			var s := fresh()
+			var ev := events_for(s, "marsgov")
+			if ev.option(number, shaded).is_empty():
+				continue
+			var res: Dictionary = ev.play(number, shaded)
+			if not res.get("ok", false):
+				errors.append("#%d %s: %s" % [number, shaded, res.get("error", "")])
+			if (res.get("choices", {}) as Dictionary).is_empty():
+				without_choices += 1
+			# Lo stato deve restare coerente: nessun conteggio negativo.
+			for sid in s.spaces.keys():
+				for fid in (s.spaces[sid] as SpaceState).pieces.keys():
+					for t in s.spaces[sid].pieces[fid].keys():
+						for st in s.spaces[sid].pieces[fid][t].keys():
+							if int(s.spaces[sid].pieces[fid][t][st]) < 0:
+								errors.append("#%d: %s negativo in %s" % [number, t, sid])
+	eq(errors.size(), 0, "nessun errore giocando le 93 opzioni (%s)" % ", ".join(errors))
+	ok(without_choices < 40, "la maggior parte delle opzioni dichiara delle scelte")
+
+
+func test_events_effects() -> void:
+	print("Eventi — effetti scritti a mano")
+
+	# #1: tutti i Danni negli spazi con Controllo COIN, +1 Profit ciascuno.
+	var s1 := fresh()
+	var ev1 := events_for(s1)
+	var damaged := 0
+	for sid in module.mars_spaces(s1):
+		if s1.spaces[sid].control == "coin":
+			damaged += module.marker(s1, sid, "damage")
+	ok(damaged > 0, "allo schieramento c'è Danno sotto Controllo COIN (%d)" % damaged)
+	ev1.play(1, false)
+	eq(int(s1.tracks["profits"]), damaged, "+1 Profit per ogni Danno rimosso")
+	var left := 0
+	for sid in module.mars_spaces(s1):
+		if s1.spaces[sid].control == "coin":
+			left += module.marker(s1, sid, "damage")
+	eq(left, 0, "nessun Danno resta negli spazi COIN")
+
+	# #9: 1 Supply su Earth per ogni Labirinto senza forze Ribelli.
+	var s9 := fresh()
+	var ev9 := events_for(s9)
+	var clean := 0
+	for sid in module.mars_spaces(s9):
+		if not module.is_labyrinth(s9, sid):
+			continue
+		if module.count_in(s9, sid, "rd_rebel") + module.count_in(s9, sid, "cr_rebel") \
+				+ module.count_in(s9, sid, "rd_base") + module.count_in(s9, sid, "cr_base") == 0:
+			clean += 1
+	var supply_before := module.marker(s9, "earth", "supply")
+	ev9.play(9, false)
+	eq(module.marker(s9, "earth", "supply"), supply_before + clean,
+		"%d Labirinti liberi → altrettante Supply" % clean)
+
+	# #14 non ombreggiato apre la Rodgers Line fra Europa e Tereshkova.
+	var s14 := fresh()
+	var ev14 := events_for(s14)
+	ok(not Array(module.maglev_links(s14, "europa")).has("tereshkova"),
+		"prima dell'Evento #14 la linea è in costruzione")
+	ev14.play(14, false)
+	ok(Array(module.maglev_links(s14, "europa")).has("tereshkova"),
+		"dopo l'Evento #14 Europa e Tereshkova sono collegate")
+	eq(int(s14.tracks["profits"]), 6, "+6 Profits")
+
+	# #18 ombreggiato toglie 4 SpecOps DAL GIOCO (non fra le Disponibili).
+	var s18 := fresh()
+	var ev18 := events_for(s18)
+	var avail_before := module.available(s18, "specops")
+	s18.tracks["profits"] = 10
+	ev18.play(18, true)
+	eq(module.available(s18, "specops"), avail_before - 4, "4 SpecOps in meno fra le Disponibili")
+	eq(int(s18.out_of_play.get("corporations:specops", 0)), 4, "…e fuori dal gioco")
+	eq(int(s18.tracks["profits"]), 6, "−4 Profits")
+
+	# #21 ombreggiato sostituisce cubi COIN con Ribelli, uno per spazio scelto.
+	var s21 := fresh()
+	var ev21 := events_for(s21, "red_dust")
+	var targets: Array = []
+	for sid in module.mars_spaces(s21):
+		if module.count_in(s21, sid, "mg_troop") > 0 and targets.size() < 2:
+			targets.append(sid)
+	var mg_before := module.count_in(s21, String(targets[0]), "mg_troop")
+	ev21.play(21, true, {"a": targets, "who": "red_dust"})
+	eq(module.count_in(s21, String(targets[0]), "mg_troop"), mg_before - 1,
+		"una Truppa MG sostituita nel primo spazio")
+	ok(module.count_in(s21, String(targets[0]), "rd_rebel") > 0, "…da un Ribelle Red Dust")
+
+	# #24 ombreggiato sposta verso l'Opposizione solo se lo spazio resta senza cubi.
+	var s24 := fresh()
+	var ev24 := events_for(s24)
+	var lone := ""
+	for sid in module.mars_spaces(s24):
+		var cubes := module.count_in(s24, sid, "mg_troop") + module.count_in(s24, sid, "security") \
+			+ module.count_in(s24, sid, "eg_troop")
+		if cubes > 0 and cubes <= 4 and module.population(s24, sid) > 0 and lone == "":
+			lone = sid
+	ok(lone != "", "trovato uno spazio con pochi cubi (%s)" % lone)
+	var sup_before: int = s24.spaces[lone].support
+	ev24.play(24, true, {"a": [lone]})
+	eq(module.count_in(s24, lone, "mg_troop") + module.count_in(s24, lone, "security")
+		+ module.count_in(s24, lone, "eg_troop"), 0, "lo spazio resta senza cubi")
+	eq(s24.spaces[lone].support, maxi(sup_before - 1, CoinEnums.Support.ACTIVE_OPPOSITION),
+		"…quindi si sposta verso l'Opposizione")
+
+	# #47 piazza i 6 marcatori Tempesta disponibili e lascia Disponibile chi esegue.
+	var s47 := fresh()
+	var ev47 := events_for(s47, "reclaimer")
+	ev47.play(47, false)
+	var storms := 0
+	for sid in module.mars_spaces(s47):
+		if module.storm(s47, sid) == 2:
+			storms += 1
+	eq(storms, 6, "6 Raging Storm sulla mappa (il massimo, §1.10)")
+	ok(Array(s47.tracks.get("stay_eligible", [])).has("reclaimer"),
+		"i Reclaimer restano Disponibili")
+
+	# #48 ombreggiato: Europa crolla di 2 livelli e il Red Dust pesca 4 Campaign.
+	var s48 := fresh()
+	var ev48 := events_for(s48)
+	var eu: int = s48.spaces["europa"].support
+	var deck_before: int = (s48.tracks.get("campaign_deck", []) as Array).size()
+	var campaign_before := int(s48.tracks.get("campaign_in_play", -1))
+	ev48.play(48, true)
+	eq(s48.spaces["europa"].support, maxi(eu - 2, CoinEnums.Support.ACTIVE_OPPOSITION),
+		"Europa −2 livelli")
+	ok(int(s48.tracks.get("campaign_in_play", -1)) != campaign_before,
+		"una nuova Campaign card entra in gioco")
+	# Le 3 carte non giocate e quella sostituita tornano nel mazzo: il conto torna.
+	eq((s48.tracks.get("campaign_deck", []) as Array).size(), deck_before,
+		"pescate 4 Campaign, una in gioco e le altre rimescolate")
+
+
+## §7.0: gli Eventi che rendono una Fazione Non Disponibile, o che la lasciano
+## Disponibile, agiscono alla chiusura della carta.
+func test_events_eligibility() -> void:
+	print("Eventi — Eligibility (§7.0/§4.1)")
+
+	# #29 non ombreggiato: −5 Risorse al Red Dust, che salta il round successivo.
+	var s := fresh()
+	var ev := events_for(s, "marsgov")
+	var rd_before := s.get_resources("red_dust")
+	ev.play(29, false, {"target": "red_dust"})
+	eq(s.get_resources("red_dust"), rd_before - 5, "−5 Risorse Red Dust")
+	var seq := RDRSequence.new(s, module, gd.card(1))
+	seq.finish()
+	eq(s.eligibility["red_dust"], CoinEnums.Eligibility.INELIGIBLE,
+		"il Red Dust è Non Disponibile alla carta seguente")
+	eq((s.tracks.get("forced_ineligible", []) as Array).size(), 0, "la lista è consumata")
+
+	# #46 non ombreggiato: le Corporations restano Disponibili anche avendo agito.
+	var s2 := fresh()
+	var ev2 := events_for(s2, "corporations")
+	# Serve un Deserto Spopolato con una Base CORP: lo si prepara a mano.
+	module.place_from_available(s2, "wilderness", "corp_base", 1)
+	ev2.play(46, false, {"a": ["wilderness"]})
+	var seq2 := RDRSequence.new(s2, module, gd.card(1))
+	seq2.act(CoinEnums.ActionType.EVENT)
+	seq2.finish()
+	eq(s2.eligibility["corporations"], CoinEnums.Eligibility.ELIGIBLE,
+		"le Corporations restano Disponibili")
+
+
+## §7.0: le Operazioni gratuite concesse dagli Eventi finiscono in coda e le
+## esegue il motore delle Operazioni senza pagarne il costo.
+func test_events_free_ops() -> void:
+	print("Eventi — Operazioni gratuite")
+	var s := fresh()
+	var ev := events_for(s, "marsgov")
+	var res: Dictionary = ev.play(8, false)
+	var queue: Array = s.tracks.get("pending_free_ops", [])
+	eq(queue.size(), 1, "#8 concede una sola Operazione gratuita")
+	var entry: Dictionary = queue[0]
+	eq(String(entry["operation"]), "assault", "…un Assault")
+	eq(String(entry["faction"]), "marsgov", "…al MarsGov")
+	eq(Array(entry["spaces"]), ["tenzing"], "…a Tenzing")
+	eq(module.count_in(s, "tenzing", "rd_rebel", "hidden"), 0,
+		"i Ribelli di Tenzing sono stati Attivati")
+
+	# Eseguirla non costa Risorse.
+	var ops := ops_for(s)
+	ops.free = true
+	var mg_before := s.get_resources("marsgov")
+	var done: Dictionary = ops.assault({"faction": "marsgov", "spaces": ["tenzing"]})
+	eq(done.get("ok", false), true, "l'Assault gratuito è eseguito")
+	eq(s.get_resources("marsgov"), mg_before, "…e non costa Risorse")
+
+	# #34: quando l'Evento lascia libera la scelta dell'Operazione, la coda porta
+	# la nota invece del nome dell'Operazione.
+	var s2 := fresh()
+	var ev2 := events_for(s2, "marsgov")
+	ev2.play(34, false)
+	var q2: Array = s2.tracks.get("pending_free_ops", [])
+	eq(q2.size(), 1, "#34 mette in coda l'Operazione a scelta")
+	eq(String((q2[0] as Dictionary)["operation"]), "", "senza Operazione prefissata")
+	ok(String((q2[0] as Dictionary)["note"]) != "", "ma con la nota per il giocatore")
+
+	# #39: gli effetti "a seguire" scattano solo dopo l'Assault, e solo se sono
+	# state rimosse Basi Ribelli.
+	var s3 := fresh()
+	var ev3 := events_for(s3, "corporations")
+	var lab := ""
+	for sid in module.mars_spaces(s3):
+		if module.is_labyrinth(s3, sid) and module.count_in(s3, sid, "rd_base") > 0:
+			lab = sid
+			break
+	if lab == "":
+		lab = "tenzing"
+		module.place_from_available(s3, lab, "rd_base", 1)
+	ev3.play(39, false, {"a": [lab]})
+	s3.tracks["profits"] = 0
+	var pending: Array = s3.tracks.get("pending_free_ops", [])
+	ev3.apply_after(pending[0])
+	eq(int(s3.tracks["profits"]), 0, "niente Profits finché la Base Ribelle è al suo posto")
+	module.remove_pieces(s3, lab, "rd_base", 9, "available")
+	ev3.apply_after(pending[0])
+	eq(int(s3.tracks["profits"]), 4, "+4 Profits quando l'Assault ha tolto la Base")
 
 
 # ===========================================================================

@@ -1,17 +1,16 @@
 """Ricava gli effetti eseguibili automaticamente dalle carte Evento.
 
+SUPERATO — tenuto solo come traccia di come è nata la libreria degli Eventi.
+
+Questo script riconosceva dai testi appena 6 opzioni su 93 e marcava `manual`
+tutte le altre. `data/event_effects.json` oggi è scritto a mano, carta per
+carta, con le scelte dei giocatori dichiarate esplicitamente (vedi
+`rules/Events.gd`): rigenerarlo da qui butterebbe via quel lavoro.
+
+Per questo l'output va in `event_effects_auto.json`, che il gioco NON legge.
+
 Uso (dalla root del repo):
     python3 sources/rules/estrai_effetti_eventi.py
-
-Legge `godot/games/red_dust_rebellion/data/cards.json` e scrive
-`godot/games/red_dust_rebellion/data/event_effects.json`.
-
-Il criterio è volutamente CONSERVATIVO: un'opzione viene marcata come eseguibile
-solo se OGNI sua frase corrisponde a una clausola riconosciuta. Se resta anche un
-solo pezzo di testo non interpretato, l'opzione è `manual`: il gioco mostra il
-testo e lascia risolvere ai giocatori, invece di applicare mezzo Evento.
-
-Meglio pochi Eventi giusti che molti Eventi approssimati.
 """
 
 import json
@@ -143,15 +142,13 @@ def main():
         if entry:
             out[str(c["number"])] = entry
 
-    with open(os.path.join(DATA, "event_effects.json"), "w", encoding="utf-8") as fh:
+    with open(os.path.join(DATA, "event_effects_auto.json"), "w", encoding="utf-8") as fh:
         json.dump({
             "_note": (
-                "Effetti eseguibili degli Eventi, ricavati dai testi con "
-                "sources/rules/estrai_effetti_eventi.py. Un'opzione è automatica solo "
-                "se OGNI sua frase è stata riconosciuta; altrimenti è marcata `manual` "
-                "e il gioco mostra il testo perché lo risolvano i giocatori (il simbolo "
-                "EG+/EG- resta comunque automatico). `shift_spaces` richiede che il "
-                "giocatore indichi gli spazi."
+                "NON USATO DAL GIOCO. Estrazione automatica di riferimento: il file "
+                "buono è event_effects.json, scritto a mano. Qui un'opzione è "
+                "automatica solo se OGNI sua frase è stata riconosciuta dai testi; "
+                "altrimenti resta marcata `manual`."
             ),
             "events": out,
         }, fh, ensure_ascii=False, indent=1)

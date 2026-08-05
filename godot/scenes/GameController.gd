@@ -62,6 +62,8 @@ func new_game(scenario: String = "standard", seed_value: int = 0) -> void:
 	specials = RDRSpecials.new(state, rdr())
 	specials.cards = cards
 	events = RDREvents.new(state, rdr())
+	events.cards = cards
+	events.rounds = rounds
 	rounds.begin_game()
 	_drain_log()
 	_start_card()
@@ -415,13 +417,15 @@ func _run_special(sa_id: String, spaces: Array) -> Dictionary:
 
 ## §7.0: la Fazione di turno gioca l'Evento della carta corrente. Applica gli
 ## effetti riconosciuti e restituisce il testo che resta da risolvere al tavolo.
-func execute_event(shaded: bool, targets: Array = []) -> Dictionary:
+## `choices` è il dizionario delle scelte dell'Evento ({id: valore}); accetta
+## anche il vecchio Array di spazi, che finisce sulla prima scelta dichiarata.
+func execute_event(shaded: bool, choices = {}) -> Dictionary:
 	if sequence == null or sequence.pending_faction() == "":
 		return {"ok": false, "error": "Non è il turno di nessuno."}
 	if not sequence.is_legal(CoinEnums.ActionType.EVENT):
 		return {"ok": false, "error": "L'Evento non è consentito adesso."}
 	var fid := sequence.pending_faction()
-	var res: Dictionary = events.play(state.current_card, shaded, targets)
+	var res: Dictionary = events.play(state.current_card, shaded, choices, fid)
 	if not res.get("ok", false):
 		return res
 	for line in events.log_lines:
@@ -432,6 +436,50 @@ func execute_event(shaded: bool, targets: Array = []) -> Dictionary:
 		"ombreggiato" if shaded else "non ombreggiato"])
 	sequence.act(CoinEnums.ActionType.EVENT)
 	_after_action()
+	return res
+
+
+## §7.0: Operazioni gratuite concesse dagli Eventi e non ancora eseguite.
+func pending_free_ops() -> Array:
+	if not state.tracks.has("pending_free_ops"):
+		state.tracks["pending_free_ops"] = []
+	return state.tracks["pending_free_ops"]
+
+
+## Esegue una delle Operazioni gratuite in sospeso: stesso motore delle
+## Operazioni normali, ma senza pagarne il costo (né Risorse né Asset card).
+## Al termine applica gli effetti "a seguire" dichiarati dall'Evento.
+func execute_free_op(index: int, plan_extra: Dictionary = {}) -> Dictionary:
+	var queue: Array = pending_free_ops()
+	if index < 0 or index >= queue.size():
+		return {"ok": false, "error": "Nessuna Operazione gratuita a quell'indice."}
+	var entry: Dictionary = queue[index]
+	var fid := String(entry.get("faction", ""))
+	var spaces: Array = entry.get("spaces", [])
+	var op_id := String(entry.get("operation", ""))
+	var sa_id := String(entry.get("special", ""))
+	if op_id == "" and sa_id == "":
+		return {"ok": false, "error": "L'Evento lascia la scelta dell'Operazione: %s" % entry.get("note", "")}
+	ops.free = true
+	var res: Dictionary = _run_operation(op_id, fid, spaces, plan_extra) if op_id != "" \
+		else _run_special(sa_id, spaces)
+	ops.free = false
+	if not res.get("ok", false):
+		return res
+	for line in ops.log_lines:
+		emit_signal("log_line", line)
+	ops.log_lines.clear()
+	for line in specials.log_lines:
+		emit_signal("log_line", line)
+	specials.log_lines.clear()
+	events.apply_after(entry)
+	for line in events.log_lines:
+		emit_signal("log_line", line)
+	events.log_lines.clear()
+	queue.remove_at(index)
+	emit_signal("log_line", "Operazione gratuita eseguita: %s (%s)." % [
+		OPERATION_NAMES.get(op_id, SPECIAL_NAMES.get(sa_id, op_id)), fid])
+	refresh()
 	return res
 
 

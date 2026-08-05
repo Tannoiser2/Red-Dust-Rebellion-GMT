@@ -169,6 +169,42 @@ func _initialize() -> void:
 	_ok(gc.UI_OPERATIONS["reclaimer"].has("travel"), "Travel disponibile in UI")
 	_ok(gc.UI_SPECIALS["reclaimer"].has("purify"), "Purify disponibile in UI")
 
+	# --- Evento con le sue scelte (§7.0) ---------------------------------
+	# Si riparte da una partita pulita e si guida la barra come farebbe un
+	# giocatore: spazi sulla mappa, Fazioni e rami con i pulsanti.
+	gc.new_game("standard", 20240424)
+	await process_frame
+	var ev_fid: String = gc.sequence.pending_faction()
+	var card_no: int = gc.state.current_card
+	var opt: Dictionary = gc.events.option(card_no, false)
+	_ok(not opt.is_empty(), "la carta corrente ha un Evento non ombreggiato (#%d)" % card_no)
+	main.call("_start_event", false)
+	await process_frame
+	_ok(bool(main.get("_ev_active")), "la pianificazione dell'Evento è aperta")
+	var guard := 0
+	while bool(main.get("_ev_active")) and guard < 12:
+		guard += 1
+		var reqs: Array = main.get("_ev_reqs")
+		var idx: int = main.get("_ev_index")
+		if idx >= reqs.size():
+			break
+		var req: Dictionary = reqs[idx]
+		if String(req.get("kind", "space")) == "space":
+			var pool: Array = req.get("candidates", [])
+			for i in range(mini(int(req.get("min", 0)), pool.size())):
+				main.call("_on_space_clicked", String(pool[i]))
+			main.call("_ev_confirm_spaces")
+		else:
+			var opts: Array = req.get("candidates", [])
+			main.call("_ev_pick", String(opts[0]) if not opts.is_empty() else "")
+		await process_frame
+	_ok(not bool(main.get("_ev_active")), "l'Evento è stato risolto e la barra si è chiusa")
+	_ok(gc.sequence == null or gc.sequence.pending_faction() != ev_fid,
+		"giocare l'Evento consuma il turno di %s" % ev_fid)
+	_ok(typeof(gc.pending_free_ops()) == TYPE_ARRAY,
+		"la coda delle Operazioni gratuite è consultabile (%d in attesa)"
+			% gc.pending_free_ops().size())
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()

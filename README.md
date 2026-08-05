@@ -11,13 +11,20 @@ architettura `coin_engine/` + `games/<gioco>/`, così che il terzo titolo riusi
 
 ## Stato
 
-🚧 **Fase 5 (in corso) — i mazzi Asset e Campaign ci sono.** Le 30 carte Asset dei
-Reclaimer e le 12 Campaign del Red Dust sono state lette dal modulo Vassal e sono
-in gioco: mano da 6, pagamento delle Operazioni scartando carte (col valore
-maggiorato quando la carta nomina quell'Operazione), scarti per anticipare il
-turno, Capability che restano in gioco, rimescolamento al Dust Storm Round. Gli Eventi si giocano con una
-**risoluzione mista**: il gioco applica gli effetti che riesce a riconoscere con
-certezza dal testo e mostra il resto perché lo risolvano i giocatori.
+🚧 **Fase 5 (in corso) — gli Eventi si giocano davvero.** Tutte e **93 le opzioni
+delle 48 carte Evento** hanno effetti scritti a mano: niente più "risolvete voi al
+tavolo". Ogni opzione dichiara le **scelte** che spettano ai giocatori (quali
+spazi, quale Fazione, quale ramo di un "either/or") e la sequenza di effetti da
+applicare una volta note; le scelte non fornite vengono riempite scorrendo i
+candidati legali, così l'Evento è sempre risolvibile per intero. Le Operazioni
+gratuite che gli Eventi concedono finiscono in una coda e le esegue il normale
+motore delle Operazioni, a costo zero.
+
+I mazzi Asset e Campaign ci sono: le 30 carte Asset dei Reclaimer e le 12
+Campaign del Red Dust sono state lette dal modulo Vassal e sono in gioco — mano
+da 6, pagamento delle Operazioni scartando carte (col valore maggiorato quando la
+carta nomina quell'Operazione), scarti per anticipare il turno, Capability che
+restano in gioco, rimescolamento al Dust Storm Round.
 
 Fase 4 — Tutte e 11 le Operazioni e tutte e 12 le
 Attività Speciali sono implementate e testate; in interfaccia sono utilizzabili
@@ -34,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**636 test del modulo + 40 controlli di smoke test della scena, 0 falliti.**
+**674 test del modulo + 45 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -69,7 +76,10 @@ disponibile in UI è il Passo.
 | 30 carte Asset + 12 Campaign (dati) | ✅ lette dal Vassal |
 | Mano, pagamento, Capability, rimescolamento §1.5 | ✅ i Reclaimer pagano davvero |
 | Partita riproducibile con un seme | ✅ `new_game(scenario, seed)` |
-| Eventi §7.0: risoluzione mista | ⚠️ 6 opzioni su 93 automatiche, le altre da risolvere al tavolo |
+| Eventi §7.0: effetti delle carte | ✅ 93 opzioni su 93, scritte a mano |
+| Eventi: scelte dei giocatori (spazi, Fazioni, rami) | ✅ dichiarate dalla carta e raccolte in UI |
+| Eventi: Operazioni gratuite concesse | ✅ in coda, eseguite a costo zero |
+| Eventi: «Ineligible» / «remains Eligible» | ✅ applicati alla chiusura della carta |
 | Effetti continuativi delle 12 Campaign card | ✅ tutte attive sulle regole |
 | Capability delle Asset card | ⬜ in gioco ma ancora inerti |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
@@ -81,6 +91,8 @@ disponibile in UI è il Passo.
 sources/          Materiali sorgente
   rules/          PDF ufficiali (regolamento, playbook, non-player, FAQ, player aid)
                   + estrai_carte_rdr.py  (carte Evento dal Playbook)
+                  + estrai_effetti_eventi.py (superato: gli effetti degli Eventi
+                    ora sono scritti a mano in data/event_effects.json)
   vassal/         Modulo Vassal 1.0 scompattato (buildFile.xml + images/)
                   + estrai_zone_rdr.py   (poligoni e tracciati dalla tavola)
 godot/            Progetto Godot 4

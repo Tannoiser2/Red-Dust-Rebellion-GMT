@@ -27,6 +27,9 @@ var cards: RDRCards = null
 var log_lines: Array[String] = []
 ## Operazione in corso, per il valore maggiorato delle Asset card (§1.5).
 var _current_op := ""
+## §7.0: le Operazioni gratuite concesse dagli Eventi non costano Risorse (né
+## Asset card per i Reclaimer).
+var free := false
 
 
 func _init(p_state: GameState, p_module: RDRModule, p_rng: RandomNumberGenerator = null) -> void:
@@ -55,6 +58,8 @@ func _done(spent: int) -> Dictionary:
 ## §5.0: il costo si paga dopo aver risolto tutti gli spazi, e non si possono
 ## scegliere più spazi di quanti se ne possano pagare.
 func _can_pay(faction: String, cost: int) -> bool:
+	if free:
+		return true
 	if faction == "corporations":
 		return true  # le Corporations non spendono Risorse per le Operazioni
 	if faction == "reclaimer":
@@ -70,6 +75,9 @@ func _can_pay(faction: String, cost: int) -> bool:
 
 func _pay(faction: String, cost: int) -> void:
 	if cost <= 0:
+		return
+	if free:
+		log_lines.append("Operazione gratuita: %d Risorse non pagate." % cost)
 		return
 	if faction == "reclaimer":
 		if cards == null:

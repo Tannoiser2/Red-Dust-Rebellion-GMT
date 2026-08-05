@@ -95,6 +95,20 @@ func act_pass() -> bool:
 	return super()
 
 
+## §7.0: alcuni Eventi rendono una Fazione Non Disponibile per tutto l'Event
+## Round successivo ("Ineligible through the next Event Round"), altri lasciano
+## Disponibile chi ha appena agito ("remains Eligible"). Le due liste sono
+## riempite da RDREvents e consumate qui, alla chiusura della carta.
+func finish() -> void:
+	super()
+	for fid in state.tracks.get("stay_eligible", []):
+		state.eligibility[String(fid)] = CoinEnums.Eligibility.ELIGIBLE
+	state.tracks["stay_eligible"] = []
+	for fid in state.tracks.get("forced_ineligible", []):
+		state.eligibility[String(fid)] = CoinEnums.Eligibility.INELIGIBLE
+	state.tracks["forced_ineligible"] = []
+
+
 ## §4.1 Desert Efficiency: vale solo per i Reclaimer 2ª Disponibili che mettono
 ## il proprio cilindro nella casella Operazione Limitata.
 func desert_efficiency_applies(fid: String, action: int) -> bool:

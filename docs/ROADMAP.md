@@ -88,17 +88,25 @@ fatto su Cuba Libre e All Bridges Burning.
       scartando carte, scarti per anticipare il turno (con il bonus di #19/#22),
       Capability permanenti, pescate del Dust Storm Round, rimescolamento
 - [x] Partita riproducibile: `GameController.new_game(scenario, seed)`
-- [x] Interprete degli Eventi (`rules/Events.gd`) con effetti atomici: Profits,
-      Risorse, EG+/EG−, Supply e Popolazione su Earth, spostamenti su spazi
-      nominati o scelti, attivazione dei Ribelli
-- [x] Estrazione conservativa degli effetti dai testi
-      (`sources/rules/estrai_effetti_eventi.py`): un'opzione è automatica solo se
-      OGNI sua frase è riconosciuta — **6 opzioni su 93**
-- [x] UI: pulsanti Evento / Evento ombreggiato, con il testo nel tooltip; ciò che
-      non è automatico finisce nel Log come "da risolvere al tavolo"
-- [ ] Libreria di effetti scritti a mano per le 87 opzioni restanti — è l'unico
-      modo per automatizzarle: quasi tutte richiedono scelte di spazi, pezzi o
-      Operazioni gratuite
+- [x] Interprete degli Eventi (`rules/Events.gd`): vocabolario di effetti atomici
+      (tracciati, Supporto/Opposizione, Danno, pezzi, House/Repair, tempeste,
+      carte, Eligibility), filtri sugli spazi, quantità calcolate e condizioni
+- [x] Modello delle scelte: ogni opzione dichiara `choices` (spazi, Fazione,
+      ramo di un "either/or"); quelle non fornite dal chiamante si riempiono coi
+      candidati legali, così l'Evento è sempre risolvibile per intero
+- [x] **Libreria di effetti scritti a mano per tutte e 93 le opzioni** delle 48
+      carte (`data/event_effects.json`): l'estrazione automatica dai testi
+      (`sources/rules/estrai_effetti_eventi.py`, 6 opzioni su 93) è superata e
+      scrive ora su un file che il gioco non legge
+- [x] Operazioni gratuite concesse dagli Eventi: registrate in
+      `pending_free_ops` ed eseguite dal motore delle Operazioni con `free`
+      (niente Risorse, niente Asset card), con gli effetti "a seguire"
+      (`apply_after`) per le clausole del tipo "poi Nascondi tutti i Ribelli"
+- [x] "Ineligible through the next Event Round" e "remains Eligible": applicati
+      da `RDRSequence.finish()` alla chiusura della carta
+- [x] UI: i pulsanti Evento / Evento ombreggiato aprono la raccolta delle scelte
+      una alla volta (spazi sulla mappa, Fazioni e rami con i pulsanti della
+      barra); le Operazioni gratuite in sospeso compaiono come pulsanti «★»
 - [x] Effetti continuativi di tutte e 12 le Campaign card, agganciati alle
       regole: Basi RD già Dug-In (#1), Profits erosi dalle Basi CORP (#2),
       Supply scartate o ripartite (#3/#8), Maglev vietati al Secure (#4),
@@ -106,8 +114,12 @@ fatto su Cuba Libre e All Bridges Burning.
       l'Opposizione (#6), unità CORP escluse dal Controllo nei Labirinti (#7),
       costi maggiorati per MarsGov (#9/#10), Transit e Aldrin Cycler bloccati
       (#11), Supporto Passivo che salta il Neutrale (#12)
-- [ ] Effetti degli Eventi e delle Capability sulle Asset card
+- [ ] Effetti degli Eventi e delle Capability sulle Asset card (le 30 carte
+      Reclaimer: la libreria degli Eventi §7.0 è il modello da riusare)
 - [ ] Simboli Non-Player ★/⊘ sulle carte (sottolineato/riquadrato nel Playbook)
+- [ ] Scelte fini dentro le Operazioni gratuite: l'Evento le mette in coda con
+      gli spazi già fissati, ma bersagli, dadi dell'Ambush e modalità del Rally
+      usano ancora i piani minimi della UI
 
 ## Fase 6 — Non-Player *Curiosity*
 

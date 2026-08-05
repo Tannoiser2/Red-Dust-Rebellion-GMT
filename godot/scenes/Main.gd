@@ -21,6 +21,13 @@ var _op_spaces: Array[String] = []
 var _op_candidates: PackedStringArray = PackedStringArray()
 var _op_moves: Array = []              ## spostamenti dichiarati {from,to,type,count}
 var _sa_mode := ""                     ## Attività Speciale in corso
+## §7.0: Evento in corso di pianificazione — le sue scelte si raccolgono una
+## alla volta (spazi sulla mappa, Fazioni e rami con i pulsanti della barra).
+var _ev_active := false
+var _ev_shaded := false
+var _ev_choices: Dictionary = {}
+var _ev_reqs: Array = []
+var _ev_index := 0
 var _move_box: VBoxContainer
 var _log: RichTextLabel
 var _views: Dictionary = {}   ## space_id -> RegionView
@@ -312,14 +319,16 @@ func _count_control(control: String) -> int:
 
 
 func _on_space_clicked(space_id: String) -> void:
-	if _op_mode != "" or _sa_mode != "":
+	if _op_mode != "" or _sa_mode != "" or _ev_active:
 		if not _op_candidates.has(space_id):
 			_append_log("%s non è selezionabile per %s." % [
 				GameController.game_def.space(space_id).name,
-				GameController.OPERATION_NAMES.get(_op_mode,
+				"l'Evento" if _ev_active else GameController.OPERATION_NAMES.get(_op_mode,
 					GameController.SPECIAL_NAMES.get(_sa_mode, "l'azione"))])
-		elif _op_spaces.has(space_id):
+		elif _op_spaces.has(space_id) and not _ev_repeat_allowed():
 			_op_spaces.erase(space_id)
+		elif _ev_active and _op_spaces.size() >= _ev_max_spaces():
+			_append_log("Questa scelta ammette al massimo %d spazi." % _ev_max_spaces())
 		else:
 			_op_spaces.append(space_id)
 		_refresh_op_bar()
@@ -350,22 +359,91 @@ func _start_op(op_id: String) -> void:
 	_refresh_op_bar()
 
 
-## Gioca l'Evento: gli effetti riconosciuti sono applicati, il resto va risolto
-## al tavolo e finisce nel Log.
-func _play_event(shaded: bool) -> void:
+## §7.0: gioca l'Evento raccogliendo una alla volta le scelte che dichiara —
+## gli spazi si indicano sulla mappa, Fazioni e rami con i pulsanti della barra.
+func _start_event(shaded: bool) -> void:
+	_cancel_op()
+	_ev_active = true
+	_ev_shaded = shaded
+	_ev_choices = {}
+	_ev_index = 0
+	_ev_step()
+
+
+## Prepara la scelta corrente; quando sono finite, esegue l'Evento.
+func _ev_step() -> void:
 	var gc := GameController
-	var need: int = gc.events.targets_needed(gc.state.current_card, shaded)
-	if need > 0 and _op_spaces.size() < need:
-		_append_log("Questo Evento richiede %d spazi: selezionali con «%s» e riprova." % [
-			need, gc.OPERATION_NAMES.get(_op_mode, "una Operazione")])
+	_ev_reqs = gc.events.requirements(gc.state.current_card, _ev_shaded, _ev_choices)
+	if _ev_index >= _ev_reqs.size():
+		_ev_run()
 		return
-	var res: Dictionary = gc.execute_event(shaded, Array(_op_spaces))
+	var req: Dictionary = _ev_reqs[_ev_index]
+	_op_spaces.clear()
+	_op_candidates = PackedStringArray()
+	if String(req.get("kind", "space")) == "space":
+		_op_candidates = PackedStringArray(req.get("candidates", []))
+		_append_log("Evento — %s (fino a %d, %d candidati)." % [
+			req.get("prompt", "scegli gli spazi"), int(req.get("count", 0)),
+			_op_candidates.size()])
+		if _op_candidates.is_empty():
+			_append_log("Nessuno spazio legale: la scelta resta vuota.")
+	else:
+		_append_log("Evento — %s." % req.get("prompt", "scegli"))
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _ev_confirm_spaces() -> void:
+	var req: Dictionary = _ev_reqs[_ev_index]
+	if _op_spaces.size() < int(req.get("min", 0)):
+		_append_log("Questa scelta richiede almeno %d spazi." % int(req.get("min", 0)))
+		return
+	_ev_choices[String(req.get("id", ""))] = Array(_op_spaces)
+	_ev_index += 1
+	_ev_step()
+
+
+func _ev_pick(value: String) -> void:
+	var req: Dictionary = _ev_reqs[_ev_index]
+	_ev_choices[String(req.get("id", ""))] = value
+	_ev_index += 1
+	_ev_step()
+
+
+func _ev_run() -> void:
+	var gc := GameController
+	var res: Dictionary = gc.execute_event(_ev_shaded, _ev_choices)
 	if not res.get("ok", false):
 		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "Evento rifiutato"))
+		_cancel_op()
 		return
 	if bool(res.get("manual", false)):
 		_append_log("[color=#e0b070]Evento da completare a mano: %s[/color]" % res.get("residual", ""))
+	for entry in res.get("free_ops", []):
+		_append_log("[color=#7fc4d8]Operazione gratuita in sospeso: %s[/color]" %
+			(entry as Dictionary).get("note", (entry as Dictionary).get("operation", "")))
 	_cancel_op()
+
+
+func _ev_max_spaces() -> int:
+	if not _ev_active or _ev_index >= _ev_reqs.size():
+		return 0
+	return int((_ev_reqs[_ev_index] as Dictionary).get("count", 0))
+
+
+func _ev_repeat_allowed() -> bool:
+	if not _ev_active or _ev_index >= _ev_reqs.size():
+		return false
+	return bool((_ev_reqs[_ev_index] as Dictionary).get("repeat", false))
+
+
+## Esegue una delle Operazioni gratuite concesse dagli Eventi (§7.0).
+func _run_free_op(index: int) -> void:
+	var res: Dictionary = GameController.execute_free_op(index)
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "Operazione gratuita rifiutata"))
+		return
+	_refresh_op_bar()
 
 
 ## Attività Speciale (§6.0): stessa pianificazione a scelta di spazi.
@@ -396,6 +474,10 @@ func _confirm_sa() -> void:
 func _cancel_op() -> void:
 	_op_mode = ""
 	_sa_mode = ""
+	_ev_active = false
+	_ev_reqs.clear()
+	_ev_choices.clear()
+	_ev_index = 0
 	_op_moves.clear()
 	_op_spaces.clear()
 	_op_candidates = PackedStringArray()
@@ -432,6 +514,9 @@ func _refresh_op_bar() -> void:
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
 	var fid := gc.sequence.pending_faction()
+	if _ev_active:
+		_build_event_bar()
+		return
 	if _op_mode == "" and _sa_mode == "":
 		for op_id in gc.UI_OPERATIONS.get(fid, []):
 			var b := Button.new()
@@ -449,8 +534,22 @@ func _refresh_op_bar() -> void:
 					var e := Button.new()
 					e.text = "Ev. ombr." if shaded else "Evento"
 					e.tooltip_text = String(opt.get("text", ""))
-					e.pressed.connect(_play_event.bind(shaded))
+					e.pressed.connect(_start_event.bind(shaded))
 					_ops_box.add_child(e)
+		# §7.0: Operazioni gratuite concesse da un Evento e non ancora eseguite.
+		var queue: Array = gc.pending_free_ops()
+		for i in range(queue.size()):
+			var entry: Dictionary = queue[i]
+			var label := String(entry.get("operation", ""))
+			if label == "":
+				label = String(entry.get("special", ""))
+			var fb := Button.new()
+			fb.text = "★ %s gratis (%s)" % [
+				gc.OPERATION_NAMES.get(label, gc.SPECIAL_NAMES.get(label, label)),
+				gc.game_def.faction(String(entry.get("faction", ""))).short_name]
+			fb.tooltip_text = String(entry.get("note", ""))
+			fb.pressed.connect(_run_free_op.bind(i))
+			_ops_box.add_child(fb)
 		for sa_id in gc.UI_SPECIALS.get(fid, {}).keys():
 			var sb := Button.new()
 			sb.text = "· %s" % gc.SPECIAL_NAMES.get(sa_id, sa_id)
@@ -480,6 +579,51 @@ func _refresh_op_bar() -> void:
 	cancel.pressed.connect(_cancel_op)
 	_ops_box.add_child(cancel)
 	_refresh_move_box()
+
+
+## Barra della scelta in corso di un Evento: gli spazi si prendono dalla mappa,
+## Fazioni e rami hanno un pulsante ciascuno.
+func _build_event_bar() -> void:
+	if _ev_index >= _ev_reqs.size():
+		return
+	var req: Dictionary = _ev_reqs[_ev_index]
+	var label := Label.new()
+	label.text = "Evento (%d/%d): %s" % [
+		_ev_index + 1, _ev_reqs.size(), req.get("prompt", "scegli")]
+	_ops_box.add_child(label)
+	if String(req.get("kind", "space")) == "space":
+		var next := Button.new()
+		next.text = "Conferma (%d/%d)" % [_op_spaces.size(), int(req.get("count", 0))]
+		next.pressed.connect(_ev_confirm_spaces)
+		_ops_box.add_child(next)
+		if not _op_spaces.is_empty():
+			var clear := Button.new()
+			clear.text = "Svuota"
+			clear.pressed.connect(func():
+				_op_spaces.clear()
+				_paint_op_highlight()
+				_refresh_op_bar())
+			_ops_box.add_child(clear)
+	else:
+		for value in req.get("candidates", []):
+			var b := Button.new()
+			b.text = _choice_label(String(value))
+			b.pressed.connect(_ev_pick.bind(String(value)))
+			_ops_box.add_child(b)
+	var cancel := Button.new()
+	cancel.text = "Annulla"
+	cancel.pressed.connect(_cancel_op)
+	_ops_box.add_child(cancel)
+
+
+func _choice_label(value: String) -> String:
+	var f: FactionDef = GameController.game_def.faction(value)
+	if f != null:
+		return f.short_name
+	var s: SpaceDef = GameController.game_def.space(value)
+	if s != null:
+		return s.name
+	return value.capitalize()
 
 
 ## Pianificatore di movimento (§5.3/§5.4/§5.7/§5.8): per ogni spazio scelto come

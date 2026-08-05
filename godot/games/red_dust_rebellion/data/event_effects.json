@@ -1,842 +1,4276 @@
 {
- "_note": "Effetti eseguibili degli Eventi, ricavati dai testi con sources/rules/estrai_effetti_eventi.py. Un'opzione è automatica solo se OGNI sua frase è stata riconosciuta; altrimenti è marcata `manual` e il gioco mostra il testo perché lo risolvano i giocatori (il simbolo EG+/EG- resta comunque automatico). `shift_spaces` richiede che il giocatore indichi gli spazi.",
- "events": {
-  "1": {
-   "unshaded": {
-    "text": "Remove all Damage from spaces with COIN Control. Increase Profits by 1 per Damage removed. Shift up to 2 spaces where any Damage was removed 1 level each towards Active Support.",
-    "manual": true,
-    "residual": "Remove all Damage from spaces with COIN Control. Increase Profits by 1 per Damage removed. Shift up to 2 spaces where any Damage was removed 1 level each towards Active Support",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Reduce Profits by 5 and MG Resources by 9.",
-    "effects": [
-     {
-      "op": "profits",
-      "delta": -5
-     },
-     {
-      "op": "resources",
-      "faction": "marsgov",
-      "delta": -9
-     }
-    ]
-   }
-  },
-  "2": {
-   "unshaded": {
-    "text": "Place 4 Supply markers or 4 EG Troops on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
-    "manual": true,
-    "residual": "Place 4 Supply markers or 4 EG Troops on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round)",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Reduce Profits by 5.",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     },
-     {
-      "op": "profits",
-      "delta": -5
-     }
-    ]
-   }
-  },
-  "3": {
-   "unshaded": {
-    "text": "Remove all Rebel Bases from 2 spaces with EG Troops.",
-    "manual": true,
-    "residual": "Remove all Rebel Bases from 2 spaces with EG Troops",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "CORP may Exploit in any 1 space with Support, even if more MG forces than CORP forces there.",
-    "manual": true,
-    "residual": "CORP may Exploit in any 1 space with Support, even if more MG forces than CORP forces there",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "4": {
-   "unshaded": {
-    "text": "Place up to 8 EG Troops in Labyrinths without Rebel forces.",
-    "manual": true,
-    "residual": "Place up to 8 EG Troops in Labyrinths without Rebel forces",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Move all EG Troops from Phobos and 1 other space on Mars to Available.",
-    "manual": true,
-    "residual": "Move all EG Troops from Phobos and 1 other space on Mars to Available",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "5": {
-   "unshaded": {
-    "text": "Shift EG Confidence up one step for each Satellite in Orbit, then move all Satellites to Orbit.",
-    "manual": true,
-    "residual": "Shift EG Confidence up one step for each Satellite in Orbit, then move all Satellites to Orbit",
-    "effects": []
-   },
-   "shaded": {
-    "text": "RD or CR may free Attack in each space with friendly forces and a Satellite.",
-    "manual": true,
-    "residual": "RD or CR may free Attack in each space with friendly forces and a Satellite",
-    "effects": []
-   }
-  },
-  "6": {
-   "unshaded": {
-    "text": "Place 3 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
-    "manual": true,
-    "residual": "Place 3 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round)",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Either transfer up to 6 MG Resources to RD Resources, or remove all Supply markers from Transit.",
-    "manual": true,
-    "residual": "Either transfer up to 6 MG Resources to RD Resources, or remove all Supply markers from Transit",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "7": {
-   "unshaded": {
-    "text": "Place 2 Population markers on Earth, then may House in any 1 space with Support.",
-    "manual": true,
-    "residual": "Place 2 Population markers on Earth, then may House in any 1 space with Support",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Remove up to 6 MG Troops from spaces on Mars without Support.",
-    "manual": true,
-    "residual": "Remove up to 6 MG Troops from spaces on Mars without Support",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "8": {
-   "unshaded": {
-    "text": "Shift Tenzing 2 levels towards Active Support. Activate all Rebels in Tenzing, then MG may free Assault there.",
-    "manual": true,
-    "residual": "Activate all Rebels in Tenzing, then MG may free Assault there",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Set Tenzing to Neutral, then RD gains Resources equal to its Population and CR draws 1 Asset card.",
-    "manual": true,
-    "residual": "Set Tenzing to Neutral, then RD gains Resources equal to its Population and CR draws 1 Asset card",
-    "effects": []
-   }
-  },
-  "9": {
-   "unshaded": {
-    "text": "Place 1 Supply marker on Earth for each Labyrinth without any Rebel forces.",
-    "manual": true,
-    "residual": "Place 1 Supply marker on Earth for each Labyrinth without any Rebel forces",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Remove 1 Supply marker from Earth for each Labyrinth with any Rebel forces.",
-    "manual": true,
-    "residual": "Remove 1 Supply marker from Earth for each Labyrinth with any Rebel forces",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "10": {
-   "unshaded": {
-    "text": "Shift any 2 spaces 1 level each towards Active Support.",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     },
-     {
-      "op": "shift_spaces",
-      "count": 2,
-      "direction": 1
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Shift any 2 spaces 1 level each towards Active Opposition. Place 2 Rebels in each selected space.",
-    "manual": true,
-    "residual": "Place 2 Rebels in each selected space",
-    "effects": []
-   }
-  },
-  "11": {
-   "unshaded": {
-    "text": "Activate all Rebels in 1 Labyrinth. The Rebel Faction with the most forces in that Labyrinth is Ineligible through the next Event Round (executing Faction chooses if tied).",
-    "manual": true,
-    "residual": "Activate all Rebels in 1 Labyrinth. The Rebel Faction with the most forces in that Labyrinth is Ineligible through the next Event Round (executing Faction chooses if tied)",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Move 4 MG or CORP cubes from each of up to 2 Labyrinths to any spaces with COIN Bases.",
-    "manual": true,
-    "residual": "Move 4 MG or CORP cubes from each of up to 2 Labyrinths to any spaces with COIN Bases",
-    "effects": []
-   }
-  },
-  "12": {
-   "unshaded": {
-    "text": "Activate all SpecOps and Rebels in one space with SpecOps, then CORP may free Assault there.",
-    "manual": true,
-    "residual": "Activate all SpecOps and Rebels in one space with SpecOps, then CORP may free Assault there",
-    "effects": []
-   },
-   "shaded": {
-    "text": "RD may place up to 2 Rebels in a Labyrinth, then free Ambush there. Flip all Rebels in that Labyrinth to Hidden after the Ambush is executed.",
-    "manual": true,
-    "residual": "RD may place up to 2 Rebels in a Labyrinth, then free Ambush there. Flip all Rebels in that Labyrinth to Hidden after the Ambush is executed",
-    "effects": []
-   }
-  },
-  "13": {
-   "unshaded": {
-    "text": "Move up to 6 Security to a single space adjacent to a Maglev line. Activate all Rebels in that space, then CORP may free Assault there.",
-    "manual": true,
-    "residual": "Move up to 6 Security to a single space adjacent to a Maglev line. Activate all Rebels in that space, then CORP may free Assault there",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Select a Maglev line, then shift all adjacent spaces 1 level each towards Active Opposition.",
-    "manual": true,
-    "residual": "Select a Maglev line, then shift all adjacent spaces 1 level each towards Active Opposition",
-    "effects": []
-   }
-  },
-  "14": {
-   "unshaded": {
-    "text": "Place the Rodgers Line marker between Europa and Tereshkova. Shift Europa and Tereshkova 1 level each towards Active Support, increase Profits by 6, and MG or CORP may House once in both Labyrinths.",
-    "manual": true,
-    "residual": "Place the Rodgers Line marker between Europa and Tereshkova. Shift Europa and Tereshkova 1 level each towards Active Support, increase Profits by 6, and MG or CORP may House once in both Labyrinths",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Shift Europa and Tereshkova 1 level each towards Active Opposition. Reduce Profits by 3 and MG Resources by 6.",
-    "effects": [
-     {
-      "op": "shift_space",
-      "space": "europa",
-      "levels": 1,
-      "direction": -1
-     },
-     {
-      "op": "shift_space",
-      "space": "tereshkova",
-      "levels": 1,
-      "direction": -1
-     },
-     {
-      "op": "profits",
-      "delta": -3
-     },
-     {
-      "op": "resources",
-      "faction": "marsgov",
-      "delta": -6
-     }
-    ]
-   }
-  },
-  "15": {
-   "unshaded": {
-    "text": "Shift any 2 Deserts 2 levels each towards Active Opposition. Increase Profits by 1 for each CORP Base in a Desert.",
-    "manual": true,
-    "residual": "Shift any 2 Deserts 2 levels each towards Active Opposition. Increase Profits by 1 for each CORP Base in a Desert",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Reduce Profits by 6 and remove up to 2 CORP Bases from any Deserts.",
-    "manual": true,
-    "residual": "Reduce Profits by 6 and remove up to 2 CORP Bases from any Deserts",
-    "effects": []
-   }
-  },
-  "16": {
-   "unshaded": {
-    "text": "Remove all Rebels from Shenzhou and set it to Neutral, then Activate all Rebels adjacent to it. Increase Profits by 3 or place 3 Supply markers on Earth.",
-    "manual": true,
-    "residual": "Remove all Rebels from Shenzhou and set it to Neutral, then Activate all Rebels adjacent to it. Increase Profits by 3 or place 3 Supply markers on Earth",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Place 1 Damage on Shenzhou, then remove any number of Population markers from Displaced Population.",
-    "manual": true,
-    "residual": "Place 1 Damage on Shenzhou, then remove any number of Population markers from Displaced Population",
-    "effects": []
-   }
-  },
-  "17": {
-   "unshaded": {
-    "text": "Shift any 2 Deserts 1 level each towards Neutral. Increase Profits by 3 or place 3 Supply markers on Earth.",
-    "manual": true,
-    "residual": "Shift any 2 Deserts 1 level each towards Neutral. Increase Profits by 3 or place 3 Supply markers on Earth",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Shift any 2 Deserts 1 level each towards Active Opposition. RD may draw and play 1 Campaign card.",
-    "manual": true,
-    "residual": "Shift any 2 Deserts 1 level each towards Active Opposition. RD may draw and play 1 Campaign card",
-    "effects": []
-   }
-  },
-  "18": {
-   "unshaded": {
-    "text": "Place 2 SpecOps, 2 Security, and a CORP Base in 1 Desert. Activate all Rebels there.",
-    "manual": true,
-    "residual": "Place 2 SpecOps, 2 Security, and a CORP Base in 1 Desert. Activate all Rebels there",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Permanently remove up to 4 Available SpecOps from the game. Reduce Profits by 4.",
-    "manual": true,
-    "residual": "Permanently remove up to 4 Available SpecOps from the game",
-    "effects": []
-   }
-  },
-  "19": {
-   "unshaded": {
-    "text": "Shift each space with Damage and Security 1 level towards Active Support. Increase Profits by 3.",
-    "manual": true,
-    "residual": "Shift each space with Damage and Security 1 level towards Active Support",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Reduce MG Resources by 3 for each Labyrinth with any CORP forces.",
-    "manual": true,
-    "residual": "Reduce MG Resources by 3 for each Labyrinth with any CORP forces",
-    "effects": []
-   }
-  },
-  "20": {
-   "unshaded": {
-    "text": "Shift any 2 Labyrinths 1 level each towards Active Support. Increase Profits by 3.",
-    "manual": true,
-    "residual": "Shift any 2 Labyrinths 1 level each towards Active Support",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Shift up to 4 spaces with CORP forces 1 level each towards Active Opposition.",
-    "manual": true,
-    "residual": "Shift up to 4 spaces with CORP forces 1 level each towards Active Opposition",
-    "effects": []
-   }
-  },
-  "21": {
-   "unshaded": {
-    "text": "Place 6 MG Troops or 4 EG Troops in 1 Labyrinth. Increase Profits by 3.",
-    "manual": true,
-    "residual": "Place 6 MG Troops or 4 EG Troops in 1 Labyrinth",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Replace up to 6 MG Troops or CORP Security with Rebels.",
-    "manual": true,
-    "residual": "Replace up to 6 MG Troops or CORP Security with Rebels",
-    "effects": []
-   }
-  },
-  "22": {
-   "unshaded": {
-    "text": "Activate all Rebels in Labyrinths with COIN Control, then MG or CORP may free Assault in one Labyrinth with COIN Control.",
-    "manual": true,
-    "residual": "Activate all Rebels in Labyrinths with COIN Control, then MG or CORP may free Assault in one Labyrinth with COIN Control",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Shift any 2 Labyrinths 1 level each towards Active Opposition, then place 2 Rebels in or adjacent to each selected Labyrinth.",
-    "manual": true,
-    "residual": "Shift any 2 Labyrinths 1 level each towards Active Opposition, then place 2 Rebels in or adjacent to each selected Labyrinth",
-    "effects": []
-   }
-  },
-  "23": {
-   "unshaded": {
-    "text": "Replace up to 4 Rebels with either CORP Security or MG Troops.",
-    "manual": true,
-    "residual": "Replace up to 4 Rebels with either CORP Security or MG Troops",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Remove a CORP Base and up to 4 CORP units from 1 space, then shift that space 1 level towards Active Opposition. Reduce Profits by 2.",
-    "manual": true,
-    "residual": "Remove a CORP Base and up to 4 CORP units from 1 space, then shift that space 1 level towards Active Opposition",
-    "effects": []
-   }
-  },
-  "24": {
-   "unshaded": {
-    "text": "Shift up to 3 spaces 1 level each towards Active Support, then increase Profits by 1 for each space now with Active Support.",
-    "manual": true,
-    "residual": "Shift up to 3 spaces 1 level each towards Active Support, then increase Profits by 1 for each space now with Active Support",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Remove up to 4 Troops or Security from one space (EG last). Then, if no cubes remain, shift that space 1 level towards Active Opposition.",
-    "manual": true,
-    "residual": "Remove up to 4 Troops or Security from one space (EG last). Then, if no cubes remain, shift that space 1 level towards Active Opposition",
-    "effects": []
-   }
-  },
-  "25": {
-   "unshaded": {
-    "text": "Activate all Rebels in spaces containing CORP Bases, then MG or CORP may free Assault in one space with a CORP Base.",
-    "manual": true,
-    "residual": "Activate all Rebels in spaces containing CORP Bases, then MG or CORP may free Assault in one space with a CORP Base",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Move up to 6 MG Troops or CORP Security from any one Labyrinth to one other Labyrinth with Support.",
-    "manual": true,
-    "residual": "Move up to 6 MG Troops or CORP Security from any one Labyrinth to one other Labyrinth with Support",
-    "effects": []
-   }
-  },
-  "26": {
-   "unshaded": {
-    "text": "Increase Profits by 1 for each CORP Base in a Desert, then flip up to 2 CORP Bases to their Terraforming side.",
-    "manual": true,
-    "residual": "Increase Profits by 1 for each CORP Base in a Desert, then flip up to 2 CORP Bases to their Terraforming side",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Free March or Travel from any one space to one other space with a CORP Terraforming Base, then Activate all Rebels in the space and remove CORP forces equal to the number of Rebels there (Bases last).",
-    "manual": true,
-    "residual": "Free March or Travel from any one space to one other space with a CORP Terraforming Base, then Activate all Rebels in the space and remove CORP forces equal to the number of Rebels there (Bases last)",
-    "effects": []
-   }
-  },
-  "27": {
-   "unshaded": {
-    "text": "Flip up to 1 CORP Base in each Unpopulated Desert to its Terraforming side.",
-    "manual": true,
-    "residual": "Flip up to 1 CORP Base in each Unpopulated Desert to its Terraforming side",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Remove all Supply markers from Earth. RD may draw and play 1 Campaign card.",
-    "manual": true,
-    "residual": "RD may draw and play 1 Campaign card",
-    "effects": []
-   }
-  },
-  "28": {
-   "unshaded": {
-    "text": "MG or CORP may House in 1 Labyrinth, then add or remove up to 3 Population markers to/from Displaced Population.",
-    "manual": true,
-    "residual": "MG or CORP may House in 1 Labyrinth, then add or remove up to 3 Population markers to/from Displaced Population",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "RD may House in 1 space, then remove all Population markers from Displaced Population and shift 1 Labyrinth 1 level towards Active Opposition for every 3 Population markers removed (round down).",
-    "manual": true,
-    "residual": "RD may House in 1 space, then remove all Population markers from Displaced Population and shift 1 Labyrinth 1 level towards Active Opposition for every 3 Population markers removed (round down)",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "29": {
-   "unshaded": {
-    "text": "Either reduce RD Resources by 5 or CR must discard 2 Asset cards at random. The targeted Faction is Ineligible through the next Event Round.",
-    "manual": true,
-    "residual": "Either reduce RD Resources by 5 or CR must discard 2 Asset cards at random. The targeted Faction is Ineligible through the next Event Round",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Place 4 Rebels and 1 Base (flipped to either Dug-In or Conversion Center) in any 1 Desert.",
-    "manual": true,
-    "residual": "Place 4 Rebels and 1 Base (flipped to either Dug-In or Conversion Center) in any 1 Desert",
-    "effects": []
-   }
-  },
-  "30": {
-   "unshaded": {
-    "text": "Set any 2 Deserts to Neutral, then remove up to 2 Rebel forces from each of those Deserts (Bases last).",
-    "manual": true,
-    "residual": "Set any 2 Deserts to Neutral, then remove up to 2 Rebel forces from each of those Deserts (Bases last)",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Shift any 3 Deserts 1 level each towards Active Opposition, then place 1 Rebel and 1 Base in each selected Desert.",
-    "manual": true,
-    "residual": "Shift any 3 Deserts 1 level each towards Active Opposition, then place 1 Rebel and 1 Base in each selected Desert",
-    "effects": []
-   }
-  },
-  "31": {
-   "unshaded": {
-    "text": "Place 4 EG Troops on Phobos, then remove one active RD Campaign card from play.",
-    "manual": true,
-    "residual": "Place 4 EG Troops on Phobos, then remove one active RD Campaign card from play",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Place 3 Rebels total in any Populated spaces. Increase RD Resources by 6.",
-    "manual": true,
-    "residual": "Place 3 Rebels total in any Populated spaces",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "32": {
-   "unshaded": {
-    "text": "Place 2 Rebels in either Shepard or Tereshkova, then place 2 MG Troops in the other Labyrinth. Shift the Labyrinth where the Rebels were placed 2 levels towards Active Opposition, then shift the other Labyrinth 2 levels towards Active Support. The executing Faction may free Assault (if COIN) or free Attack (if Rebel) in one affected Labyrinth.",
-    "manual": true,
-    "residual": "Place 2 Rebels in either Shepard or Tereshkova, then place 2 MG Troops in the other Labyrinth. Shift the Labyrinth where the Rebels were placed 2 levels towards Active Opposition, then shift the other Labyrinth 2 levels towards Active Support. The executing Faction may free Assault (if COIN) or free Attack (if Rebel) in one affected Labyrinth",
-    "effects": []
-   }
-  },
-  "33": {
-   "unshaded": {
-    "text": "Activate all RD Rebels.",
-    "effects": [
-     {
-      "op": "activate_all",
-      "faction": "red_dust"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "RD may free Ambush in any number of Labyrinths, then must Activate all RD Rebels in any Labyrinths where they Ambushed.",
-    "manual": true,
-    "residual": "RD may free Ambush in any number of Labyrinths, then must Activate all RD Rebels in any Labyrinths where they Ambushed",
-    "effects": []
-   }
-  },
-  "34": {
-   "unshaded": {
-    "text": "The executing Faction may move up to 3 of their units from 1 space through a chain of up to 3 contiguous Deserts. Then, they may perform a free Operation other than Recon or March in the final Desert.",
-    "manual": true,
-    "residual": "The executing Faction may move up to 3 of their units from 1 space through a chain of up to 3 contiguous Deserts. Then, they may perform a free Operation other than Recon or March in the final Desert",
-    "effects": []
-   }
-  },
-  "35": {
-   "unshaded": {
-    "text": "MG or CORP may House in 1 space, then shift up to 2 Deserts with Population markers 1 level each towards Active Support.",
-    "manual": true,
-    "residual": "MG or CORP may House in 1 space, then shift up to 2 Deserts with Population markers 1 level each towards Active Support",
-    "effects": []
-   },
-   "shaded": {
-    "text": "RD may House in 1 Desert and place 1 Base there, then increase RD Resources by 4.",
-    "manual": true,
-    "residual": "RD may House in 1 Desert and place 1 Base there, then increase RD Resources by 4",
-    "effects": []
-   }
-  },
-  "36": {
-   "unshaded": {
-    "text": "Move any number of COIN units on Mars to a Desert with a Rebel Base. MG or CORP may free Recon in that Desert, then free Assault there.",
-    "manual": true,
-    "residual": "Move any number of COIN units on Mars to a Desert with a Rebel Base. MG or CORP may free Recon in that Desert, then free Assault there",
-    "effects": []
-   },
-   "shaded": {
-    "text": "RD or CR may move up to 6 COIN units on Mars to a Desert with a friendly Base, then move that Base and any number of friendly Rebels there to an adjacent Desert.",
-    "manual": true,
-    "residual": "RD or CR may move up to 6 COIN units on Mars to a Desert with a friendly Base, then move that Base and any number of friendly Rebels there to an adjacent Desert",
-    "effects": []
-   }
-  },
-  "37": {
-   "unshaded": {
-    "text": "Remove 6 Rebels total from any spaces. An equal number of RD and CR Rebels must be removed if possible.",
-    "manual": true,
-    "residual": "Remove 6 Rebels total from any spaces. An equal number of RD and CR Rebels must be removed if possible",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Move up to 3 CR Rebels from one space to an adjacent space with RD forces in it. Then RD or CR may either free Ambush there, or replace the moved CR Rebels with RD Rebels.",
-    "manual": true,
-    "residual": "Move up to 3 CR Rebels from one space to an adjacent space with RD forces in it. Then RD or CR may either free Ambush there, or replace the moved CR Rebels with RD Rebels",
-    "effects": []
-   }
-  },
-  "38": {
-   "unshaded": {
-    "text": "Increase Profits by 3, then place 2 Security in each of up to 3 spaces adjacent to Maglev lines.",
-    "manual": true,
-    "residual": "Increase Profits by 3, then place 2 Security in each of up to 3 spaces adjacent to Maglev lines",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Place 1 Damage and 1 Rebel in each of 2 Labyrinths connected by a single Maglev line, then increase RD Resources by 3.",
-    "manual": true,
-    "residual": "Place 1 Damage and 1 Rebel in each of 2 Labyrinths connected by a single Maglev line, then increase RD Resources by 3",
-    "effects": []
-   }
-  },
-  "39": {
-   "unshaded": {
-    "text": "CORP may Activate all Rebels in one Labyrinth, then Assault there. Increase Profits by 4 if any Rebel Bases are removed by this Assault.",
-    "manual": true,
-    "residual": "CORP may Activate all Rebels in one Labyrinth, then Assault there. Increase Profits by 4 if any Rebel Bases are removed by this Assault",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Reduce Profits by 3. Shift any 3 Labyrinths 1 level each towards Active Opposition, then place 1 Damage in each selected Labyrinth.",
-    "manual": true,
-    "residual": "Shift any 3 Labyrinths 1 level each towards Active Opposition, then place 1 Damage in each selected Labyrinth",
-    "effects": []
-   }
-  },
-  "40": {
-   "unshaded": {
-    "text": "Place 4 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round). Increase Profits by 2.",
-    "manual": true,
-    "residual": "Place 4 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round)",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Reduce Profits by 3 and MG Resources by 9.",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     },
-     {
-      "op": "profits",
-      "delta": -3
-     },
-     {
-      "op": "resources",
-      "faction": "marsgov",
-      "delta": -9
-     }
-    ]
-   }
-  },
-  "41": {
-   "unshaded": {
-    "text": "Shift Sharma and Gandhi 1 level each towards Active Support. RD is Ineligible through next Event Round.",
-    "manual": true,
-    "residual": "RD is Ineligible through next Event Round",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Shift Gandhi and Sharma 1 level each towards Active Opposition. Replace all MG forces in Sharma with RD forces (replace Troops with Rebels and Bases with Bases).",
-    "manual": true,
-    "residual": "Replace all MG forces in Sharma with RD forces (replace Troops with Rebels and Bases with Bases)",
-    "effects": []
-   }
-  },
-  "42": {
-   "unshaded": {
-    "text": "Shift 2 spaces with EG Troops 1 level each towards Active Support.",
-    "manual": true,
-    "residual": "Shift 2 spaces with EG Troops 1 level each towards Active Support",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Shift 2 spaces with EG Troops 1 level each towards Active Opposition.",
-    "manual": true,
-    "residual": "Shift 2 spaces with EG Troops 1 level each towards Active Opposition",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
-  },
-  "43": {
-   "unshaded": {
-    "text": "MG or CORP may move any COIN forces from a Desert to an adjacent Desert, then may free Recon or free Assault in the destination Desert.",
-    "manual": true,
-    "residual": "MG or CORP may move any COIN forces from a Desert to an adjacent Desert, then may free Recon or free Assault in the destination Desert",
-    "effects": []
-   },
-   "shaded": {
-    "text": "RD or CR may move up to 3 Rebel Bases from any spaces to any adjacent Deserts.",
-    "manual": true,
-    "residual": "RD or CR may move up to 3 Rebel Bases from any spaces to any adjacent Deserts",
-    "effects": []
-   }
-  },
-  "44": {
-   "unshaded": {
-    "text": "Remove up to 6 Rebel forces from New Córdoba (Bases last).",
-    "manual": true,
-    "residual": "Remove up to 6 Rebel forces from New Córdoba (Bases last)",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Shift New Córdoba 1 level towards Active Opposition, then place 2 Rebels in each of New Córdoba and both adjacent Deserts.",
-    "manual": true,
-    "residual": "Shift New Córdoba 1 level towards Active Opposition, then place 2 Rebels in each of New Córdoba and both adjacent Deserts",
-    "effects": []
-   }
-  },
-  "45": {
-   "unshaded": {
-    "text": "MG or CORP may move any number of COIN units from adjacent spaces to 1 Desert, then Activate all Rebels in that Desert and free Assault there.",
-    "manual": true,
-    "residual": "MG or CORP may move any number of COIN units from adjacent spaces to 1 Desert, then Activate all Rebels in that Desert and free Assault there",
-    "effects": []
-   },
-   "shaded": {
-    "text": "RD or CR may free March or Travel to 1 Desert, then free Ambush there (even if all Rebels are Active).",
-    "manual": true,
-    "residual": "RD or CR may free March or Travel to 1 Desert, then free Ambush there (even if all Rebels are Active)",
-    "effects": []
-   }
-  },
-  "46": {
-   "unshaded": {
-    "text": "Remove a CORP Base and all units from 1 Unpopulated Desert. Increase Profits by 6 and CORP remains Eligible.",
-    "manual": true,
-    "residual": "Remove a CORP Base and all units from 1 Unpopulated Desert. Increase Profits by 6 and CORP remains Eligible",
-    "effects": []
-   },
-   "shaded": {
-    "text": "Reduce Profits by 1 for each CORP Base in a space with Rebel forces.",
-    "manual": true,
-    "residual": "Reduce Profits by 1 for each CORP Base in a space with Rebel forces",
-    "effects": []
-   }
-  },
-  "47": {
-   "unshaded": {
-    "text": "Place all available Storm markers on their Raging Storm side in any spaces (maximum 1 Storm per space). Executing Faction remains Eligible.",
-    "manual": true,
-    "residual": "Place all available Storm markers on their Raging Storm side in any spaces (maximum 1 Storm per space). Executing Faction remains Eligible",
-    "effects": []
-   }
-  },
-  "48": {
-   "unshaded": {
-    "text": "Shift Europa 2 levels towards Active Support, then place 3 Supply markers on Earth.",
-    "manual": true,
-    "residual": "Shift Europa 2 levels towards Active Support, then place 3 Supply markers on Earth",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG+"
-     }
-    ]
-   },
-   "shaded": {
-    "text": "Shift Europa 2 levels towards Active Opposition, then RD draws 4 Campaign cards and plays 1 (shuffle the rest back into the deck).",
-    "manual": true,
-    "residual": "Shift Europa 2 levels towards Active Opposition, then RD draws 4 Campaign cards and plays 1 (shuffle the rest back into the deck)",
-    "effects": [
-     {
-      "op": "eg_side",
-      "side": "EG-"
-     }
-    ]
-   }
+  "_note": "Effetti degli Eventi (§7.0), scritti a mano carta per carta. Ogni opzione dichiara `choices` (le decisioni dei giocatori: quali spazi, quale Fazione, quale ramo di un \"either/or\") e `effects` (gli effetti atomici da applicare). Le scelte non fornite dal chiamante vengono riempite scorrendo i candidati legali, così che l'Evento sia sempre risolvibile per intero. Le Operazioni gratuite concesse dagli Eventi finiscono in `pending_free_ops` e le esegue il motore delle Operazioni a costo zero. Testi delle carte estratti dal Playbook (sources/rules/estrai_carte_rdr.py).",
+  "events": {
+    "1": {
+      "unshaded": {
+        "text": "Remove all Damage from spaces with COIN Control. Increase Profits by 1 per Damage removed. Shift up to 2 spaces where any Damage was removed 1 level each towards Active Support.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "filter": {
+              "control": "coin",
+              "damage": {
+                "min": 1
+              }
+            },
+            "prompt": "Fino a 2 spazi da cui è stato tolto il Danno, da spostare verso il Supporto"
+          }
+        ],
+        "effects": [
+          {
+            "op": "remove_damage",
+            "where": {
+              "filter": {
+                "control": "coin",
+                "damage": {
+                  "min": 1
+                }
+              }
+            },
+            "all": true
+          },
+          {
+            "op": "profits",
+            "delta_per": 1,
+            "times": {
+              "kind": "last"
+            }
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": 1
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce Profits by 5 and MG Resources by 9.",
+        "effects": [
+          {
+            "op": "profits",
+            "delta": -5
+          },
+          {
+            "op": "resources",
+            "faction": "marsgov",
+            "delta": -9
+          }
+        ]
+      }
+    },
+    "2": {
+      "unshaded": {
+        "text": "Place 4 Supply markers or 4 EG Troops on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
+        "choices": [
+          {
+            "id": "what",
+            "kind": "branch",
+            "options": [
+              "supply",
+              "eg_troops"
+            ],
+            "prompt": "4 Supply oppure 4 Truppe EG su Earth"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "branch",
+            "choice": "what",
+            "cases": {
+              "supply": [
+                {
+                  "op": "supply_earth",
+                  "delta": 4
+                }
+              ],
+              "eg_troops": [
+                {
+                  "op": "place",
+                  "where": {
+                    "space": "earth"
+                  },
+                  "pieces": [
+                    {
+                      "type": "eg_troop",
+                      "count": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "op": "aldrin_cycler"
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce Profits by 5.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "profits",
+            "delta": -5
+          }
+        ]
+      }
+    },
+    "3": {
+      "unshaded": {
+        "text": "Remove all Rebel Bases from 2 spaces with EG Troops.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "filter": {
+              "has_any": [
+                "eg_troop"
+              ],
+              "has": [
+                {
+                  "types": [
+                    "rebel_bases"
+                  ],
+                  "min": 1
+                }
+              ]
+            },
+            "prompt": "2 spazi con Truppe EG da cui togliere le Basi Ribelli"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebel_bases"
+            ],
+            "all": true,
+            "protect_bases": false
+          }
+        ]
+      },
+      "shaded": {
+        "text": "CORP may Exploit in any 1 space with Support, even if more MG forces than CORP forces there.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "support": "any_support"
+            },
+            "prompt": "Spazio con Supporto dove le CORP fanno Exploit"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "free_op",
+            "faction": "corporations",
+            "special": "exploit",
+            "where": {
+              "choice": "a"
+            },
+            "note": "anche se lì le forze MG superano quelle CORP"
+          }
+        ]
+      }
+    },
+    "4": {
+      "unshaded": {
+        "text": "Place up to 8 EG Troops in Labyrinths without Rebel forces.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 8,
+            "repeat": true,
+            "filter": {
+              "terrain": "labyrinth",
+              "has_none": [
+                "rebel_forces"
+              ]
+            },
+            "prompt": "Fino a 8 Truppe EG nei Labirinti senza forze Ribelli"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "place",
+            "mode": "spread",
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "eg_troop",
+                "total": 8
+              }
+            ]
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Move all EG Troops from Phobos and 1 other space on Mars to Available.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "has_any": [
+                "eg_troop"
+              ]
+            },
+            "prompt": "L'altro spazio da cui togliere le Truppe EG"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "remove",
+            "where": {
+              "list": [
+                "phobos"
+              ]
+            },
+            "types": [
+              "eg_troop"
+            ],
+            "all": true,
+            "dest": "available"
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "eg_troop"
+            ],
+            "all": true,
+            "dest": "available"
+          }
+        ]
+      }
+    },
+    "5": {
+      "unshaded": {
+        "text": "Shift EG Confidence up one step for each Satellite in Orbit, then move all Satellites to Orbit.",
+        "effects": [
+          {
+            "op": "eg_confidence",
+            "delta_per": 1,
+            "times": {
+              "kind": "pieces",
+              "where": {
+                "list": [
+                  "orbit"
+                ]
+              },
+              "types": [
+                "satellite"
+              ]
+            }
+          },
+          {
+            "op": "move",
+            "from": {
+              "filter": {
+                "scope": "all",
+                "has_any": [
+                  "satellite"
+                ]
+              }
+            },
+            "to": {
+              "space": "orbit"
+            },
+            "types": [
+              "satellite"
+            ],
+            "all": true
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD or CR may free Attack in each space with friendly forces and a Satellite.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Chi esegue gli Attack gratuiti"
+          }
+        ],
+        "effects": [
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "attack",
+            "where": {
+              "filter": {
+                "has_any": [
+                  "satellite"
+                ],
+                "has": [
+                  {
+                    "types": [
+                      "@rebel"
+                    ],
+                    "min": 1
+                  }
+                ]
+              }
+            },
+            "note": "un Attack gratuito in ogni spazio con forze amiche e un Satellite"
+          }
+        ]
+      }
+    },
+    "6": {
+      "unshaded": {
+        "text": "Place 3 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "supply_earth",
+            "delta": 3
+          },
+          {
+            "op": "aldrin_cycler"
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Either transfer up to 6 MG Resources to RD Resources, or remove all Supply markers from Transit.",
+        "choices": [
+          {
+            "id": "what",
+            "kind": "branch",
+            "options": [
+              "transfer",
+              "supply"
+            ],
+            "prompt": "Trasferire Risorse MG oppure svuotare le Supply in Transit"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "branch",
+            "choice": "what",
+            "cases": {
+              "transfer": [
+                {
+                  "op": "resource_transfer",
+                  "from": "marsgov",
+                  "to": "red_dust",
+                  "delta": 6
+                }
+              ],
+              "supply": [
+                {
+                  "op": "clear_supply",
+                  "where": {
+                    "list": [
+                      "transit"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "7": {
+      "unshaded": {
+        "text": "Place 2 Population markers on Earth, then may House in any 1 space with Support.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue House"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "support": "any_support",
+              "damage": {
+                "max": 0
+              }
+            },
+            "prompt": "Spazio con Supporto dove fare House"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "population_earth",
+            "delta": 2
+          },
+          {
+            "op": "house",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Remove up to 6 MG Troops from spaces on Mars without Support.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 6,
+            "repeat": true,
+            "filter": {
+              "support": "no_support",
+              "has_any": [
+                "mg_troop"
+              ]
+            },
+            "prompt": "Fino a 6 Truppe MG da togliere (spazi senza Supporto)"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "mg_troop"
+            ],
+            "count": 1,
+            "total": 6
+          }
+        ]
+      }
+    },
+    "8": {
+      "unshaded": {
+        "text": "Shift Tenzing 2 levels towards Active Support. Activate all Rebels in Tenzing, then MG may free Assault there.",
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "tenzing"
+              ]
+            },
+            "levels": 2
+          },
+          {
+            "op": "activate",
+            "where": {
+              "list": [
+                "tenzing"
+              ]
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": "marsgov",
+            "operation": "assault",
+            "where": {
+              "list": [
+                "tenzing"
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Set Tenzing to Neutral, then RD gains Resources equal to its Population and CR draws 1 Asset card.",
+        "effects": [
+          {
+            "op": "set_support",
+            "where": {
+              "list": [
+                "tenzing"
+              ]
+            },
+            "level": "neutral"
+          },
+          {
+            "op": "resources",
+            "faction": "red_dust",
+            "delta_per": 1,
+            "times": {
+              "kind": "population",
+              "where": {
+                "list": [
+                  "tenzing"
+                ]
+              }
+            }
+          },
+          {
+            "op": "draw_asset",
+            "count": 1
+          }
+        ]
+      }
+    },
+    "9": {
+      "unshaded": {
+        "text": "Place 1 Supply marker on Earth for each Labyrinth without any Rebel forces.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "supply_earth",
+            "delta_per": 1,
+            "times": {
+              "kind": "spaces",
+              "filter": {
+                "terrain": "labyrinth",
+                "has_none": [
+                  "rebel_forces"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Remove 1 Supply marker from Earth for each Labyrinth with any Rebel forces.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "supply_earth",
+            "delta_per": -1,
+            "times": {
+              "kind": "spaces",
+              "filter": {
+                "terrain": "labyrinth",
+                "has_any": [
+                  "rebel_forces"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "10": {
+      "unshaded": {
+        "text": "Shift any 2 spaces 1 level each towards Active Support.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {},
+            "prompt": "2 spazi da spostare verso il Supporto Attivo"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": 1
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift any 2 spaces 1 level each towards Active Opposition. Place 2 Rebels in each selected space.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {},
+            "prompt": "2 spazi da spostare verso l'Opposizione Attiva"
+          },
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          },
+          {
+            "op": "place",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "@rebel",
+                "count": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "11": {
+      "unshaded": {
+        "text": "Activate all Rebels in 1 Labyrinth. The Rebel Faction with the most forces in that Labyrinth is Ineligible through the next Event Round (executing Faction chooses if tied).",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "labyrinth",
+              "has_any": [
+                "rebels"
+              ]
+            },
+            "prompt": "Labirinto in cui Attivare tutti i Ribelli"
+          }
+        ],
+        "effects": [
+          {
+            "op": "activate",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "ineligible",
+            "faction": {
+              "most_rebels_in": {
+                "choice": "a"
+              }
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Move 4 MG or CORP cubes from each of up to 2 Labyrinths to any spaces with COIN Bases.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "filter": {
+              "terrain": "labyrinth",
+              "has_any": [
+                "mg_troop",
+                "security"
+              ]
+            },
+            "prompt": "Fino a 2 Labirinti da cui muovere 4 cubi ciascuno"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "has_any": [
+                "coin_bases"
+              ]
+            },
+            "prompt": "Destinazione con una Base COIN"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "mg_troop",
+              "security"
+            ],
+            "count": 8,
+            "per_from": 4
+          }
+        ]
+      }
+    },
+    "12": {
+      "unshaded": {
+        "text": "Activate all SpecOps and Rebels in one space with SpecOps, then CORP may free Assault there.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "has_any": [
+                "specops"
+              ]
+            },
+            "prompt": "Spazio con SpecOps"
+          }
+        ],
+        "effects": [
+          {
+            "op": "activate",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "specops",
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": "corporations",
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD may place up to 2 Rebels in a Labyrinth, then free Ambush there. Flip all Rebels in that Labyrinth to Hidden after the Ambush is executed.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "labyrinth"
+            },
+            "prompt": "Labirinto dell'Ambush"
+          }
+        ],
+        "effects": [
+          {
+            "op": "place",
+            "faction": "red_dust",
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "rd_rebel",
+                "count": 2
+              }
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": "red_dust",
+            "operation": "attack",
+            "special": "ambush",
+            "where": {
+              "choice": "a"
+            },
+            "note": "dopo l'Ambush tutti i Ribelli del Labirinto tornano Nascosti",
+            "after": [
+              {
+                "op": "hide",
+                "where": {
+                  "choice": "a"
+                },
+                "types": [
+                  "rebels"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "13": {
+      "unshaded": {
+        "text": "Move up to 6 Security to a single space adjacent to a Maglev line. Activate all Rebels in that space, then CORP may free Assault there.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "maglev_adjacent": true
+            },
+            "prompt": "Spazio adiacente a una linea Maglev dove concentrare le Security"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "filter": {
+                "has_any": [
+                  "security"
+                ]
+              }
+            },
+            "to": {
+              "choice": "a"
+            },
+            "types": [
+              "security"
+            ],
+            "count": 6
+          },
+          {
+            "op": "activate",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": "corporations",
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Select a Maglev line, then shift all adjacent spaces 1 level each towards Active Opposition.",
+        "choices": [
+          {
+            "id": "line",
+            "kind": "branch",
+            "options": [
+              "europa_tenzing",
+              "tenzing_shepard",
+              "shepard_tereshkova",
+              "new_cordoba_shenzhou",
+              "europa_tereshkova"
+            ],
+            "prompt": "Quale linea Maglev"
+          }
+        ],
+        "effects": [
+          {
+            "op": "branch",
+            "choice": "line",
+            "cases": {
+              "europa_tenzing": [
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "europa",
+                      "tenzing",
+                      "pavonis_mons"
+                    ]
+                  },
+                  "levels": -1
+                }
+              ],
+              "tenzing_shepard": [
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "tenzing",
+                      "shepard",
+                      "syria_planum"
+                    ]
+                  },
+                  "levels": -1
+                }
+              ],
+              "shepard_tereshkova": [
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "shepard",
+                      "tereshkova",
+                      "noctis_labyrinthus",
+                      "syria_planum"
+                    ]
+                  },
+                  "levels": -1
+                }
+              ],
+              "new_cordoba_shenzhou": [
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "new_cordoba",
+                      "shenzhou",
+                      "trouvelot"
+                    ]
+                  },
+                  "levels": -1
+                }
+              ],
+              "europa_tereshkova": [
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "europa",
+                      "tereshkova",
+                      "pavonis_mons",
+                      "noctis_labyrinthus"
+                    ]
+                  },
+                  "levels": -1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "14": {
+      "unshaded": {
+        "text": "Place the Rodgers Line marker between Europa and Tereshkova. Shift Europa and Tereshkova 1 level each towards Active Support, increase Profits by 6, and MG or CORP may House once in both Labyrinths.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue House"
+          }
+        ],
+        "effects": [
+          {
+            "op": "rodgers_line"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "europa",
+                "tereshkova"
+              ]
+            },
+            "levels": 1
+          },
+          {
+            "op": "profits",
+            "delta": 6
+          },
+          {
+            "op": "house",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "list": [
+                "europa",
+                "tereshkova"
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift Europa and Tereshkova 1 level each towards Active Opposition. Reduce Profits by 3 and MG Resources by 6.",
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "europa",
+                "tereshkova"
+              ]
+            },
+            "levels": -1
+          },
+          {
+            "op": "profits",
+            "delta": -3
+          },
+          {
+            "op": "resources",
+            "faction": "marsgov",
+            "delta": -6
+          }
+        ]
+      }
+    },
+    "15": {
+      "unshaded": {
+        "text": "Shift any 2 Deserts 2 levels each towards Active Opposition. Increase Profits by 1 for each CORP Base in a Desert.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "terrain": "desert"
+            },
+            "prompt": "2 Deserti verso l'Opposizione Attiva"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -2
+          },
+          {
+            "op": "profits",
+            "delta_per": 1,
+            "times": {
+              "kind": "pieces",
+              "where": {
+                "filter": {
+                  "terrain": "desert"
+                }
+              },
+              "types": [
+                "corp_base"
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce Profits by 6 and remove up to 2 CORP Bases from any Deserts.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "repeat": true,
+            "filter": {
+              "terrain": "desert",
+              "has_any": [
+                "corp_base"
+              ]
+            },
+            "prompt": "Fino a 2 Basi CORP da rimuovere dai Deserti"
+          }
+        ],
+        "effects": [
+          {
+            "op": "profits",
+            "delta": -6
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "corp_base"
+            ],
+            "count": 1,
+            "total": 2,
+            "protect_bases": false
+          }
+        ]
+      }
+    },
+    "16": {
+      "unshaded": {
+        "text": "Remove all Rebels from Shenzhou and set it to Neutral, then Activate all Rebels adjacent to it. Increase Profits by 3 or place 3 Supply markers on Earth.",
+        "choices": [
+          {
+            "id": "what",
+            "kind": "branch",
+            "options": [
+              "profits",
+              "supply"
+            ],
+            "prompt": "+3 Profits oppure 3 Supply su Earth"
+          }
+        ],
+        "effects": [
+          {
+            "op": "remove",
+            "where": {
+              "list": [
+                "shenzhou"
+              ]
+            },
+            "types": [
+              "rebels"
+            ],
+            "all": true
+          },
+          {
+            "op": "set_support",
+            "where": {
+              "list": [
+                "shenzhou"
+              ]
+            },
+            "level": "neutral"
+          },
+          {
+            "op": "activate",
+            "where": {
+              "filter": {
+                "adjacent_to": {
+                  "list": [
+                    "shenzhou"
+                  ]
+                }
+              }
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "branch",
+            "choice": "what",
+            "cases": {
+              "profits": [
+                {
+                  "op": "profits",
+                  "delta": 3
+                }
+              ],
+              "supply": [
+                {
+                  "op": "supply_earth",
+                  "delta": 3
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Place 1 Damage on Shenzhou, then remove any number of Population markers from Displaced Population.",
+        "effects": [
+          {
+            "op": "damage",
+            "where": {
+              "list": [
+                "shenzhou"
+              ]
+            },
+            "count": 1
+          },
+          {
+            "op": "displaced_clear"
+          }
+        ]
+      }
+    },
+    "17": {
+      "unshaded": {
+        "text": "Shift any 2 Deserts 1 level each towards Neutral. Increase Profits by 3 or place 3 Supply markers on Earth.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "terrain": "desert"
+            },
+            "prompt": "2 Deserti da spostare verso il Neutrale"
+          },
+          {
+            "id": "what",
+            "kind": "branch",
+            "options": [
+              "profits",
+              "supply"
+            ],
+            "prompt": "+3 Profits oppure 3 Supply su Earth"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "toward": "neutral",
+            "levels": 1
+          },
+          {
+            "op": "branch",
+            "choice": "what",
+            "cases": {
+              "profits": [
+                {
+                  "op": "profits",
+                  "delta": 3
+                }
+              ],
+              "supply": [
+                {
+                  "op": "supply_earth",
+                  "delta": 3
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift any 2 Deserts 1 level each towards Active Opposition. RD may draw and play 1 Campaign card.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "terrain": "desert"
+            },
+            "prompt": "2 Deserti verso l'Opposizione Attiva"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          },
+          {
+            "op": "campaign",
+            "draw": 1
+          }
+        ]
+      }
+    },
+    "18": {
+      "unshaded": {
+        "text": "Place 2 SpecOps, 2 Security, and a CORP Base in 1 Desert. Activate all Rebels there.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "base_room": true
+            },
+            "prompt": "Deserto dove schierare la task force CORP"
+          }
+        ],
+        "effects": [
+          {
+            "op": "place",
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "specops",
+                "count": 2
+              },
+              {
+                "type": "security",
+                "count": 2
+              },
+              {
+                "type": "corp_base",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "op": "activate",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebels"
+            ]
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Permanently remove up to 4 Available SpecOps from the game. Reduce Profits by 4.",
+        "effects": [
+          {
+            "op": "remove_from_game",
+            "type": "specops",
+            "count": 4
+          },
+          {
+            "op": "profits",
+            "delta": -4
+          }
+        ]
+      }
+    },
+    "19": {
+      "unshaded": {
+        "text": "Shift each space with Damage and Security 1 level towards Active Support. Increase Profits by 3.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "filter": {
+                "damage": {
+                  "min": 1
+                },
+                "has_any": [
+                  "security"
+                ]
+              }
+            },
+            "levels": 1
+          },
+          {
+            "op": "profits",
+            "delta": 3
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce MG Resources by 3 for each Labyrinth with any CORP forces.",
+        "effects": [
+          {
+            "op": "resources",
+            "faction": "marsgov",
+            "delta_per": -3,
+            "times": {
+              "kind": "spaces",
+              "filter": {
+                "terrain": "labyrinth",
+                "has_any": [
+                  "corp_forces"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "20": {
+      "unshaded": {
+        "text": "Shift any 2 Labyrinths 1 level each towards Active Support. Increase Profits by 3.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "terrain": "labyrinth"
+            },
+            "prompt": "2 Labirinti verso il Supporto Attivo"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": 1
+          },
+          {
+            "op": "profits",
+            "delta": 3
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift up to 4 spaces with CORP forces 1 level each towards Active Opposition.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 4,
+            "filter": {
+              "has_any": [
+                "corp_forces"
+              ]
+            },
+            "prompt": "Fino a 4 spazi con forze CORP verso l'Opposizione Attiva"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          }
+        ]
+      }
+    },
+    "21": {
+      "unshaded": {
+        "text": "Place 6 MG Troops or 4 EG Troops in 1 Labyrinth. Increase Profits by 3.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "labyrinth"
+            },
+            "prompt": "Labirinto da rinforzare"
+          },
+          {
+            "id": "what",
+            "kind": "branch",
+            "options": [
+              "mg",
+              "eg"
+            ],
+            "prompt": "6 Truppe MG oppure 4 Truppe EG"
+          }
+        ],
+        "effects": [
+          {
+            "op": "branch",
+            "choice": "what",
+            "cases": {
+              "mg": [
+                {
+                  "op": "place",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "pieces": [
+                    {
+                      "type": "mg_troop",
+                      "count": 6
+                    }
+                  ]
+                }
+              ],
+              "eg": [
+                {
+                  "op": "place",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "pieces": [
+                    {
+                      "type": "eg_troop",
+                      "count": 4
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "op": "profits",
+            "delta": 3
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Replace up to 6 MG Troops or CORP Security with Rebels.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 6,
+            "repeat": true,
+            "filter": {
+              "has_any": [
+                "mg_troop",
+                "security"
+              ]
+            },
+            "prompt": "Fino a 6 cubi MG/CORP da sostituire con Ribelli"
+          },
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli"
+          }
+        ],
+        "effects": [
+          {
+            "op": "replace",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            },
+            "from": [
+              "mg_troop",
+              "security"
+            ],
+            "to": [
+              "@rebel"
+            ],
+            "count": 6,
+            "per_space": 1
+          }
+        ]
+      }
+    },
+    "22": {
+      "unshaded": {
+        "text": "Activate all Rebels in Labyrinths with COIN Control, then MG or CORP may free Assault in one Labyrinth with COIN Control.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue l'Assault gratuito"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "terrain": "labyrinth",
+              "control": "coin"
+            },
+            "prompt": "Labirinto sotto Controllo COIN per l'Assault"
+          }
+        ],
+        "effects": [
+          {
+            "op": "activate",
+            "where": {
+              "filter": {
+                "terrain": "labyrinth",
+                "control": "coin"
+              }
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift any 2 Labyrinths 1 level each towards Active Opposition, then place 2 Rebels in or adjacent to each selected Labyrinth.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "terrain": "labyrinth"
+            },
+            "prompt": "2 Labirinti verso l'Opposizione Attiva"
+          },
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          },
+          {
+            "op": "place",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "@rebel",
+                "count": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "23": {
+      "unshaded": {
+        "text": "Replace up to 4 Rebels with either CORP Security or MG Troops.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 4,
+            "repeat": true,
+            "filter": {
+              "has_any": [
+                "rebels"
+              ]
+            },
+            "prompt": "Fino a 4 Ribelli da sostituire"
+          },
+          {
+            "id": "cube",
+            "kind": "branch",
+            "options": [
+              "security",
+              "mg_troop"
+            ],
+            "prompt": "Sostituirli con Security CORP o Truppe MG"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "branch",
+            "choice": "cube",
+            "cases": {
+              "security": [
+                {
+                  "op": "replace",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "from": [
+                    "rebels"
+                  ],
+                  "to": [
+                    "security"
+                  ],
+                  "count": 4,
+                  "per_space": 1
+                }
+              ],
+              "mg_troop": [
+                {
+                  "op": "replace",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "from": [
+                    "rebels"
+                  ],
+                  "to": [
+                    "mg_troop"
+                  ],
+                  "count": 4,
+                  "per_space": 1
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Remove a CORP Base and up to 4 CORP units from 1 space, then shift that space 1 level towards Active Opposition. Reduce Profits by 2.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "has_any": [
+                "corp_base"
+              ]
+            },
+            "prompt": "Spazio da cui togliere la Base CORP"
+          }
+        ],
+        "effects": [
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "corp_base"
+            ],
+            "count": 1,
+            "protect_bases": false
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "corp_units"
+            ],
+            "count": 4
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          },
+          {
+            "op": "profits",
+            "delta": -2
+          }
+        ]
+      }
+    },
+    "24": {
+      "unshaded": {
+        "text": "Shift up to 3 spaces 1 level each towards Active Support, then increase Profits by 1 for each space now with Active Support.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 3,
+            "filter": {},
+            "prompt": "Fino a 3 spazi verso il Supporto Attivo"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": 1
+          },
+          {
+            "op": "profits",
+            "delta_per": 1,
+            "times": {
+              "kind": "spaces",
+              "where": {
+                "choice": "a",
+                "unique": true
+              },
+              "filter": {
+                "support": "active_support"
+              }
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Remove up to 4 Troops or Security from one space (EG last). Then, if no cubes remain, shift that space 1 level towards Active Opposition.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "has_any": [
+                "cubes"
+              ]
+            },
+            "prompt": "Spazio da cui togliere fino a 4 cubi"
+          }
+        ],
+        "effects": [
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "mg_troop",
+              "security",
+              "eg_troop"
+            ],
+            "count": 4
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1,
+            "when": {
+              "count": {
+                "kind": "pieces",
+                "where": {
+                  "choice": "a"
+                },
+                "types": [
+                  "cubes"
+                ]
+              },
+              "max": 0
+            }
+          }
+        ]
+      }
+    },
+    "25": {
+      "unshaded": {
+        "text": "Activate all Rebels in spaces containing CORP Bases, then MG or CORP may free Assault in one space with a CORP Base.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "corporations",
+            "prompt": "Chi esegue l'Assault gratuito"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "has_any": [
+                "corp_base"
+              ]
+            },
+            "prompt": "Spazio con Base CORP per l'Assault"
+          }
+        ],
+        "effects": [
+          {
+            "op": "activate",
+            "where": {
+              "filter": {
+                "has_any": [
+                  "corp_base"
+                ]
+              }
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Move up to 6 MG Troops or CORP Security from any one Labyrinth to one other Labyrinth with Support.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "labyrinth",
+              "has_any": [
+                "mg_troop",
+                "security"
+              ]
+            },
+            "prompt": "Labirinto di partenza"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "labyrinth",
+              "support": "any_support"
+            },
+            "prompt": "Labirinto con Supporto di destinazione"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "mg_troop",
+              "security"
+            ],
+            "count": 6
+          }
+        ]
+      }
+    },
+    "26": {
+      "unshaded": {
+        "text": "Increase Profits by 1 for each CORP Base in a Desert, then flip up to 2 CORP Bases to their Terraforming side.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "repeat": true,
+            "filter": {
+              "has": [
+                {
+                  "type": "corp_base",
+                  "state": "basic",
+                  "min": 1
+                }
+              ]
+            },
+            "prompt": "Fino a 2 Basi CORP da girare sul lato Terraforming"
+          }
+        ],
+        "effects": [
+          {
+            "op": "profits",
+            "delta_per": 1,
+            "times": {
+              "kind": "pieces",
+              "where": {
+                "filter": {
+                  "terrain": "desert"
+                }
+              },
+              "types": [
+                "corp_base"
+              ]
+            }
+          },
+          {
+            "op": "flip",
+            "where": {
+              "choice": "a"
+            },
+            "type": "corp_base",
+            "from_state": "basic",
+            "to_state": "terraforming",
+            "count": 1,
+            "total": 2
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Free March or Travel from any one space to one other space with a CORP Terraforming Base, then Activate all Rebels in the space and remove CORP forces equal to the number of Rebels there (Bases last).",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Chi esegue March/Travel gratuito"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "has": [
+                {
+                  "type": "corp_base",
+                  "state": "terraforming",
+                  "min": 1
+                }
+              ]
+            },
+            "prompt": "Spazio con Base CORP Terraforming"
+          }
+        ],
+        "effects": [
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "@march_or_travel",
+            "where": {
+              "choice": "a"
+            },
+            "note": "da uno spazio qualsiasi verso il Deserto con la Base Terraforming",
+            "after": [
+              {
+                "op": "activate",
+                "where": {
+                  "choice": "a"
+                },
+                "types": [
+                  "rebels"
+                ]
+              },
+              {
+                "op": "remove",
+                "where": {
+                  "choice": "a"
+                },
+                "types": [
+                  "corp_forces"
+                ],
+                "bases_last": true,
+                "count": {
+                  "kind": "pieces",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "types": [
+                    "rebels"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "27": {
+      "unshaded": {
+        "text": "Flip up to 1 CORP Base in each Unpopulated Desert to its Terraforming side.",
+        "effects": [
+          {
+            "op": "flip",
+            "where": {
+              "filter": {
+                "terrain": "desert",
+                "populated": false,
+                "has": [
+                  {
+                    "type": "corp_base",
+                    "state": "basic",
+                    "min": 1
+                  }
+                ]
+              }
+            },
+            "type": "corp_base",
+            "from_state": "basic",
+            "to_state": "terraforming",
+            "count": 1
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Remove all Supply markers from Earth. RD may draw and play 1 Campaign card.",
+        "effects": [
+          {
+            "op": "clear_supply",
+            "where": {
+              "list": [
+                "earth"
+              ]
+            }
+          },
+          {
+            "op": "campaign",
+            "draw": 1
+          }
+        ]
+      }
+    },
+    "28": {
+      "unshaded": {
+        "text": "MG or CORP may House in 1 Labyrinth, then add or remove up to 3 Population markers to/from Displaced Population.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue House"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "terrain": "labyrinth",
+              "damage": {
+                "max": 0
+              }
+            },
+            "prompt": "Labirinto dove fare House"
+          },
+          {
+            "id": "pop",
+            "kind": "branch",
+            "options": [
+              "add",
+              "remove"
+            ],
+            "prompt": "Aggiungere o togliere 3 marker Popolazione dalla Displaced Population"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "house",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            }
+          },
+          {
+            "op": "branch",
+            "choice": "pop",
+            "cases": {
+              "add": [
+                {
+                  "op": "displaced",
+                  "delta": 3
+                }
+              ],
+              "remove": [
+                {
+                  "op": "displaced",
+                  "delta": -3
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD may House in 1 space, then remove all Population markers from Displaced Population and shift 1 Labyrinth 1 level towards Active Opposition for every 3 Population markers removed (round down).",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "damage": {
+                "max": 0
+              }
+            },
+            "prompt": "Spazio dove il Red Dust fa House"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 4,
+            "filter": {
+              "terrain": "labyrinth"
+            },
+            "prompt": "Labirinti da spostare (1 ogni 3 marker tolti)"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "house",
+            "faction": "red_dust",
+            "where": {
+              "choice": "a"
+            }
+          },
+          {
+            "op": "displaced_clear"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "b",
+              "limit": {
+                "kind": "last",
+                "per": 3
+              }
+            },
+            "levels": -1
+          }
+        ]
+      }
+    },
+    "29": {
+      "unshaded": {
+        "text": "Either reduce RD Resources by 5 or CR must discard 2 Asset cards at random. The targeted Faction is Ineligible through the next Event Round.",
+        "choices": [
+          {
+            "id": "target",
+            "kind": "branch",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Colpire il Red Dust o i Reclaimer"
+          }
+        ],
+        "effects": [
+          {
+            "op": "branch",
+            "choice": "target",
+            "cases": {
+              "red_dust": [
+                {
+                  "op": "resources",
+                  "faction": "red_dust",
+                  "delta": -5
+                },
+                {
+                  "op": "ineligible",
+                  "faction": "red_dust"
+                }
+              ],
+              "reclaimer": [
+                {
+                  "op": "discard_asset",
+                  "count": 2
+                },
+                {
+                  "op": "ineligible",
+                  "faction": "reclaimer"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Place 4 Rebels and 1 Base (flipped to either Dug-In or Conversion Center) in any 1 Desert.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quale Fazione Ribelle"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "base_room": true
+            },
+            "prompt": "Deserto dove schierarsi"
+          }
+        ],
+        "effects": [
+          {
+            "op": "branch",
+            "choice": "who",
+            "cases": {
+              "red_dust": [
+                {
+                  "op": "place",
+                  "faction": "red_dust",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "pieces": [
+                    {
+                      "type": "rd_rebel",
+                      "count": 4
+                    },
+                    {
+                      "type": "rd_base",
+                      "count": 1,
+                      "state": "dug_in"
+                    }
+                  ]
+                }
+              ],
+              "reclaimer": [
+                {
+                  "op": "place",
+                  "faction": "reclaimer",
+                  "where": {
+                    "choice": "a"
+                  },
+                  "pieces": [
+                    {
+                      "type": "cr_rebel",
+                      "count": 4
+                    },
+                    {
+                      "type": "cr_base",
+                      "count": 1,
+                      "state": "conversion_center"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "30": {
+      "unshaded": {
+        "text": "Set any 2 Deserts to Neutral, then remove up to 2 Rebel forces from each of those Deserts (Bases last).",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "terrain": "desert"
+            },
+            "prompt": "2 Deserti da riportare al Neutrale"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "set_support",
+            "where": {
+              "choice": "a"
+            },
+            "level": "neutral"
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebel_forces"
+            ],
+            "count": 2,
+            "bases_last": true
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift any 3 Deserts 1 level each towards Active Opposition, then place 1 Rebel and 1 Base in each selected Desert.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 3,
+            "min": 3,
+            "filter": {
+              "terrain": "desert",
+              "base_room": true
+            },
+            "prompt": "3 Deserti verso l'Opposizione Attiva"
+          },
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          },
+          {
+            "op": "place",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "@rebel",
+                "count": 1
+              },
+              {
+                "type": "@base",
+                "count": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "31": {
+      "unshaded": {
+        "text": "Place 4 EG Troops on Phobos, then remove one active RD Campaign card from play.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "place",
+            "where": {
+              "space": "phobos"
+            },
+            "pieces": [
+              {
+                "type": "eg_troop",
+                "count": 4
+              }
+            ]
+          },
+          {
+            "op": "campaign",
+            "remove": true
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Place 3 Rebels total in any Populated spaces. Increase RD Resources by 6.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 3,
+            "repeat": true,
+            "filter": {
+              "populated": true
+            },
+            "prompt": "Dove piazzare 3 Ribelli in tutto"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "place",
+            "faction": {
+              "choice": "who"
+            },
+            "mode": "spread",
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "@rebel",
+                "total": 3
+              }
+            ]
+          },
+          {
+            "op": "resources",
+            "faction": "red_dust",
+            "delta": 6
+          }
+        ]
+      }
+    },
+    "32": {
+      "unshaded": {
+        "text": "Place 2 Rebels in either Shepard or Tereshkova, then place 2 MG Troops in the other Labyrinth. Shift the Labyrinth where the Rebels were placed 2 levels towards Active Opposition, then shift the other Labyrinth 2 levels towards Active Support. The executing Faction may free Assault (if COIN) or free Attack (if Rebel) in one affected Labyrinth.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          },
+          {
+            "id": "where",
+            "kind": "branch",
+            "options": [
+              "shepard",
+              "tereshkova"
+            ],
+            "prompt": "Dove vanno i Ribelli"
+          }
+        ],
+        "effects": [
+          {
+            "op": "branch",
+            "choice": "where",
+            "cases": {
+              "shepard": [
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "shepard"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "op": "place",
+                  "where": {
+                    "list": [
+                      "tereshkova"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "mg_troop",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "shepard"
+                    ]
+                  },
+                  "levels": -2
+                },
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "tereshkova"
+                    ]
+                  },
+                  "levels": 2
+                },
+                {
+                  "op": "free_op",
+                  "operation": "@assault_or_attack",
+                  "where": {
+                    "list": [
+                      "shepard"
+                    ]
+                  },
+                  "note": "in uno dei due Labirinti coinvolti"
+                }
+              ],
+              "tereshkova": [
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "tereshkova"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "op": "place",
+                  "where": {
+                    "list": [
+                      "shepard"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "mg_troop",
+                      "count": 2
+                    }
+                  ]
+                },
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "tereshkova"
+                    ]
+                  },
+                  "levels": -2
+                },
+                {
+                  "op": "shift",
+                  "where": {
+                    "list": [
+                      "shepard"
+                    ]
+                  },
+                  "levels": 2
+                },
+                {
+                  "op": "free_op",
+                  "operation": "@assault_or_attack",
+                  "where": {
+                    "list": [
+                      "tereshkova"
+                    ]
+                  },
+                  "note": "in uno dei due Labirinti coinvolti"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "33": {
+      "unshaded": {
+        "text": "Activate all RD Rebels.",
+        "effects": [
+          {
+            "op": "activate",
+            "where": {
+              "filter": {}
+            },
+            "types": [
+              "rd_rebel"
+            ]
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD may free Ambush in any number of Labyrinths, then must Activate all RD Rebels in any Labyrinths where they Ambushed.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 4,
+            "filter": {
+              "terrain": "labyrinth",
+              "has": [
+                {
+                  "type": "rd_rebel",
+                  "state": "hidden",
+                  "min": 1
+                }
+              ]
+            },
+            "prompt": "Labirinti in cui il Red Dust fa Ambush"
+          }
+        ],
+        "effects": [
+          {
+            "op": "free_op",
+            "faction": "red_dust",
+            "operation": "attack",
+            "special": "ambush",
+            "where": {
+              "choice": "a"
+            },
+            "note": "dopo l'Ambush tutti i Ribelli RD di quei Labirinti restano Attivi",
+            "after": [
+              {
+                "op": "activate",
+                "where": {
+                  "choice": "a"
+                },
+                "types": [
+                  "rd_rebel"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "34": {
+      "unshaded": {
+        "text": "The executing Faction may move up to 3 of their units from 1 space through a chain of up to 3 contiguous Deserts. Then, they may perform a free Operation other than Recon or March in the final Desert.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {},
+            "prompt": "Spazio di partenza delle proprie unità"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "terrain": "desert",
+              "adjacent_to": {
+                "choice": "a"
+              }
+            },
+            "prompt": "Deserto finale della catena"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "faction": "executing",
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "@own"
+            ],
+            "count": 3
+          },
+          {
+            "op": "free_op",
+            "where": {
+              "choice": "b"
+            },
+            "note": "Operazione gratuita a scelta nel Deserto finale, tranne Recon e March"
+          }
+        ]
+      }
+    },
+    "35": {
+      "unshaded": {
+        "text": "MG or CORP may House in 1 space, then shift up to 2 Deserts with Population markers 1 level each towards Active Support.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue House"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "damage": {
+                "max": 0
+              }
+            },
+            "prompt": "Spazio dove fare House"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 2,
+            "filter": {
+              "terrain": "desert",
+              "marker": {
+                "name": "pop_markers",
+                "min": 1
+              }
+            },
+            "prompt": "Fino a 2 Deserti con marker Popolazione verso il Supporto Attivo"
+          }
+        ],
+        "effects": [
+          {
+            "op": "house",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "choice": "a"
+            }
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "b"
+            },
+            "levels": 1
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD may House in 1 Desert and place 1 Base there, then increase RD Resources by 4.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "damage": {
+                "max": 0
+              },
+              "base_room": true
+            },
+            "prompt": "Deserto dove il Red Dust fa House e piazza una Base"
+          }
+        ],
+        "effects": [
+          {
+            "op": "house",
+            "faction": "red_dust",
+            "where": {
+              "choice": "a"
+            }
+          },
+          {
+            "op": "place",
+            "faction": "red_dust",
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "rd_base",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "op": "resources",
+            "faction": "red_dust",
+            "delta": 4
+          }
+        ]
+      }
+    },
+    "36": {
+      "unshaded": {
+        "text": "Move any number of COIN units on Mars to a Desert with a Rebel Base. MG or CORP may free Recon in that Desert, then free Assault there.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue Recon e Assault gratuiti"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "has_any": [
+                "rebel_bases"
+              ]
+            },
+            "prompt": "Deserto con una Base Ribelle"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 3,
+            "filter": {
+              "has_any": [
+                "coin_units"
+              ]
+            },
+            "prompt": "Spazi da cui far affluire le unità COIN"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "b"
+            },
+            "to": {
+              "choice": "a"
+            },
+            "types": [
+              "coin_units"
+            ],
+            "all": true
+          },
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "recon",
+            "where": {
+              "choice": "a"
+            }
+          },
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD or CR may move up to 6 COIN units on Mars to a Desert with a friendly Base, then move that Base and any number of friendly Rebels there to an adjacent Desert.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quale Fazione Ribelle"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "has_any": [
+                "@base"
+              ]
+            },
+            "prompt": "Deserto con una propria Base"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "filter": {
+              "terrain": "desert",
+              "adjacent_to": {
+                "choice": "a"
+              },
+              "base_room": true
+            },
+            "prompt": "Deserto adiacente dove ritirarsi"
+          },
+          {
+            "id": "c",
+            "kind": "space",
+            "count": 3,
+            "filter": {
+              "has_any": [
+                "coin_units"
+              ]
+            },
+            "prompt": "Spazi da cui attirare le unità COIN"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "c"
+            },
+            "to": {
+              "choice": "a"
+            },
+            "types": [
+              "coin_units"
+            ],
+            "count": 6
+          },
+          {
+            "op": "move",
+            "faction": {
+              "choice": "who"
+            },
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "@base",
+              "@rebel"
+            ],
+            "all": true
+          }
+        ]
+      }
+    },
+    "37": {
+      "unshaded": {
+        "text": "Remove 6 Rebels total from any spaces. An equal number of RD and CR Rebels must be removed if possible.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 3,
+            "repeat": true,
+            "filter": {
+              "has_any": [
+                "rd_rebel"
+              ]
+            },
+            "prompt": "Fino a 3 Ribelli Red Dust da rimuovere"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 3,
+            "repeat": true,
+            "filter": {
+              "has_any": [
+                "cr_rebel"
+              ]
+            },
+            "prompt": "Fino a 3 Ribelli Reclaimer da rimuovere"
+          }
+        ],
+        "effects": [
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rd_rebel"
+            ],
+            "count": 1,
+            "total": 3
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "b"
+            },
+            "types": [
+              "cr_rebel"
+            ],
+            "count": 1,
+            "total": 3
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Move up to 3 CR Rebels from one space to an adjacent space with RD forces in it. Then RD or CR may either free Ambush there, or replace the moved CR Rebels with RD Rebels.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "default": "reclaimer",
+            "prompt": "Chi esegue l'Ambush o la sostituzione"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "has_any": [
+                "cr_rebel"
+              ]
+            },
+            "prompt": "Spazio di partenza dei Ribelli Reclaimer"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "adjacent_to": {
+                "choice": "a"
+              },
+              "has_any": [
+                "rd_rebel",
+                "rd_base"
+              ]
+            },
+            "prompt": "Spazio adiacente con forze Red Dust"
+          },
+          {
+            "id": "then",
+            "kind": "branch",
+            "options": [
+              "ambush",
+              "replace"
+            ],
+            "prompt": "Ambush gratuito oppure sostituire i CR con Ribelli RD"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "cr_rebel"
+            ],
+            "count": 3
+          },
+          {
+            "op": "branch",
+            "choice": "then",
+            "cases": {
+              "ambush": [
+                {
+                  "op": "free_op",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "operation": "attack",
+                  "special": "ambush",
+                  "where": {
+                    "choice": "b"
+                  }
+                }
+              ],
+              "replace": [
+                {
+                  "op": "replace",
+                  "where": {
+                    "choice": "b"
+                  },
+                  "from": [
+                    "cr_rebel"
+                  ],
+                  "to": [
+                    "rd_rebel"
+                  ],
+                  "count": 3,
+                  "per_space": 3
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "38": {
+      "unshaded": {
+        "text": "Increase Profits by 3, then place 2 Security in each of up to 3 spaces adjacent to Maglev lines.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 3,
+            "filter": {
+              "maglev_adjacent": true
+            },
+            "prompt": "Fino a 3 spazi adiacenti alle linee Maglev"
+          }
+        ],
+        "effects": [
+          {
+            "op": "profits",
+            "delta": 3
+          },
+          {
+            "op": "place",
+            "where": {
+              "choice": "a"
+            },
+            "pieces": [
+              {
+                "type": "security",
+                "count": 2
+              }
+            ]
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Place 1 Damage and 1 Rebel in each of 2 Labyrinths connected by a single Maglev line, then increase RD Resources by 3.",
+        "choices": [
+          {
+            "id": "line",
+            "kind": "branch",
+            "options": [
+              "europa_tenzing",
+              "tenzing_shepard",
+              "shepard_tereshkova",
+              "new_cordoba_shenzhou",
+              "europa_tereshkova"
+            ],
+            "prompt": "Quale linea Maglev"
+          },
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          }
+        ],
+        "effects": [
+          {
+            "op": "branch",
+            "choice": "line",
+            "cases": {
+              "europa_tenzing": [
+                {
+                  "op": "damage",
+                  "where": {
+                    "list": [
+                      "europa",
+                      "tenzing"
+                    ]
+                  },
+                  "count": 1
+                },
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "europa",
+                      "tenzing"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 1
+                    }
+                  ]
+                }
+              ],
+              "tenzing_shepard": [
+                {
+                  "op": "damage",
+                  "where": {
+                    "list": [
+                      "tenzing",
+                      "shepard"
+                    ]
+                  },
+                  "count": 1
+                },
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "tenzing",
+                      "shepard"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 1
+                    }
+                  ]
+                }
+              ],
+              "shepard_tereshkova": [
+                {
+                  "op": "damage",
+                  "where": {
+                    "list": [
+                      "shepard",
+                      "tereshkova"
+                    ]
+                  },
+                  "count": 1
+                },
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "shepard",
+                      "tereshkova"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 1
+                    }
+                  ]
+                }
+              ],
+              "new_cordoba_shenzhou": [
+                {
+                  "op": "damage",
+                  "where": {
+                    "list": [
+                      "new_cordoba",
+                      "shenzhou"
+                    ]
+                  },
+                  "count": 1
+                },
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "new_cordoba",
+                      "shenzhou"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 1
+                    }
+                  ]
+                }
+              ],
+              "europa_tereshkova": [
+                {
+                  "op": "damage",
+                  "where": {
+                    "list": [
+                      "europa",
+                      "tereshkova"
+                    ]
+                  },
+                  "count": 1
+                },
+                {
+                  "op": "place",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "where": {
+                    "list": [
+                      "europa",
+                      "tereshkova"
+                    ]
+                  },
+                  "pieces": [
+                    {
+                      "type": "@rebel",
+                      "count": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "op": "resources",
+            "faction": "red_dust",
+            "delta": 3
+          }
+        ]
+      }
+    },
+    "39": {
+      "unshaded": {
+        "text": "CORP may Activate all Rebels in one Labyrinth, then Assault there. Increase Profits by 4 if any Rebel Bases are removed by this Assault.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "labyrinth",
+              "has_any": [
+                "rebels"
+              ]
+            },
+            "prompt": "Labirinto dell'Assault CORP"
+          }
+        ],
+        "effects": [
+          {
+            "op": "capture",
+            "id": "rebel_bases",
+            "count": {
+              "kind": "pieces",
+              "where": {
+                "choice": "a"
+              },
+              "types": [
+                "rebel_bases"
+              ]
+            }
+          },
+          {
+            "op": "activate",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": "corporations",
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            },
+            "note": "+4 Profits se l'Assault rimuove Basi Ribelli",
+            "after": [
+              {
+                "op": "profits",
+                "delta": 4,
+                "when": [
+                  {
+                    "count": {
+                      "kind": "var",
+                      "name": "rebel_bases"
+                    },
+                    "min": 1
+                  },
+                  {
+                    "count": {
+                      "kind": "pieces",
+                      "where": {
+                        "choice": "a"
+                      },
+                      "types": [
+                        "rebel_bases"
+                      ]
+                    },
+                    "max": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce Profits by 3. Shift any 3 Labyrinths 1 level each towards Active Opposition, then place 1 Damage in each selected Labyrinth.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 3,
+            "min": 3,
+            "filter": {
+              "terrain": "labyrinth"
+            },
+            "prompt": "3 Labirinti verso l'Opposizione Attiva"
+          }
+        ],
+        "effects": [
+          {
+            "op": "profits",
+            "delta": -3
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          },
+          {
+            "op": "damage",
+            "where": {
+              "choice": "a"
+            },
+            "count": 1
+          }
+        ]
+      }
+    },
+    "40": {
+      "unshaded": {
+        "text": "Place 4 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round). Increase Profits by 2.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "supply_earth",
+            "delta": 4
+          },
+          {
+            "op": "aldrin_cycler"
+          },
+          {
+            "op": "profits",
+            "delta": 2
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce Profits by 3 and MG Resources by 9.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "profits",
+            "delta": -3
+          },
+          {
+            "op": "resources",
+            "faction": "marsgov",
+            "delta": -9
+          }
+        ]
+      }
+    },
+    "41": {
+      "unshaded": {
+        "text": "Shift Sharma and Gandhi 1 level each towards Active Support. RD is Ineligible through next Event Round.",
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "sharma",
+                "gandhi"
+              ]
+            },
+            "levels": 1
+          },
+          {
+            "op": "ineligible",
+            "faction": "red_dust"
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift Gandhi and Sharma 1 level each towards Active Opposition. Replace all MG forces in Sharma with RD forces (replace Troops with Rebels and Bases with Bases).",
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "gandhi",
+                "sharma"
+              ]
+            },
+            "levels": -1
+          },
+          {
+            "op": "replace",
+            "where": {
+              "list": [
+                "sharma"
+              ]
+            },
+            "from": [
+              "mg_troop",
+              "mg_base"
+            ],
+            "to": [
+              "rd_rebel",
+              "rd_base"
+            ],
+            "count": 99,
+            "per_space": 99
+          }
+        ]
+      }
+    },
+    "42": {
+      "unshaded": {
+        "text": "Shift 2 spaces with EG Troops 1 level each towards Active Support.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "has_any": [
+                "eg_troop"
+              ]
+            },
+            "prompt": "2 spazi con Truppe EG verso il Supporto Attivo"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": 1
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift 2 spaces with EG Troops 1 level each towards Active Opposition.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 2,
+            "min": 2,
+            "filter": {
+              "has_any": [
+                "eg_troop"
+              ]
+            },
+            "prompt": "2 spazi con Truppe EG verso l'Opposizione Attiva"
+          }
+        ],
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "choice": "a"
+            },
+            "levels": -1
+          }
+        ]
+      }
+    },
+    "43": {
+      "unshaded": {
+        "text": "MG or CORP may move any COIN forces from a Desert to an adjacent Desert, then may free Recon or free Assault in the destination Desert.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue l'Operazione gratuita"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "has_any": [
+                "coin_units"
+              ]
+            },
+            "prompt": "Deserto di partenza"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "adjacent_to": {
+                "choice": "a"
+              }
+            },
+            "prompt": "Deserto adiacente di destinazione"
+          },
+          {
+            "id": "then",
+            "kind": "branch",
+            "options": [
+              "recon",
+              "assault"
+            ],
+            "prompt": "Recon oppure Assault gratuito nel Deserto di arrivo"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "coin_units"
+            ],
+            "all": true
+          },
+          {
+            "op": "branch",
+            "choice": "then",
+            "cases": {
+              "recon": [
+                {
+                  "op": "free_op",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "operation": "recon",
+                  "where": {
+                    "choice": "b"
+                  }
+                }
+              ],
+              "assault": [
+                {
+                  "op": "free_op",
+                  "faction": {
+                    "choice": "who"
+                  },
+                  "operation": "assault",
+                  "where": {
+                    "choice": "b"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD or CR may move up to 3 Rebel Bases from any spaces to any adjacent Deserts.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quale Fazione Ribelle"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "has_any": [
+                "@base"
+              ]
+            },
+            "prompt": "Spazio di partenza delle Basi"
+          },
+          {
+            "id": "b",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "adjacent_to": {
+                "choice": "a"
+              },
+              "base_room": true
+            },
+            "prompt": "Deserto adiacente di destinazione"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "faction": {
+              "choice": "who"
+            },
+            "from": {
+              "choice": "a"
+            },
+            "to": {
+              "choice": "b"
+            },
+            "types": [
+              "@base"
+            ],
+            "count": 3
+          }
+        ]
+      }
+    },
+    "44": {
+      "unshaded": {
+        "text": "Remove up to 6 Rebel forces from New Córdoba (Bases last).",
+        "effects": [
+          {
+            "op": "remove",
+            "where": {
+              "list": [
+                "new_cordoba"
+              ]
+            },
+            "types": [
+              "rebel_forces"
+            ],
+            "count": 6,
+            "bases_last": true
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift New Córdoba 1 level towards Active Opposition, then place 2 Rebels in each of New Córdoba and both adjacent Deserts.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quali Ribelli piazzare"
+          }
+        ],
+        "effects": [
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "new_cordoba"
+              ]
+            },
+            "levels": -1
+          },
+          {
+            "op": "place",
+            "faction": {
+              "choice": "who"
+            },
+            "where": {
+              "list": [
+                "new_cordoba",
+                "rutherford",
+                "trouvelot"
+              ]
+            },
+            "pieces": [
+              {
+                "type": "@rebel",
+                "count": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "45": {
+      "unshaded": {
+        "text": "MG or CORP may move any number of COIN units from adjacent spaces to 1 Desert, then Activate all Rebels in that Desert and free Assault there.",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "marsgov",
+              "corporations"
+            ],
+            "default": "marsgov",
+            "prompt": "Chi esegue l'Assault gratuito"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert"
+            },
+            "prompt": "Deserto in cui concentrare le unità COIN"
+          }
+        ],
+        "effects": [
+          {
+            "op": "move",
+            "from": {
+              "choice": "a",
+              "adjacent": true
+            },
+            "to": {
+              "choice": "a"
+            },
+            "types": [
+              "coin_units"
+            ],
+            "all": true
+          },
+          {
+            "op": "activate",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "rebels"
+            ]
+          },
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "assault",
+            "where": {
+              "choice": "a"
+            }
+          }
+        ]
+      },
+      "shaded": {
+        "text": "RD or CR may free March or Travel to 1 Desert, then free Ambush there (even if all Rebels are Active).",
+        "choices": [
+          {
+            "id": "who",
+            "kind": "faction",
+            "options": [
+              "red_dust",
+              "reclaimer"
+            ],
+            "prompt": "Quale Fazione Ribelle"
+          },
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert"
+            },
+            "prompt": "Deserto di destinazione"
+          }
+        ],
+        "effects": [
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "@march_or_travel",
+            "where": {
+              "choice": "a"
+            }
+          },
+          {
+            "op": "free_op",
+            "faction": {
+              "choice": "who"
+            },
+            "operation": "attack",
+            "special": "ambush",
+            "where": {
+              "choice": "a"
+            },
+            "note": "anche se tutti i Ribelli sono Attivi"
+          }
+        ]
+      }
+    },
+    "46": {
+      "unshaded": {
+        "text": "Remove a CORP Base and all units from 1 Unpopulated Desert. Increase Profits by 6 and CORP remains Eligible.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 1,
+            "min": 1,
+            "filter": {
+              "terrain": "desert",
+              "populated": false,
+              "has_any": [
+                "corp_base"
+              ]
+            },
+            "prompt": "Deserto Spopolato da abbandonare"
+          }
+        ],
+        "effects": [
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "corp_base"
+            ],
+            "count": 1,
+            "protect_bases": false
+          },
+          {
+            "op": "remove",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "corp_units"
+            ],
+            "all": true
+          },
+          {
+            "op": "profits",
+            "delta": 6
+          },
+          {
+            "op": "stay_eligible",
+            "faction": "corporations"
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Reduce Profits by 1 for each CORP Base in a space with Rebel forces.",
+        "effects": [
+          {
+            "op": "profits",
+            "delta_per": -1,
+            "times": {
+              "kind": "pieces",
+              "where": {
+                "filter": {
+                  "has_any": [
+                    "rebel_forces"
+                  ]
+                }
+              },
+              "types": [
+                "corp_base"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "47": {
+      "unshaded": {
+        "text": "Place all available Storm markers on their Raging Storm side in any spaces (maximum 1 Storm per space). Executing Faction remains Eligible.",
+        "choices": [
+          {
+            "id": "a",
+            "kind": "space",
+            "count": 6,
+            "filter": {
+              "storm": {
+                "max": 0
+              },
+              "terrain": "desert"
+            },
+            "prompt": "Dove piazzare i marcatori Raging Storm"
+          }
+        ],
+        "effects": [
+          {
+            "op": "storm",
+            "where": {
+              "choice": "a"
+            },
+            "level": 2
+          },
+          {
+            "op": "stay_eligible",
+            "faction": "executing"
+          }
+        ]
+      }
+    },
+    "48": {
+      "unshaded": {
+        "text": "Shift Europa 2 levels towards Active Support, then place 3 Supply markers on Earth.",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG+"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "europa"
+              ]
+            },
+            "levels": 2
+          },
+          {
+            "op": "supply_earth",
+            "delta": 3
+          }
+        ]
+      },
+      "shaded": {
+        "text": "Shift Europa 2 levels towards Active Opposition, then RD draws 4 Campaign cards and plays 1 (shuffle the rest back into the deck).",
+        "effects": [
+          {
+            "op": "eg_side",
+            "side": "EG-"
+          },
+          {
+            "op": "shift",
+            "where": {
+              "list": [
+                "europa"
+              ]
+            },
+            "levels": -2
+          },
+          {
+            "op": "campaign",
+            "draw": 4
+          }
+        ]
+      }
+    }
   }
- }
 }
