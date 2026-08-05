@@ -144,16 +144,27 @@ L'esportazione produce un bundle universale (Intel + Apple Silicon) in
 godot --headless --path godot --export-release "macOS" "../dist/macos/Red Dust Rebellion — Digital.app"
 ```
 
-Gli asset arrivano dal modulo Vassal e portano con sé attributi estesi di
-Finder, che fanno fallire la firma: vanno ripuliti, poi si firma ad-hoc (senza
-certificato di sviluppatore) perché Gatekeeper lasci aprire l'app in locale.
+La firma va fatta **fuori dalla cartella sincronizzata**: se il repo sta in
+`~/Documents` gestita da iCloud Drive, gli attributi estesi (`com.apple.macl`,
+`com.apple.fileprovider.*`) rispuntano appena rimossi e `codesign` si rifiuta
+("resource fork, Finder information, or similar detritus not allowed"). Si copia
+quindi il bundle in una cartella non sincronizzata, lo si firma ad-hoc (senza
+certificato di sviluppatore) e lo si installa:
 
 ```bash
-xattr -cr "dist/macos/Red Dust Rebellion — Digital.app" && codesign --force --deep --sign - "dist/macos/Red Dust Rebellion — Digital.app"
+ditto --norsrc --noextattr --noacl "dist/macos/Red Dust Rebellion — Digital.app" "/tmp/rdr/Red Dust Rebellion — Digital.app"
 ```
 
-Poi basta copiare il bundle in `/Applications`. Essendo firmata solo ad-hoc,
-alla prima apertura macOS può chiedere conferma (Ctrl-clic → Apri).
+```bash
+xattr -cr "/tmp/rdr/Red Dust Rebellion — Digital.app" && codesign --force --deep --sign - "/tmp/rdr/Red Dust Rebellion — Digital.app" && codesign --verify --deep --strict "/tmp/rdr/Red Dust Rebellion — Digital.app"
+```
+
+```bash
+ditto --norsrc --noextattr --noacl "/tmp/rdr/Red Dust Rebellion — Digital.app" "/Applications/Red Dust Rebellion — Digital.app"
+```
+
+Essendo firmata solo ad-hoc, alla prima apertura macOS può chiedere conferma
+(Ctrl-clic → Apri).
 
 ## Perché i dati sono affidabili
 
