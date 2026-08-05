@@ -113,10 +113,29 @@ func do_pass() -> bool:
 ## (Logistics, Secure, Recon, March, Travel) hanno bisogno del pianificatore di
 ## movimento, non ancora in interfaccia.
 const UI_OPERATIONS := {
-	"marsgov": ["train", "assault"],
-	"corporations": ["assault"],
-	"red_dust": ["rally", "attack", "campaign"],
-	"reclaimer": ["rally", "attack", "preach"],
+	"marsgov": ["train", "secure", "recon", "assault"],
+	"corporations": ["logistics", "secure", "recon", "assault"],
+	"red_dust": ["rally", "march", "attack", "campaign"],
+	"reclaimer": ["rally", "travel", "attack", "preach"],
+}
+
+## Operazioni che oltre agli spazi richiedono di dichiarare gli spostamenti.
+const MOVEMENT_OPERATIONS := ["secure", "recon", "march", "travel"]
+
+## Attività Speciali collegate alla UI, per Fazione, con il numero massimo di
+## spazi selezionabili (§6.0).
+const UI_SPECIALS := {
+	"marsgov": {"entrench": 2, "petition": 0, "transport": 0},
+	"corporations": {"public_relations": 2, "exploit": 2, "raid": 2},
+	"red_dust": {"redistribute": 4, "coordinate": 2},
+	"reclaimer": {"purify": 2, "ransack": 2},
+}
+
+const SPECIAL_NAMES := {
+	"entrench": "Entrench", "petition": "Petition", "transport": "Transport",
+	"public_relations": "Public Relations", "exploit": "Exploit", "raid": "Raid",
+	"redistribute": "Redistribute", "coordinate": "Coordinate", "ambush": "Ambush",
+	"purify": "Purify", "ransack": "Ransack",
 }
 
 const OPERATION_NAMES := {
@@ -128,7 +147,10 @@ const OPERATION_NAMES := {
 
 ## Esegue un'Operazione per la Fazione di turno e registra l'azione nella
 ## sequenza. Restituisce il risultato dell'Operazione ({ok, error, spent}).
-func execute_operation(op_id: String, spaces: Array, with_special: bool = false) -> Dictionary:
+## `plan_extra` porta le scelte in più delle Operazioni di movimento
+## ({moves: [...]}) e di Logistics ({earth: {...}, transit: bool}).
+func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
+		plan_extra: Dictionary = {}) -> Dictionary:
 	if sequence == null:
 		return {"ok": false, "error": "Nessuna carta in corso."}
 	var fid := sequence.pending_faction()
@@ -141,7 +163,7 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false)
 		if not sequence.is_legal(action) or spaces.size() > 1:
 			return {"ok": false, "error": "Azione non consentita adesso."}
 
-	var res: Dictionary = _run_operation(op_id, fid, spaces)
+	var res: Dictionary = _run_operation(op_id, fid, spaces, plan_extra)
 	if not res.get("ok", false):
 		return res
 	for line in ops.log_lines:
@@ -154,8 +176,22 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false)
 	return res
 
 
-func _run_operation(op_id: String, fid: String, spaces: Array) -> Dictionary:
+func _run_operation(op_id: String, fid: String, spaces: Array,
+		extra: Dictionary = {}) -> Dictionary:
+	var moves: Array = extra.get("moves", [])
 	match op_id:
+		"secure":
+			return ops.secure({"faction": fid, "dest": spaces, "moves": moves})
+		"recon":
+			return ops.recon({"faction": fid, "dest": spaces, "moves": moves})
+		"march":
+			return ops.march({"dest": spaces, "moves": moves})
+		"travel":
+			return ops.travel({"origins": spaces, "moves": moves})
+		"logistics":
+			var plan := {"deserts": spaces, "earth": extra.get("earth", {}),
+				"transit": bool(extra.get("transit", false))}
+			return ops.logistics(plan)
 		"train":
 			var entries: Array = []
 			for sid in spaces:
@@ -206,6 +242,37 @@ func operation_candidates(op_id: String, fid: String) -> PackedStringArray:
 						and ops._enemy_force_count(sid, fid) > 0:
 					out2.append(sid)
 			return out2
+		"secure":
+			var out_s := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if m.is_labyrinth(state, sid) and ops.act.selectable(sid):
+					out_s.append(sid)
+			return out_s
+		"recon":
+			var out_r := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if m.is_desert(state, sid) and ops.act.selectable(sid):
+					out_r.append(sid)
+			return out_r
+		"march":
+			var out_m := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if ops.act.selectable(sid):
+					out_m.append(sid)
+			return out_m
+		"travel":
+			# Travel sceglie le ORIGINI e ignora le tempeste (§5.8).
+			var out_t := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if m.count_in(state, sid, "cr_rebel") + m.count_in(state, sid, "cr_base") > 0:
+					out_t.append(sid)
+			return out_t
+		"logistics":
+			var out_l := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if m.is_desert(state, sid) and m.count_in(state, sid, "corp_base") > 0:
+					out_l.append(sid)
+			return out_l
 		"campaign", "preach":
 			var rebel2 := "rd_rebel" if op_id == "campaign" else "cr_rebel"
 			var out3 := PackedStringArray()
@@ -215,6 +282,130 @@ func operation_candidates(op_id: String, fid: String) -> PackedStringArray:
 					out3.append(sid)
 			return out3
 	return PackedStringArray()
+
+
+## Spazi legalmente selezionabili per un'Attività Speciale (§6.0).
+func special_candidates(sa_id: String, fid: String) -> PackedStringArray:
+	var m: RDRModule = rdr()
+	var out := PackedStringArray()
+	for sid in m.mars_spaces(state):
+		var st: SpaceState = state.spaces[sid]
+		var okk := false
+		match sa_id:
+			"entrench":
+				okk = st.control == "coin" and m.count_in(state, sid, "mg_troop") > 0
+			"public_relations":
+				okk = st.control == "coin" and m.count_in(state, sid, "security") > 0
+			"exploit":
+				okk = m.count_in(state, sid, "corp_base") > 0 and m.marker(state, sid, "damage") == 0
+			"raid":
+				okk = m.count_in(state, sid, "specops") > 0 or _adjacent_specops(sid)
+			"redistribute":
+				okk = m.population(state, sid) > 0 and st.control == "red_dust" \
+					and m.count_in(state, sid, "rd_rebel", "hidden") > 0
+			"coordinate":
+				okk = st.support <= 0 and m.count_in(state, sid, "rd_rebel", "hidden") > 0
+			"purify":
+				okk = st.control == "reclaimer" and m.count_in(state, sid, "cr_rebel", "hidden") > 0
+			"ransack":
+				okk = m.marker(state, sid, "damage") > 0 \
+					and m.count_in(state, sid, "cr_rebel", "hidden") > 0
+		if okk:
+			out.append(sid)
+	return out
+
+
+func _adjacent_specops(sid: String) -> bool:
+	for a in state.game_def.space(sid).adjacent:
+		if rdr().count_in(state, String(a), "specops", "hidden") > 0:
+			return true
+	return false
+
+
+## Unità che la Fazione di turno può muovere con l'Operazione in corso.
+func movable_types(op_id: String, fid: String) -> Array[String]:
+	match op_id:
+		"secure", "recon":
+			return ops._coin_unit_types(fid)
+		"march":
+			return ["rd_rebel"] as Array[String]
+		"travel":
+			return ["cr_rebel", "cr_base"] as Array[String]
+	return [] as Array[String]
+
+
+## Origini legali per portare `type_id` in `dest` con l'Operazione in corso.
+func legal_origins(op_id: String, fid: String, dest: String, type_id: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	var control := "coin" if op_id in ["secure", "recon"] else \
+		("red_dust" if op_id == "march" else "reclaimer")
+	for s in state.game_def.spaces:
+		if s.id == dest or rdr().count_in(state, s.id, type_id) == 0:
+			continue
+		if op_id == "travel":
+			# §5.8: le forze Reclaimer si spostano di uno spazio adiacente.
+			if state.game_def.space(dest).adjacent.has(s.id):
+				out.append(s.id)
+			continue
+		var reach := ops.reachable_labyrinths(s.id, control)
+		if op_id in ["recon", "march"]:
+			for x in ops.reachable_deserts(s.id, control):
+				reach.append(x)
+		if reach.has(dest):
+			out.append(s.id)
+	return out
+
+
+## §6.0: esegue un'Attività Speciale della Fazione di turno. Non consuma il turno
+## da sola: accompagna l'Operazione (qui è eseguita subito, prima o dopo).
+func execute_special(sa_id: String, spaces: Array) -> Dictionary:
+	if sequence == null or sequence.pending_faction() == "":
+		return {"ok": false, "error": "Non è il turno di nessuno."}
+	var res: Dictionary = _run_special(sa_id, spaces)
+	if not res.get("ok", false):
+		return res
+	for line in specials.log_lines:
+		emit_signal("log_line", line)
+	specials.log_lines.clear()
+	emit_signal("log_line", "%s: %s in %d spazi." % [
+		game_def.faction(sequence.pending_faction()).short_name,
+		SPECIAL_NAMES.get(sa_id, sa_id), spaces.size()])
+	refresh()
+	return res
+
+
+func _run_special(sa_id: String, spaces: Array) -> Dictionary:
+	var entries: Array = []
+	match sa_id:
+		"entrench":
+			for sid in spaces:
+				entries.append({"id": sid, "fortify": 9})
+			return specials.entrench({"spaces": entries})
+		"petition":
+			return specials.petition({})
+		"public_relations":
+			for sid in spaces:
+				entries.append({"id": sid, "repairs": 1, "house": true})
+			return specials.public_relations({"spaces": entries})
+		"exploit":
+			return specials.exploit({"spaces": spaces})
+		"raid":
+			for sid in spaces:
+				entries.append({"id": sid, "targets": ["rd_rebel", "cr_rebel"]})
+			return specials.raid({"spaces": entries})
+		"redistribute":
+			return specials.redistribute({"spaces": spaces})
+		"coordinate":
+			for sid in spaces:
+				entries.append({"id": sid, "action": "", "at_max": "remove"})
+			return specials.coordinate({"spaces": entries})
+		"purify":
+			for sid in spaces:
+				entries.append({"id": sid, "mode": "convert"})
+			return specials.purify({"spaces": entries})
+		"ransack":
+			return specials.ransack({"spaces": spaces})
+	return {"ok": false, "error": "Attività Speciale '%s' non disponibile in UI." % sa_id}
 
 
 ## §7.0: la Fazione di turno gioca l'Evento della carta corrente. Applica gli

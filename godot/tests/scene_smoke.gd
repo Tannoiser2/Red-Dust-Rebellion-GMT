@@ -84,7 +84,7 @@ func _initialize() -> void:
 	_ok(gc.cards.campaign_in_play() > 0, "una Campaign card in gioco")
 
 	# Barra delle Operazioni della Fazione di turno (§5.0).
-	var ops_box: HBoxContainer = main.get("_ops_box")
+	var ops_box: HFlowContainer = main.get("_ops_box")
 	_ok(ops_box.get_child_count() > 0, "barra delle Operazioni popolata (%d)" % ops_box.get_child_count())
 
 	# Pianificazione: si sceglie un'Operazione, si clicca uno spazio candidato,
@@ -140,6 +140,34 @@ func _initialize() -> void:
 	var passer := "reclaimer" if fid != "reclaimer" else "marsgov"
 	_ok(gc.state.eligibility[passer] == CoinEnums.Eligibility.ELIGIBLE,
 		"chi Passa resta Disponibile (%s)" % passer)
+
+	# --- Pianificatore di movimento (§5.3/§5.7) e Attività Speciali (§6.0) ---
+	# Si prova su uno stato pulito, senza passare dalla sequenza della carta.
+	gc.new_game("standard", 20240424)
+	await process_frame
+	var m = gc.rdr()
+	var origins: PackedStringArray = gc.legal_origins("march", "red_dust", "daedalia_planum", "rd_rebel")
+	_ok(origins.size() > 0, "il pianificatore trova origini legali (%d)" % origins.size())
+	_ok(origins.has("shepard"), "Shepard è un'origine valida per Daedalia Planum")
+	var before_dest: int = m.count_in(gc.state, "daedalia_planum", "rd_rebel")
+	var res: Dictionary = gc.ops.march({"dest": ["daedalia_planum"],
+		"moves": [{"from": "shepard", "to": "daedalia_planum", "count": 2}]})
+	_ok(res.get("ok", false), "March con spostamenti dichiarati eseguita")
+	_ok(m.count_in(gc.state, "daedalia_planum", "rd_rebel") == before_dest + 2,
+		"i Ribelli sono arrivati a destinazione")
+
+	# Un'Attività Speciale a scelta di spazi.
+	var sa_spaces: PackedStringArray = gc.special_candidates("redistribute", "red_dust")
+	_ok(sa_spaces.size() > 0, "Redistribute ha spazi candidati (%d)" % sa_spaces.size())
+	var rd_before: int = gc.state.get_resources("red_dust")
+	var sres: Dictionary = gc.execute_special("redistribute", [sa_spaces[0]])
+	_ok(sres.get("ok", false), "Redistribute eseguita dalla UI")
+	_ok(gc.state.get_resources("red_dust") > rd_before, "Red Dust ha guadagnato Risorse")
+
+	# Le Operazioni di movimento sono ora tutte in barra.
+	_ok(gc.UI_OPERATIONS["marsgov"].has("secure"), "Secure disponibile in UI")
+	_ok(gc.UI_OPERATIONS["reclaimer"].has("travel"), "Travel disponibile in UI")
+	_ok(gc.UI_SPECIALS["reclaimer"].has("purify"), "Purify disponibile in UI")
 
 	if shot_path != "":
 		await process_frame

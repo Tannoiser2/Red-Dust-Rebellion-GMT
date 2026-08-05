@@ -15,10 +15,13 @@ var _space_info: RichTextLabel
 var _card_info: RichTextLabel
 var _btn_pass: Button
 var _btn_end: Button
-var _ops_box: HBoxContainer
+var _ops_box: HFlowContainer
 var _op_mode := ""          ## Operazione in corso di pianificazione
 var _op_spaces: Array[String] = []
 var _op_candidates: PackedStringArray = PackedStringArray()
+var _op_moves: Array = []              ## spostamenti dichiarati {from,to,type,count}
+var _sa_mode := ""                     ## Attività Speciale in corso
+var _move_box: VBoxContainer
 var _log: RichTextLabel
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
@@ -103,9 +106,15 @@ func _build_ui() -> void:
 	actions.add_child(_btn_end)
 	_side.add_child(actions)
 
-	_ops_box = HBoxContainer.new()
-	_ops_box.add_theme_constant_override("separation", 4)
+	# HFlowContainer: i pulsanti vanno a capo invece di uscire dal pannello.
+	_ops_box = HFlowContainer.new()
+	_ops_box.add_theme_constant_override("h_separation", 4)
+	_ops_box.add_theme_constant_override("v_separation", 4)
 	_side.add_child(_ops_box)
+
+	_move_box = VBoxContainer.new()
+	_move_box.add_theme_constant_override("separation", 2)
+	_side.add_child(_move_box)
 
 	_side.add_child(_title("Spazio selezionato"))
 	_space_info = _rich(150)
@@ -303,11 +312,12 @@ func _count_control(control: String) -> int:
 
 
 func _on_space_clicked(space_id: String) -> void:
-	if _op_mode != "":
+	if _op_mode != "" or _sa_mode != "":
 		if not _op_candidates.has(space_id):
 			_append_log("%s non è selezionabile per %s." % [
 				GameController.game_def.space(space_id).name,
-				GameController.OPERATION_NAMES.get(_op_mode, _op_mode)])
+				GameController.OPERATION_NAMES.get(_op_mode,
+					GameController.SPECIAL_NAMES.get(_sa_mode, "l'azione"))])
 		elif _op_spaces.has(space_id):
 			_op_spaces.erase(space_id)
 		else:
@@ -329,6 +339,8 @@ func _on_space_clicked(space_id: String) -> void:
 
 func _start_op(op_id: String) -> void:
 	var gc := GameController
+	_sa_mode = ""
+	_op_moves.clear()
 	_op_mode = op_id
 	_op_spaces.clear()
 	_op_candidates = gc.operation_candidates(op_id, gc.sequence.pending_faction())
@@ -356,8 +368,35 @@ func _play_event(shaded: bool) -> void:
 	_cancel_op()
 
 
+## Attività Speciale (§6.0): stessa pianificazione a scelta di spazi.
+func _start_sa(sa_id: String) -> void:
+	var gc := GameController
+	_op_mode = ""
+	_sa_mode = sa_id
+	_op_spaces.clear()
+	_op_moves.clear()
+	_op_candidates = gc.special_candidates(sa_id, gc.sequence.pending_faction())
+	_append_log("%s: scegli fino a %d spazi (%d disponibili)." % [
+		gc.SPECIAL_NAMES.get(sa_id, sa_id),
+		int(gc.UI_SPECIALS[gc.sequence.pending_faction()][sa_id]),
+		_op_candidates.size()])
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _confirm_sa() -> void:
+	var gc := GameController
+	var res: Dictionary = gc.execute_special(_sa_mode, Array(_op_spaces))
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "attività rifiutata"))
+		return
+	_cancel_op()
+
+
 func _cancel_op() -> void:
 	_op_mode = ""
+	_sa_mode = ""
+	_op_moves.clear()
 	_op_spaces.clear()
 	_op_candidates = PackedStringArray()
 	_paint_op_highlight()
@@ -367,7 +406,11 @@ func _cancel_op() -> void:
 func _confirm_op() -> void:
 	if _op_mode == "" or _op_spaces.is_empty():
 		return
-	var res: Dictionary = GameController.execute_operation(_op_mode, Array(_op_spaces))
+	var extra := {"moves": _op_moves}
+	if _op_mode == "logistics":
+		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
+		extra = {}
+	var res: Dictionary = GameController.execute_operation(_op_mode, Array(_op_spaces), false, extra)
 	if not res.get("ok", false):
 		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "azione rifiutata"))
 		return
@@ -389,7 +432,7 @@ func _refresh_op_bar() -> void:
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
 	var fid := gc.sequence.pending_faction()
-	if _op_mode == "":
+	if _op_mode == "" and _sa_mode == "":
 		for op_id in gc.UI_OPERATIONS.get(fid, []):
 			var b := Button.new()
 			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
@@ -408,6 +451,24 @@ func _refresh_op_bar() -> void:
 					e.tooltip_text = String(opt.get("text", ""))
 					e.pressed.connect(_play_event.bind(shaded))
 					_ops_box.add_child(e)
+		for sa_id in gc.UI_SPECIALS.get(fid, {}).keys():
+			var sb := Button.new()
+			sb.text = "· %s" % gc.SPECIAL_NAMES.get(sa_id, sa_id)
+			sb.tooltip_text = "Attività Speciale (§6.0)"
+			sb.pressed.connect(_start_sa.bind(String(sa_id)))
+			_ops_box.add_child(sb)
+		_refresh_move_box()
+		return
+	if _sa_mode != "":
+		var run_sa := Button.new()
+		run_sa.text = "Esegui %s (%d)" % [gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode), _op_spaces.size()]
+		run_sa.pressed.connect(_confirm_sa)
+		_ops_box.add_child(run_sa)
+		var cancel_sa := Button.new()
+		cancel_sa.text = "Annulla"
+		cancel_sa.pressed.connect(_cancel_op)
+		_ops_box.add_child(cancel_sa)
+		_refresh_move_box()
 		return
 	var run := Button.new()
 	run.text = "Esegui (%d)" % _op_spaces.size()
@@ -418,6 +479,82 @@ func _refresh_op_bar() -> void:
 	cancel.text = "Annulla"
 	cancel.pressed.connect(_cancel_op)
 	_ops_box.add_child(cancel)
+	_refresh_move_box()
+
+
+## Pianificatore di movimento (§5.3/§5.4/§5.7/§5.8): per ogni spazio scelto come
+## destinazione si dichiara da dove arrivano le unità, di che tipo e quante.
+func _refresh_move_box() -> void:
+	for c in _move_box.get_children():
+		c.queue_free()
+	var gc := GameController
+	if not gc.MOVEMENT_OPERATIONS.has(_op_mode) or _op_spaces.is_empty():
+		return
+	var fid := gc.sequence.pending_faction()
+	var types := gc.movable_types(_op_mode, fid)
+	if types.is_empty():
+		return
+
+	var title := Label.new()
+	title.text = "Spostamenti (%d dichiarati)" % _op_moves.size()
+	title.add_theme_font_size_override("font_size", 12)
+	_move_box.add_child(title)
+	for m in _op_moves:
+		var l := Label.new()
+		l.text = "  %d× %s: %s → %s" % [int(m["count"]), String(m["type"]),
+			gc.game_def.space(String(m["from"])).name, gc.game_def.space(String(m["to"])).name]
+		l.add_theme_font_size_override("font_size", 11)
+		_move_box.add_child(l)
+
+	# Form: destinazione (fra quelle scelte) · tipo · origine · quantità.
+	var dest_opt := OptionButton.new()
+	for sid in _op_spaces:
+		dest_opt.add_item(gc.game_def.space(sid).name)
+		dest_opt.set_item_metadata(dest_opt.item_count - 1, sid)
+	var type_opt := OptionButton.new()
+	for t in types:
+		type_opt.add_item(String(t))
+		type_opt.set_item_metadata(type_opt.item_count - 1, String(t))
+	var from_opt := OptionButton.new()
+	var count_spin := SpinBox.new()
+	count_spin.min_value = 1
+	count_spin.max_value = 12
+	count_spin.value = 1
+
+	var refill := func():
+		from_opt.clear()
+		if dest_opt.selected < 0 or type_opt.selected < 0:
+			return
+		var dest := String(dest_opt.get_item_metadata(dest_opt.selected))
+		var t := String(type_opt.get_item_metadata(type_opt.selected))
+		for o in gc.legal_origins(_op_mode, fid, dest, t):
+			from_opt.add_item("%s (%d)" % [gc.game_def.space(String(o)).name,
+				gc.rdr().count_in(gc.state, String(o), t)])
+			from_opt.set_item_metadata(from_opt.item_count - 1, String(o))
+	dest_opt.item_selected.connect(func(_i): refill.call())
+	type_opt.item_selected.connect(func(_i): refill.call())
+	refill.call()
+
+	_move_box.add_child(dest_opt)
+	_move_box.add_child(type_opt)
+	_move_box.add_child(from_opt)
+	var row := HBoxContainer.new()
+	row.add_child(count_spin)
+	var add := Button.new()
+	add.text = "Aggiungi spostamento"
+	add.pressed.connect(func():
+		if from_opt.selected < 0 or dest_opt.selected < 0:
+			_append_log("Nessuna origine valida per questa combinazione.")
+			return
+		_op_moves.append({
+			"from": String(from_opt.get_item_metadata(from_opt.selected)),
+			"to": String(dest_opt.get_item_metadata(dest_opt.selected)),
+			"type": String(type_opt.get_item_metadata(type_opt.selected)),
+			"count": int(count_spin.value),
+		})
+		_refresh_op_bar())
+	row.add_child(add)
+	_move_box.add_child(row)
 
 
 func _refresh_space_info(space_id: String) -> void:

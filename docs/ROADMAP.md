@@ -69,9 +69,13 @@ fatto su Cuba Libre e All Bridges Burning.
       nei Labirinti sotto Controllo nemico, restrizioni delle tempeste
 - [x] UI: barra delle Operazioni della Fazione di turno, selezione degli spazi
       candidati sulla mappa, Esegui/Annulla
-- [ ] Pianificatore di movimento in UI (Secure, Recon, March, Travel) e
-      pianificatore di Logistics
-- [ ] Attività Speciali in UI (le regole ci sono, manca il collegamento)
+- [x] Pianificatore di movimento in UI: destinazione, tipo di unità, origine
+      (solo quelle legali) e quantità; gli spostamenti si accumulano e si
+      eseguono insieme all'Operazione
+- [x] Logistics in UI (potenziamento delle Basi nei Deserti scelti)
+- [x] 9 Attività Speciali su 12 collegate alla UI con scelta degli spazi
+- [ ] Transport, Raid con spostamento di SpecOps e Ambush: servono form dedicati
+      (spostamenti fra spazi attivati, dadi scelti)
 - [ ] Scelte fini nella UI: modalità del Rally, bersagli dell'Assault/Attack,
       Ambush, Pacify/Coordinate
 
