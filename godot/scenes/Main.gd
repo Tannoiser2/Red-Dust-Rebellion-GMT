@@ -15,6 +15,10 @@ var _space_info: RichTextLabel
 var _card_info: RichTextLabel
 var _btn_pass: Button
 var _btn_end: Button
+var _ops_box: HBoxContainer
+var _op_mode := ""          ## Operazione in corso di pianificazione
+var _op_spaces: Array[String] = []
+var _op_candidates: PackedStringArray = PackedStringArray()
 var _log: RichTextLabel
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
@@ -98,6 +102,10 @@ func _build_ui() -> void:
 	_btn_end.pressed.connect(func(): GameController.end_card())
 	actions.add_child(_btn_end)
 	_side.add_child(actions)
+
+	_ops_box = HBoxContainer.new()
+	_ops_box.add_theme_constant_override("separation", 4)
+	_side.add_child(_ops_box)
 
 	_side.add_child(_title("Spazio selezionato"))
 	_space_info = _rich(150)
@@ -197,6 +205,7 @@ func _on_state_changed() -> void:
 	_tracks.queue_redraw()
 	_refresh_status()
 	_refresh_card_info()
+	_refresh_op_bar()
 	if _selected != "":
 		_refresh_space_info(_selected)
 
@@ -294,10 +303,90 @@ func _count_control(control: String) -> int:
 
 
 func _on_space_clicked(space_id: String) -> void:
+	if _op_mode != "":
+		if not _op_candidates.has(space_id):
+			_append_log("%s non è selezionabile per %s." % [
+				GameController.game_def.space(space_id).name,
+				GameController.OPERATION_NAMES.get(_op_mode, _op_mode)])
+		elif _op_spaces.has(space_id):
+			_op_spaces.erase(space_id)
+		else:
+			_op_spaces.append(space_id)
+		_refresh_op_bar()
+		_paint_op_highlight()
+		_refresh_space_info(space_id)
+		_selected = space_id
+		return
 	_selected = space_id
 	for sid in _views.keys():
 		(_views[sid] as RegionView).set_highlight(sid == space_id)
 	_refresh_space_info(space_id)
+
+
+# ---------------------------------------------------------------------------
+# Operazioni (§5.0)
+# ---------------------------------------------------------------------------
+
+func _start_op(op_id: String) -> void:
+	var gc := GameController
+	_op_mode = op_id
+	_op_spaces.clear()
+	_op_candidates = gc.operation_candidates(op_id, gc.sequence.pending_faction())
+	_append_log("%s: scegli gli spazi (%d disponibili), poi «Esegui»." % [
+		gc.OPERATION_NAMES.get(op_id, op_id), _op_candidates.size()])
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _cancel_op() -> void:
+	_op_mode = ""
+	_op_spaces.clear()
+	_op_candidates = PackedStringArray()
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _confirm_op() -> void:
+	if _op_mode == "" or _op_spaces.is_empty():
+		return
+	var res: Dictionary = GameController.execute_operation(_op_mode, Array(_op_spaces))
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "azione rifiutata"))
+		return
+	_cancel_op()
+
+
+## Evidenzia in bianco gli spazi scelti; gli altri candidati restano cliccabili.
+func _paint_op_highlight() -> void:
+	for sid in _views.keys():
+		(_views[sid] as RegionView).set_highlight(_op_spaces.has(sid))
+
+
+## Ricostruisce la barra delle azioni: le Operazioni della Fazione di turno,
+## oppure «Esegui / Annulla» mentre si stanno scegliendo gli spazi.
+func _refresh_op_bar() -> void:
+	for c in _ops_box.get_children():
+		c.queue_free()
+	var gc := GameController
+	if gc.sequence == null or gc.sequence.pending_faction() == "":
+		return
+	var fid := gc.sequence.pending_faction()
+	if _op_mode == "":
+		for op_id in gc.UI_OPERATIONS.get(fid, []):
+			var b := Button.new()
+			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
+			b.pressed.connect(_start_op.bind(String(op_id)))
+			_ops_box.add_child(b)
+		return
+	var run := Button.new()
+	run.text = "Esegui (%d)" % _op_spaces.size()
+	run.disabled = _op_spaces.is_empty()
+	run.pressed.connect(_confirm_op)
+	_ops_box.add_child(run)
+	var cancel := Button.new()
+	cancel.text = "Annulla"
+	cancel.pressed.connect(_cancel_op)
+	_ops_box.add_child(cancel)
 
 
 func _refresh_space_info(space_id: String) -> void:

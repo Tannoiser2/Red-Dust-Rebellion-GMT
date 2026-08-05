@@ -50,6 +50,18 @@ func _init() -> void:
 	test_dust_storm_round()
 	test_game_end()
 
+	test_actions()
+	test_train()
+	test_logistics()
+	test_movement()
+	test_secure_recon()
+	test_assault()
+	test_rally()
+	test_march_travel()
+	test_attack()
+	test_campaign_preach()
+	test_special_activities()
+
 	print("\n%d passati, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -733,3 +745,467 @@ func test_game_end() -> void:
 	var over := r2.victory_phase()
 	eq(over, true, "il check di vittoria chiude la partita")
 	eq(String(s2.tracks.get("winner", "")), "corporations", "vincono le Corporations")
+
+
+# ===========================================================================
+# Fase 4 — Operazioni (§5.0) e Attività Speciali (§6.0)
+# ===========================================================================
+
+func ops_for(s: GameState, seed_value: int = 4242) -> RDROperations:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	var o := RDROperations.new(s, module, r)
+	o.rounds = rounds_for(s, seed_value)
+	return o
+
+
+func test_actions() -> void:
+	print("Azioni condivise (§1.7/§1.8)")
+	var s := fresh()
+	var a := RDRActions.new(s, module)
+
+	# House: sposta un marker da Displaced Population su un quadrato grigio.
+	eq(module.free_infra_slots(s, "europa"), 2, "Europa ha 2 quadrati grigi liberi")
+	eq(a.house("europa", "marsgov"), true, "House riuscito")
+	eq(module.population(s, "europa"), 3, "Popolazione di Europa da 2 a 3")
+	eq(int(s.tracks["displaced_population"]), 3, "un marker lascia Displaced Population")
+	eq(int(s.tracks["eg_side"]), 1, "House di MarsGov: EG+")
+
+	# House vietato dove c'è un Danno.
+	eq(a.can_house("ascraeus_mons"), false, "niente House dove c'è Danno")
+
+	# Repair: MarsGov paga 3 Risorse e consuma un Displaced.
+	var mg := s.get_resources("marsgov")
+	eq(a.repair("ascraeus_mons", "marsgov"), true, "Repair riuscito")
+	eq(s.get_resources("marsgov"), mg - 3, "Repair MarsGov: −3 Risorse")
+	eq(module.marker(s, "ascraeus_mons", "damage"), 0, "il Danno è rimosso")
+	eq(module.population(s, "ascraeus_mons"), 1, "Popolazione ripristinata")
+
+	# Repair delle Corporations: rimuove una Security invece delle Risorse.
+	var s2 := fresh()
+	var a2 := RDRActions.new(s2, module)
+	eq(a2.repair("marth", "corporations"), true, "Repair CORP riuscito")
+	eq(module.count_in(s2, "marth", "security"), 1, "−1 Security")
+
+	# Danno: azzera i marker Popolazione gialli e manda 1 in Displaced.
+	var s3 := fresh()
+	var a3 := RDRActions.new(s3, module)
+	a3.house("europa", "marsgov")
+	var disp := int(s3.tracks["displaced_population"])
+	eq(a3.place_damage("europa"), true, "Danno piazzato")
+	eq(module.marker(s3, "europa", "pop_markers"), 0, "i marker gialli spariscono")
+	eq(module.population(s3, "europa"), 1, "Popolazione 2 stampata − 1 Danno")
+	eq(int(s3.tracks["displaced_population"]), disp + 1, "+1 in Displaced Population")
+
+	# Spazio Spopolato: il marker Supporto va via.
+	var s4 := fresh()
+	var a4 := RDRActions.new(s4, module)
+	eq(a4.shift("pavonis_mons", -1), -1, "Pavonis Mons scende di un livello")
+	a4.place_damage("pavonis_mons")
+	eq(module.population(s4, "pavonis_mons"), 0, "Pavonis Mons Spopolata")
+	eq(s4.spaces["pavonis_mons"].support, CoinEnums.Support.NEUTRAL,
+		"uno spazio Spopolato è sempre Neutrale")
+
+
+func test_train() -> void:
+	print("Train (§5.1)")
+	var s := fresh()
+	var o := ops_for(s)
+	var cand := o.train_candidates()
+	ok(cand.has("tharsis_tholus"), "spazio con Base MG selezionabile")
+	ok(cand.has("europa"), "Labirinto con Controllo COIN selezionabile")
+	ok(not cand.has("sharma"), "Labirinto sotto Controllo RD non selezionabile")
+
+	var mg := s.get_resources("marsgov")
+	var res: Dictionary = o.train({"spaces": [{"id": "europa", "troops": 4}]})
+	eq(res["ok"], true, "Train eseguito")
+	eq(module.count_in(s, "europa", "mg_troop"), 6, "2 + 4 Truppe in Europa")
+	eq(s.get_resources("marsgov"), mg - 3, "3 Risorse per lo spazio")
+
+	# Pacify: fino a due azioni fra House, Repair e spostamento a 3 Risorse.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	var before: int = s2.spaces["europa"].support
+	o2.train({"spaces": [{"id": "europa", "troops": 1}],
+		"pacify": {"id": "europa", "actions": ["shift", "house"]}})
+	eq(s2.spaces["europa"].support, before + 1, "Pacify sposta verso il Supporto Attivo")
+	eq(module.marker(s2, "europa", "pop_markers"), 1, "Pacify fa anche House")
+
+	# Non si possono scegliere più spazi di quanti se ne possano pagare.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	s3.resources["marsgov"] = 2
+	var bad: Dictionary = o3.train({"spaces": [{"id": "europa", "troops": 1}]})
+	eq(bad["ok"], false, "Train rifiutato senza Risorse")
+	eq(module.count_in(s3, "europa", "mg_troop"), 2, "lo stato non è stato toccato")
+
+
+func test_logistics() -> void:
+	print("Logistics (§5.2)")
+	var s := fresh()
+	var o := ops_for(s)
+	s.tracks["profits"] = 10
+	var res: Dictionary = o.logistics({
+		"earth": {"security": 3, "specops": 1},
+		"deserts": ["marth", "hellas_chaos"],
+	})
+	eq(res["ok"], true, "Logistics eseguita")
+	eq(module.count_in(s, "earth", "security"), 4, "1 + 3 Security su Earth")
+	eq(module.count_in(s, "marth", "corp_base", "terraforming"), 1, "prima Base potenziata")
+	eq(module.count_in(s, "hellas_chaos", "corp_base", "terraforming"), 1, "seconda Base potenziata")
+	eq(int(s.tracks["profits"]), 7, "la seconda Base costa 3 Profits")
+
+	# Transit attiva l'Aldrin Cycler.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	var mg := s2.get_resources("marsgov")
+	o2.logistics({"transit": true})
+	eq(s2.get_resources("marsgov"), mg + 9, "l'Aldrin Cycler converte le 3 Supply")
+
+
+func test_movement() -> void:
+	print("Movimento (§5.3/§5.4)")
+	var s := fresh()
+	var o := ops_for(s)
+	# Europa è collegata a Tenzing dal Maglev; la Rodgers Line verso Tereshkova è chiusa.
+	var reach := o.reachable_labyrinths("europa", "coin")
+	ok(reach.has("tenzing"), "Tenzing raggiungibile via Maglev")
+	ok(not module.maglev_links(s, "europa").has("tereshkova"),
+		"il Maglev Europa-Tereshkova (Rodgers Line) è chiuso")
+	# …ma Tereshkova resta raggiungibile via Spaceport: entrambi i Labirinti sono
+	# sotto Controllo COIN, senza Danno né tempesta (§5.3).
+	ok(reach.has("tereshkova"), "Tereshkova raggiungibile via Spaceport")
+	module.add_marker(s, "tereshkova", "damage", 1)
+	ok(not o.reachable_labyrinths("europa", "coin").has("tereshkova"),
+		"uno Spaceport Danneggiato non è utilizzabile")
+	module.add_marker(s, "tereshkova", "damage", -1)
+	# Shepard è sotto Controllo RD: ci si arriva ma non si prosegue oltre.
+	var from_tenzing := o.reachable_labyrinths("tenzing", "coin")
+	ok(from_tenzing.has("shepard"), "Shepard raggiungibile via Maglev da Tenzing")
+
+	# Recon: i Deserti si raggiungono per adiacenza.
+	var deserts := o.reachable_deserts("europa", "coin")
+	ok(deserts.has("ascraeus_mons"), "Ascraeus Mons adiacente a Europa")
+	ok(deserts.has("pavonis_mons"), "Pavonis Mons adiacente a Europa")
+	ok(not deserts.has("radau"), "Radau è in un altro Settore")
+
+	# Una Raging Storm blocca l'ingresso.
+	module.set_marker(s, "ascraeus_mons", "storm", 2)
+	ok(not o.reachable_deserts("europa", "coin").has("ascraeus_mons"),
+		"non si entra in un Deserto con Raging Storm")
+
+
+func test_secure_recon() -> void:
+	print("Secure e Recon (§5.3/§5.4)")
+	var s := fresh()
+	var o := ops_for(s)
+	var mg := s.get_resources("marsgov")
+	# Secure su Tereshkova: 2 Truppe MG già lì Attivano il Ribelle RD nascosto.
+	var res: Dictionary = o.secure({"faction": "marsgov", "dest": ["tereshkova"]})
+	eq(res["ok"], true, "Secure eseguito")
+	eq(module.count_in(s, "tereshkova", "rd_rebel", "active"), 1, "1 Ribelle Attivato per unità")
+	eq(s.get_resources("marsgov"), mg - 3, "3 Risorse per destinazione")
+
+	# Piazzamento di una Base rimuovendo una Truppa.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	o2.secure({"faction": "marsgov", "dest": ["europa"], "base_at": ["europa"]})
+	eq(module.count_in(s2, "europa", "mg_base"), 1, "Base MG piazzata")
+	eq(module.count_in(s2, "europa", "mg_troop"), 1, "una Truppa rimossa per la Base")
+
+	# Recon nella Wilderness: 1 Ribelle Attivato ogni 2 unità.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	module.place_from_available(s3, "wilderness", "mg_troop", 4)
+	o3.recon({"faction": "marsgov", "dest": ["wilderness"]})
+	eq(module.count_in(s3, "wilderness", "cr_rebel", "active"), 2,
+		"nella Wilderness 1 Ribelle ogni 2 unità")
+
+
+func test_assault() -> void:
+	print("Assault (§5.5)")
+	var s := fresh()
+	var o := ops_for(s)
+	# I Ribelli Nascosti non si possono colpire.
+	var res: Dictionary = o.assault({"faction": "marsgov", "spaces": ["sharma"]})
+	eq(res["ok"], true, "Assault eseguito")
+	eq(module.count_in(s, "sharma", "rd_rebel"), 3, "i Ribelli Nascosti non vengono rimossi")
+
+	# Con i Ribelli Attivi: 1 rimosso per cubo.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	var a2 := RDRActions.new(s2, module)
+	a2.activate("sharma", "rd_rebel", 3)
+	o2.assault({"faction": "marsgov", "spaces": ["sharma"]})
+	eq(module.count_in(s2, "sharma", "rd_rebel"), 2, "1 Truppa MG rimuove 1 Ribelle Attivo")
+	eq(module.count_in(s2, "sharma", "rd_base"), 1, "la Base resta finché ci sono Ribelli")
+
+	# Basi per ultime: senza Ribelli la Base cade.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	var a3 := RDRActions.new(s3, module)
+	module.remove_pieces(s3, "sharma", "rd_rebel", 3, "available")
+	module.place_from_available(s3, "sharma", "mg_troop", 2)
+	o3.assault({"faction": "marsgov", "spaces": ["sharma"]})
+	eq(module.count_in(s3, "sharma", "rd_base"), 0, "Base rimossa quando non restano Ribelli")
+
+	# Mercenaries: +1 Profit ogni 2 forze Ribelli rimosse dove ci sono Security.
+	var s4 := fresh()
+	var o4 := ops_for(s4)
+	var a4 := RDRActions.new(s4, module)
+	module.place_from_available(s4, "shenzhou", "mg_troop", 2)
+	a4.activate("shenzhou", "rd_rebel", 1)
+	module.place_from_available(s4, "shenzhou", "rd_rebel", 1)
+	a4.activate("shenzhou", "rd_rebel", 2)
+	s4.tracks["profits"] = 0
+	o4.assault({"faction": "marsgov", "spaces": ["shenzhou"]})
+	eq(int(s4.tracks["profits"]), 1, "+1 Profit ogni 2 Ribelli rimossi (Mercenaries)")
+
+
+func test_rally() -> void:
+	print("Rally (§5.6)")
+	var s := fresh()
+	var o := ops_for(s)
+	var cand := o.rally_candidates("red_dust")
+	ok(cand.has("shepard"), "Red Dust: spazio Popolato senza Supporto")
+	ok(not cand.has("tenzing"), "Red Dust: non dove c'è Supporto")
+	var cand_cr := o.rally_candidates("reclaimer")
+	ok(cand_cr.has("new_cordoba"), "Reclaimer: spazio Neutrale")
+	ok(not cand_cr.has("sharma"), "Reclaimer: non dove c'è Opposizione")
+
+	# "fill": Ribelli fino a Popolazione + Basi amiche.
+	var rd := s.get_resources("red_dust")
+	var res: Dictionary = o.rally({"faction": "red_dust",
+		"spaces": [{"id": "gandhi", "mode": "fill"}], "dig_in": "radau"})
+	eq(res["ok"], true, "Rally eseguito")
+	eq(module.count_in(s, "gandhi", "rd_rebel"), 5, "2 già presenti + (2 Pop + 1 Base)")
+	eq(s.get_resources("red_dust"), rd - 1, "1 Risorsa per spazio")
+	eq(module.count_in(s, "radau", "rd_base", "dug_in"), 1, "Base Dug-In anche fuori dagli spazi scelti")
+
+	# "base": due Ribelli diventano una Base.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	o2.rally({"faction": "red_dust", "spaces": [{"id": "shepard", "mode": "base"}]})
+	eq(module.count_in(s2, "shepard", "rd_base"), 1, "Base piazzata")
+	eq(module.count_in(s2, "shepard", "rd_rebel"), 0, "2 Ribelli consumati")
+
+	# Reclaimer "upgrade": la Base diventa Conversion Center.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	o3.rally({"faction": "reclaimer", "spaces": [{"id": "new_cordoba", "mode": "upgrade"}]})
+	eq(module.count_in(s3, "new_cordoba", "cr_base", "conversion_center"), 1, "Conversion Center")
+
+
+func test_march_travel() -> void:
+	print("March e Travel (§5.7/§5.8)")
+	var s := fresh()
+	var o := ops_for(s)
+	# Marcia verso uno spazio Neutrale: i Ribelli restano Nascosti.
+	var res: Dictionary = o.march({"dest": ["daedalia_planum"],
+		"moves": [{"from": "shepard", "to": "daedalia_planum", "count": 2}]})
+	eq(res["ok"], true, "March eseguita")
+	eq(module.count_in(s, "daedalia_planum", "rd_rebel", "hidden"), 3, "Ribelli arrivati Nascosti")
+
+	# In uno spazio con Supporto, se i Ribelli in arrivo più i cubi presenti
+	# superano 3, quei Ribelli si Attivano (§5.7).
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	module.place_from_available(s2, "syria_planum", "rd_rebel", 2)
+	o2.march({"dest": ["tenzing"], "moves": [{"from": "syria_planum", "to": "tenzing", "count": 2}]})
+	eq(module.count_in(s2, "tenzing", "rd_rebel", "active"), 2,
+		"2 Ribelli + 4 cubi > 3: Attivati")
+
+	# Travel ignora le tempeste e riporta le Basi mosse sul lato base.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	module.set_marker(s3, "trouvelot", "storm", 2)
+	s3.spaces["trouvelot"].remove_piece("reclaimer", "cr_base", 1, "basic")
+	s3.spaces["trouvelot"].add_piece("reclaimer", "cr_base", 1, "conversion_center")
+	var res3: Dictionary = o3.travel({"origins": ["trouvelot"],
+		"moves": [{"from": "trouvelot", "to": "rutherford", "type": "cr_base", "count": 1}]})
+	eq(res3["ok"], true, "Travel eseguito anche con Raging Storm")
+	eq(module.count_in(s3, "rutherford", "cr_base", "basic"), 1,
+		"un Conversion Center che si sposta torna sul lato base")
+
+	# La Wilderness come origine è gratis.
+	var s4 := fresh()
+	var o4 := ops_for(s4)
+	var res4: Dictionary = o4.travel({"origins": ["wilderness"],
+		"moves": [{"from": "wilderness", "to": "radau", "count": 2}]})
+	eq(res4["spent"], 0, "la Wilderness costa 0")
+	eq(module.count_in(s4, "radau", "cr_rebel"), 2, "Ribelli arrivati")
+
+
+func test_attack() -> void:
+	print("Attack (§5.9)")
+	# Con Ambush si scelgono i dadi: 1 e 1 su 3 Ribelli rimuove 4 forze.
+	var s := fresh()
+	var o := ops_for(s)
+	module.place_from_available(s, "sharma", "mg_troop", 3)
+	var res: Dictionary = o.attack({"faction": "red_dust", "spaces": ["sharma"],
+		"ambush": {"sharma": [1, 1]}})
+	eq(res["ok"], true, "Attack eseguito")
+	eq(module.count_in(s, "sharma", "mg_troop"), 0, "le 4 Truppe MG rimosse")
+
+	# Una Truppa EG vale due forze rimosse.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	module.remove_pieces(s2, "sharma", "mg_troop", 1, "available")
+	module.place_from_available(s2, "sharma", "eg_troop", 3)
+	o2.attack({"faction": "red_dust", "spaces": ["sharma"], "ambush": {"sharma": [1, 1]}})
+	eq(module.count_in(s2, "sharma", "eg_troop"), 1, "4 forze = 2 Truppe EG")
+
+	# Gli SpecOps Nascosti non si possono colpire.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	module.remove_pieces(s3, "sharma", "mg_troop", 1, "available")
+	module.place_from_available(s3, "sharma", "specops", 2, "hidden")
+	o3.attack({"faction": "red_dust", "spaces": ["sharma"], "ambush": {"sharma": [1, 1]}})
+	eq(module.count_in(s3, "sharma", "specops", "hidden"), 2, "SpecOps Nascosti intoccabili")
+
+	# L'Attack Attiva tutti i propri Ribelli (senza Ambush).
+	var s4 := fresh()
+	var o4 := ops_for(s4)
+	o4.attack({"faction": "red_dust", "spaces": ["sharma"]})
+	eq(module.count_in(s4, "sharma", "rd_rebel", "hidden"), 0, "tutti i Ribelli Attivati")
+
+
+func test_campaign_preach() -> void:
+	print("Campaign e Preach (§5.10/§5.11)")
+	var s := fresh()
+	var o := ops_for(s)
+	var before: int = s.spaces["tereshkova"].support
+	var res: Dictionary = o.campaign({"spaces": ["tereshkova"]})
+	eq(res["ok"], true, "Campaign eseguita")
+	eq(s.spaces["tereshkova"].support, before - 1, "spostamento verso l'Opposizione")
+	eq(module.count_in(s, "tereshkova", "rd_rebel", "active"), 1, "un Ribelle Attivato")
+
+	# Da Supporto Attivo a Passivo: Danno, EG− e −2 Profits se c'è una Base CORP.
+	var s2 := fresh()
+	var o2 := ops_for(s2)
+	module.place_from_available(s2, "syria_planum", "rd_rebel", 1)
+	module.place_from_available(s2, "syria_planum", "corp_base", 1)
+	s2.tracks["profits"] = 10
+	o2.campaign({"spaces": ["syria_planum"]})
+	eq(s2.spaces["syria_planum"].support, CoinEnums.Support.NEUTRAL,
+		"Syria Planum diventa Spopolata quindi Neutrale")
+	eq(module.marker(s2, "syria_planum", "damage"), 1, "Danno piazzato")
+	eq(int(s2.tracks["profits"]), 8, "−2 Profits per la Base CORP")
+	eq(int(s2.tracks["eg_side"]), -1, "EG−")
+
+	# Preach sposta verso il Neutrale.
+	var s3 := fresh()
+	var o3 := ops_for(s3)
+	o3.preach({"spaces": ["tenzing"]})
+	eq(s3.spaces["tenzing"].support, CoinEnums.Support.PASSIVE_SUPPORT,
+		"da Supporto Attivo a Passivo")
+
+	# Preach su spazio già Neutrale: arrivano Ribelli pari alla Popolazione.
+	var s4 := fresh()
+	var o4 := ops_for(s4)
+	var cr_before := module.count_in(s4, "new_cordoba", "cr_rebel")
+	o4.preach({"spaces": ["new_cordoba"]})
+	eq(module.count_in(s4, "new_cordoba", "cr_rebel"), cr_before + 2,
+		"2 Ribelli (Popolazione di New Córdoba)")
+	eq(module.marker(s4, "new_cordoba", "damage"), 1, "senza marker gialli si piazza un Danno")
+
+
+func test_special_activities() -> void:
+	print("Attività Speciali (§6.0)")
+	var s := fresh()
+	var sa := RDRSpecials.new(s, module)
+	# Ogni SA accompagna solo certe Operazioni.
+	eq(sa.can_accompany("entrench", "train"), true, "Entrench accompagna Train")
+	eq(sa.can_accompany("entrench", "assault"), false, "Entrench non accompagna Assault")
+	eq(sa.can_accompany("ambush", "attack"), true, "Ambush solo con Attack")
+	eq(sa.can_accompany("exploit", "logistics"), true, "Exploit accompagna Logistics")
+
+	# Entrench: la Truppa Fortificata assorbe un Danno.
+	var res: Dictionary = sa.entrench({"spaces": [{"id": "europa", "fortify": 2}]})
+	eq(res["ok"], true, "Entrench eseguita")
+	eq(module.marker(s, "europa", "fortified"), 2, "2 Truppe Fortificate (Popolazione 2)")
+	var a := RDRActions.new(s, module)
+	eq(a.place_damage("europa"), false, "il Danno è assorbito")
+	eq(module.marker(s, "europa", "damage"), 0, "nessun Danno sulla traccia")
+	eq(module.marker(s, "europa", "fortified"), 1, "una Truppa Fortificata consumata")
+
+	# Petition: 1 Supply + 1 ogni 3 Ribelli Attivati, a 1 Profit l'una.
+	var s2 := fresh()
+	var sa2 := RDRSpecials.new(s2, module)
+	s2.tracks["profits"] = 10
+	sa2.petition({"rebels_activated": 10, "assault_favourable": true})
+	eq(module.marker(s2, "earth", "supply"), 5, "1 + 3 Supply su Earth")
+	eq(int(s2.tracks["profits"]), 4, "−4 per le Supply, −2 per l'EG+")
+	eq(int(s2.tracks["eg_side"]), 1, "EG+")
+
+	# Public Relations: Repair dà 2 Profits e i Red Dust presenti perdono 3 Risorse.
+	var s3 := fresh()
+	var sa3 := RDRSpecials.new(s3, module)
+	s3.tracks["profits"] = 0
+	module.place_from_available(s3, "marth", "rd_rebel", 1)
+	var rd := s3.get_resources("red_dust")
+	sa3.public_relations({"spaces": [{"id": "marth", "repairs": 1}]})
+	eq(int(s3.tracks["profits"]), 2, "+2 Profits per Danno rimosso")
+	eq(s3.get_resources("red_dust"), rd - 3, "−3 Risorse Red Dust")
+
+	# Exploit: Profits pari alla Popolazione e spostamento verso il Neutrale.
+	var s4 := fresh()
+	var sa4 := RDRSpecials.new(s4, module)
+	s4.tracks["profits"] = 0
+	var bad: Dictionary = sa4.exploit({"spaces": ["marth"]})
+	eq(bad["ok"], false, "Exploit rifiutato dove c'è Danno")
+	var ok4: Dictionary = sa4.exploit({"spaces": ["shenzhou"]})
+	eq(ok4["ok"], true, "Exploit su Shenzhou")
+	eq(int(s4.tracks["profits"]), 3, "+3 Profits (Popolazione di Shenzhou)")
+
+	# Raid: SpecOps in arrivo da uno spazio adiacente rimuovono forze e fanno EG−.
+	var s5 := fresh()
+	var sa5 := RDRSpecials.new(s5, module)
+	module.place_from_available(s5, "trouvelot", "specops", 1, "hidden")
+	sa5.raid({"spaces": [{"id": "new_cordoba", "moves": [{"from": "trouvelot", "count": 1}],
+		"targets": ["mg_troop", "mg_troop"]}]})
+	eq(module.count_in(s5, "new_cordoba", "mg_troop"), 0, "2 Truppe MG rimosse")
+	eq(int(s5.tracks["eg_side"]), -1, "colpite forze MarsGov: EG−")
+
+	# Redistribute: Risorse pari alla Popolazione + Basi CORP.
+	var s6 := fresh()
+	var sa6 := RDRSpecials.new(s6, module)
+	var rd6 := s6.get_resources("red_dust")
+	sa6.redistribute({"spaces": ["sharma", "alpheus_colles"]})
+	eq(s6.get_resources("red_dust"), rd6 + 3, "Sharma 2 + Alpheus Colles 1")
+	eq(module.count_in(s6, "sharma", "rd_rebel", "active"), 1, "un Ribelle Attivato")
+
+	# Coordinate: in Opposizione Attiva rimuove due cubi nemici.
+	var s7 := fresh()
+	var sa7 := RDRSpecials.new(s7, module)
+	module.place_from_available(s7, "sharma", "security", 1)
+	sa7.coordinate({"spaces": [{"id": "sharma", "at_max": "remove"}]})
+	eq(module.count_in(s7, "sharma", "mg_troop"), 0, "Truppa MG rimossa")
+	eq(module.count_in(s7, "sharma", "security"), 0, "Security rimossa")
+
+	# Purify: converte un'unità nemica in Ribelle CR.
+	var s8 := fresh()
+	var sa8 := RDRSpecials.new(s8, module)
+	module.place_from_available(s8, "ascraeus_mons", "mg_troop", 1)
+	module.recompute_all_control(s8)
+	var cr8 := module.count_in(s8, "ascraeus_mons", "cr_rebel")
+	sa8.purify({"spaces": [{"id": "ascraeus_mons", "targets": ["mg_troop"]}]})
+	eq(module.count_in(s8, "ascraeus_mons", "mg_troop"), 0, "Truppa MG convertita")
+	eq(module.count_in(s8, "ascraeus_mons", "cr_rebel"), cr8 + 1, "+1 Ribelle CR")
+
+	# Ransack: richiede Danni e un Ribelle Nascosto.
+	var s9 := fresh()
+	var sa9 := RDRSpecials.new(s9, module)
+	eq(sa9.ransack({"spaces": ["ascraeus_mons"]})["ok"], true, "Ransack su spazio Danneggiato")
+	eq(sa9.ransack({"spaces": ["new_cordoba"]})["ok"], false, "Ransack rifiutato senza Danni")
+
+	# Ambush: valida gli spazi e restituisce i dadi scelti.
+	var s10 := fresh()
+	var sa10 := RDRSpecials.new(s10, module)
+	var amb: Dictionary = sa10.ambush({"faction": "red_dust",
+		"attack_spaces": ["sharma"], "choices": {"sharma": [1, 6]}})
+	eq(amb["ok"], true, "Ambush valido")
+	eq(amb["dice"]["sharma"], [1, 6], "dadi scelti restituiti")
+	var amb_bad: Dictionary = sa10.ambush({"faction": "red_dust",
+		"attack_spaces": ["sharma"], "choices": {"gandhi": [1, 1]}})
+	eq(amb_bad["ok"], false, "Ambush rifiutato fuori dagli spazi dell'Attack")

@@ -80,13 +80,39 @@ func _initialize() -> void:
 	_ok(card_info.text.contains("Tocca a"), "Fazione di turno mostrata")
 	_ok(gc.sequence != null, "sequenza della carta creata")
 
+	# Barra delle Operazioni della Fazione di turno (§5.0).
+	var ops_box: HBoxContainer = main.get("_ops_box")
+	_ok(ops_box.get_child_count() > 0, "barra delle Operazioni popolata (%d)" % ops_box.get_child_count())
+
+	# Pianificazione: si sceglie un'Operazione, si clicca uno spazio candidato,
+	# si esegue. L'azione deve consumare il turno della Fazione.
+	var fid: String = gc.sequence.pending_faction()
+	var op_id: String = String(gc.UI_OPERATIONS[fid][0])
+	main.call("_start_op", op_id)
+	var cands: PackedStringArray = gc.operation_candidates(op_id, fid)
+	_ok(cands.size() > 0, "%s ha spazi candidati (%d)" % [op_id, cands.size()])
+	main.call("_on_space_clicked", cands[0])
+	_ok((main.get("_op_spaces") as Array).size() == 1, "spazio aggiunto al piano")
+	main.call("_on_space_clicked", cands[0])
+	_ok((main.get("_op_spaces") as Array).is_empty(), "secondo clic: spazio tolto dal piano")
+	main.call("_on_space_clicked", cands[0])
+	main.call("_confirm_op")
+	await process_frame
+	_ok(String(main.get("_op_mode")) == "", "pianificazione chiusa dopo l'esecuzione")
+	_ok(gc.sequence == null or gc.sequence.pending_faction() != fid,
+		"l'Operazione ha consumato il turno di %s" % fid)
+
 	# Se tutte le Fazioni Passano, la carta avanza e restano tutte Disponibili.
 	var card_before: int = gc.state.current_card
 	for i in range(4):
 		gc.do_pass()
 	await process_frame
 	_ok(gc.state.current_card != card_before, "passando tutti, si passa alla carta seguente")
-	_ok(gc.state.eligibility["marsgov"] == CoinEnums.Eligibility.ELIGIBLE,
+	# MarsGov ha eseguito un'Operazione poco sopra: diventa Non Disponibile,
+	# mentre chi ha Passato resta Disponibile (§4.2).
+	_ok(gc.state.eligibility["marsgov"] == CoinEnums.Eligibility.INELIGIBLE,
+		"chi agisce diventa Non Disponibile")
+	_ok(gc.state.eligibility["reclaimer"] == CoinEnums.Eligibility.ELIGIBLE,
 		"chi Passa resta Disponibile")
 
 	if shot_path != "":

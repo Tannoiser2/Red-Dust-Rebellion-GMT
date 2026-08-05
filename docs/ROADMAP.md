@@ -54,16 +54,26 @@ fatto su Cuba Libre e All Bridges Burning.
 - [ ] Redeploy facoltativi (Truppe MG extra, Ribelli verso le proprie Basi, Basi
       CR nella Wilderness): automatizzati solo gli spostamenti obbligatori
 
-## Fase 4 — Operazioni e Attività Speciali
+## Fase 4 — Operazioni e Attività Speciali ✅ (regole) · ⬜ (UI di movimento)
 
-- [ ] COIN: Train, Logistics, Secure, Recon, Assault (+ Drop Pods, Navigation
-      Beacons, Bombard, Suppress per il Controller EarthGov)
-- [ ] Ribelli: Rally, March, Travel, Attack, Campaign, Preach
-- [ ] SA MarsGov: Entrench, Petition, Transport
-- [ ] SA Corporations: Public Relations, Exploit, Raid
-- [ ] SA Red Dust: Redistribute, Coordinate, Ambush
-- [ ] SA Reclaimer: Purify, Ransack, Ambush
-- [ ] House / Repair / Pacify / Agitate come azioni condivise
+- [x] COIN: Train, Logistics, Secure, Recon, Assault (+ Drop Pods, Navigation
+      Beacons, Bombard, Suppress, Mercenaries e Attack gratuito di risposta)
+- [x] Ribelli: Rally, March, Travel, Attack, Campaign, Preach
+- [x] SA MarsGov: Entrench (con Truppe Fortificate che assorbono il Danno),
+      Petition, Transport
+- [x] SA Corporations: Public Relations, Exploit, Raid
+- [x] SA Red Dust: Redistribute, Coordinate, Ambush
+- [x] SA Reclaimer: Purify, Ransack, Ambush
+- [x] House / Repair / Pacify / Agitate come azioni condivise (`rules/Actions.gd`)
+- [x] Regole di movimento: un passo di adiacenza + salti Maglev/Spaceport, stop
+      nei Labirinti sotto Controllo nemico, restrizioni delle tempeste
+- [x] UI: barra delle Operazioni della Fazione di turno, selezione degli spazi
+      candidati sulla mappa, Esegui/Annulla
+- [ ] Pianificatore di movimento in UI (Secure, Recon, March, Travel) e
+      pianificatore di Logistics
+- [ ] Attività Speciali in UI (le regole ci sono, manca il collegamento)
+- [ ] Scelte fini nella UI: modalità del Rally, bersagli dell'Assault/Attack,
+      Ambush, Pacify/Coordinate
 
 ## Fase 5 — Carte
 

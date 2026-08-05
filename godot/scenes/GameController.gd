@@ -14,6 +14,9 @@ var game_def: GameDef
 var rounds: RDRRounds
 ## Sequenza della carta corrente (§4.1); null se la partita è finita.
 var sequence: RDRSequence
+## Operazioni e Attività Speciali della partita in corso.
+var ops: RDROperations
+var specials: RDRSpecials
 
 ## Geometrie della tavola (regions.json / board_layout.json), normalizzate [0..1].
 var regions: Dictionary = {}
@@ -38,6 +41,9 @@ func new_game(scenario: String = "standard") -> void:
 	layout = _load_json(GameRegistry.data_path("board_layout.json"))
 
 	rounds = RDRRounds.new(state, rdr())
+	ops = RDROperations.new(state, rdr())
+	ops.rounds = rounds
+	specials = RDRSpecials.new(state, rdr())
 	rounds.begin_game()
 	_drain_log()
 	_start_card()
@@ -79,6 +85,114 @@ func do_pass() -> bool:
 				emit_signal("log_line", "I Reclaimer pescherebbero 1 Asset card (mazzo non implementato).")
 	_after_action()
 	return true
+
+
+## Operazioni eseguibili dalla UI con la sola scelta degli spazi. Le altre
+## (Logistics, Secure, Recon, March, Travel) hanno bisogno del pianificatore di
+## movimento, non ancora in interfaccia.
+const UI_OPERATIONS := {
+	"marsgov": ["train", "assault"],
+	"corporations": ["assault"],
+	"red_dust": ["rally", "attack", "campaign"],
+	"reclaimer": ["rally", "attack", "preach"],
+}
+
+const OPERATION_NAMES := {
+	"train": "Train", "logistics": "Logistics", "secure": "Secure", "recon": "Recon",
+	"assault": "Assault", "rally": "Rally", "march": "March", "travel": "Travel",
+	"attack": "Attack", "campaign": "Campaign", "preach": "Preach",
+}
+
+
+## Esegue un'Operazione per la Fazione di turno e registra l'azione nella
+## sequenza. Restituisce il risultato dell'Operazione ({ok, error, spent}).
+func execute_operation(op_id: String, spaces: Array, with_special: bool = false) -> Dictionary:
+	if sequence == null:
+		return {"ok": false, "error": "Nessuna carta in corso."}
+	var fid := sequence.pending_faction()
+	if fid == "":
+		return {"ok": false, "error": "Non è il turno di nessuno."}
+	var action := CoinEnums.ActionType.OPERATION_WITH_SPECIAL if with_special \
+		else CoinEnums.ActionType.OPERATION
+	if not sequence.is_legal(action):
+		action = CoinEnums.ActionType.LIMITED_OPERATION
+		if not sequence.is_legal(action) or spaces.size() > 1:
+			return {"ok": false, "error": "Azione non consentita adesso."}
+
+	var res: Dictionary = _run_operation(op_id, fid, spaces)
+	if not res.get("ok", false):
+		return res
+	for line in ops.log_lines:
+		emit_signal("log_line", line)
+	ops.log_lines.clear()
+	emit_signal("log_line", "%s esegue %s in %d spazi." % [
+		game_def.faction(fid).short_name, OPERATION_NAMES.get(op_id, op_id), spaces.size()])
+	sequence.act(action)
+	_after_action()
+	return res
+
+
+func _run_operation(op_id: String, fid: String, spaces: Array) -> Dictionary:
+	match op_id:
+		"train":
+			var entries: Array = []
+			for sid in spaces:
+				entries.append({"id": sid, "troops": 4})
+			return ops.train({"spaces": entries})
+		"assault":
+			return ops.assault({"faction": fid, "spaces": spaces})
+		"rally":
+			var entries: Array = []
+			for sid in spaces:
+				entries.append({"id": sid, "mode": "place"})
+			return ops.rally({"faction": fid, "spaces": entries})
+		"attack":
+			return ops.attack({"faction": fid, "spaces": spaces})
+		"campaign":
+			return ops.campaign({"spaces": spaces})
+		"preach":
+			return ops.preach({"spaces": spaces})
+	return {"ok": false, "error": "Operazione '%s' non ancora disponibile in UI." % op_id}
+
+
+## Spazi legalmente selezionabili per l'Operazione, usati per l'evidenziazione.
+func operation_candidates(op_id: String, fid: String) -> PackedStringArray:
+	var m: RDRModule = rdr()
+	match op_id:
+		"train":
+			return ops.train_candidates()
+		"rally":
+			return ops.rally_candidates(fid)
+		"assault":
+			var out := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if not ops.act.selectable(sid):
+					continue
+				var own := 0
+				for t in ops._coin_unit_types(fid):
+					own += m.count_in(state, sid, t)
+				var targets := m.count_in(state, sid, "rd_rebel", "active") \
+					+ m.count_in(state, sid, "cr_rebel", "active")
+				if own > 0 and targets > 0:
+					out.append(sid)
+			return out
+		"attack":
+			var rebel := "rd_rebel" if fid == "red_dust" else "cr_rebel"
+			var out2 := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if ops.act.selectable(sid) and m.count_in(state, sid, rebel) > 0 \
+						and ops._enemy_force_count(sid, fid) > 0:
+					out2.append(sid)
+			return out2
+		"campaign", "preach":
+			var rebel2 := "rd_rebel" if op_id == "campaign" else "cr_rebel"
+			var out3 := PackedStringArray()
+			for sid in m.mars_spaces(state):
+				if ops.act.selectable(sid) and m.population(state, sid) > 0 \
+						and m.count_in(state, sid, rebel2) > 0:
+					out3.append(sid)
+			return out3
+	return PackedStringArray()
 
 
 ## Chiude la carta corrente e passa alla successiva (§4.2 «Next Card»).

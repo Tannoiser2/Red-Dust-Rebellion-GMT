@@ -122,10 +122,6 @@ func apply_setup(state: GameState, scenario_id: String = "standard") -> void:
 	state.tracks["eg_side"] = 1 if String(tracks.get("eg_confidence_side", "EG-")) == "EG+" else -1
 	state.tracks["displaced_population"] = int(setup.get("displaced_population", 0))
 
-	# Popolazione corrente = valore stampato; Danno riduce, marker Popolazione aumenta.
-	for sid in state.spaces.keys():
-		state.spaces[sid].markers["population"] = int(printed_pop.get(sid, 0))
-
 	for sid in setup.get("spaces", {}).keys():
 		if not state.spaces.has(sid):
 			push_warning("RDR setup: spazio sconosciuto '%s'" % sid)
@@ -137,8 +133,6 @@ func apply_setup(state: GameState, scenario_id: String = "standard") -> void:
 		var dmg := int(entry.get("damage", 0))
 		if dmg > 0:
 			st.markers["damage"] = dmg
-			# §1.7: ogni Danno copre una casella verde -> Popolazione -1.
-			st.markers["population"] = maxi(0, int(st.markers.get("population", 0)) - dmg)
 
 	# Spazi fuori mappa (Aldrin Cycler, Orbita) e Forze Disponibili.
 	for sid in setup.get("off_map", {}).keys():
@@ -217,8 +211,25 @@ func recompute_all_control(state: GameState) -> void:
 # Popolazione, Supporto/Opposizione (§1.7, §1.8)
 # ---------------------------------------------------------------------------
 
+## §1.7: la Popolazione corrente di uno spazio è quella stampata (quadrati verdi)
+## meno i Danni che li coprono, più i marker Popolazione gialli sui quadrati grigi.
+## Earth/Transit e gli altri box fuori mappa non hanno traccia Infrastruttura: lì
+## "population" è il numero di marker nel box.
 func population(state: GameState, sid: String) -> int:
-	return int(state.spaces[sid].markers.get("population", 0))
+	var sd: SpaceDef = state.game_def.space(sid)
+	if sd == null:
+		return 0
+	if sd.type == CoinEnums.SpaceType.COUNTRY:
+		return marker(state, sid, "population")
+	return maxi(0, int(printed_pop.get(sid, 0))
+		- marker(state, sid, "damage") + marker(state, sid, "pop_markers"))
+
+
+## Quadrati grigi liberi dove si può piazzare un marker Popolazione (House, §1.7).
+func free_infra_slots(state: GameState, sid: String) -> int:
+	var boxes := int(infra_boxes.get(sid, 0))
+	var printed := int(printed_pop.get(sid, 0))
+	return maxi(0, boxes - printed - marker(state, sid, "pop_markers"))
 
 
 ## §1.8: Passivo conta 1 punto per Popolazione, Attivo 2. Gli spazi senza

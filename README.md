@@ -11,7 +11,14 @@ architettura `coin_engine/` + `games/<gioco>/`, così che il terzo titolo riusi
 
 ## Stato
 
-🚧 **Fase 3 — la partita avanza.** Oltre alla mappa renderizzata, il mazzo si
+🚧 **Fase 4 — le Operazioni ci sono.** Tutte e 11 le Operazioni e tutte e 12 le
+Attività Speciali sono implementate e testate; in interfaccia sono utilizzabili
+quelle che si pianificano scegliendo solo gli spazi (Train, Assault, Rally,
+Attack, Campaign, Preach), mentre quelle di movimento (Secure, Recon, March,
+Travel, Logistics) hanno le regole pronte ma aspettano il pianificatore di
+movimento in UI.
+
+Fase 3 — Oltre alla mappa renderizzata, il mazzo si
 costruisce come da regolamento e le carte scorrono: ordine di Eligibility letto
 dalla carta, Passo con i bonus di ciascuna Fazione, traccia Flashpoint, Flashpoint
 Round e Dust Storm Round completi, tempeste tirate coi due dadi, check di vittoria
@@ -19,7 +26,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**437 test del modulo + 20 controlli di smoke test della scena, 0 falliti.**
+**556 test del modulo + 27 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -45,7 +52,12 @@ disponibile in UI è il Passo.
 | Flashpoint Round §4.2 (8 fasi) | ✅ |
 | Dust Storm Round §4.3 (5 fasi) + fine partita | ✅ |
 | Tempeste §3.2 (tabella d6 bianco/nero, max 6) | ✅ |
-| Operazioni / Attività Speciali | ⬜ da implementare |
+| Operazioni §5.0 (tutte e 11) | ✅ regole complete e testate |
+| Attività Speciali §6.0 (tutte e 12) | ✅ regole complete e testate |
+| House / Repair / Pacify / Agitate §1.7 | ✅ |
+| Movimento: adiacenza, Maglev, Spaceport, tempeste | ✅ |
+| UI: pianificazione a scelta di spazi | ✅ Train, Assault, Rally, Attack, Campaign, Preach |
+| UI: pianificatore di movimento | ⬜ serve a Secure, Recon, March, Travel, Logistics |
 | Eventi (effetti) | ⬜ testi presenti, effetti da implementare |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
