@@ -1,0 +1,832 @@
+{
+  "_note": "Carte Curiosity (§8.5.3), trascritte dalle scansioni del gioco fisico. Ogni carta è un albero: `checks` sono i riquadri in cima (sì scende, no pesca una carta nuova o gira questa), `blocks` è ciò che si esegue, `special_activities` l'elenco fra cui scegliere la prima efficace. `no_an_roll` marca le istruzioni col numerale bianco, dopo le quali non si tira l'Activation Number (§8.5.4). Gli `id` delle istruzioni corrispondono alle funzioni di rules/NonPlayerOps.gd. Presenti finora: le 12 facce dei Reclaimer.",
+  "cards": {
+    "U": {
+      "faction": "reclaimer",
+      "flip": "UU",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "Any Available CR Bases?",
+          "cond": "available_bases",
+          "no": "draw"
+        },
+        {
+          "text": "2d6 ≤ Available CR Rebels?",
+          "cond": "2d6_le_available_rebels",
+          "no": "flip"
+        }
+      ],
+      "blocks": [
+        {
+          "operation": "rally",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "rally_place_bases",
+              "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+              "no_an_roll": true
+            },
+            {
+              "n": 2,
+              "id": "rally_upgrade_bases_deserts",
+              "text": "Upgrade Bases in Deserts",
+              "no_an_roll": true,
+              "only_if_player": "corporations"
+            },
+            {
+              "n": 3,
+              "id": "rally_alternate_place_upgrade",
+              "text": "Alternate Placing Rebels and Upgrading Bases",
+              "note": "Only make AN rolls after placing Rebels"
+            },
+            {
+              "n": 4,
+              "id": "rally_flip_hidden",
+              "text": "Flip most Rebels where all Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "V": {
+      "faction": "reclaimer",
+      "flip": "VV",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "2d6 ≤ Available CR Rebels?",
+          "cond": "2d6_le_available_rebels",
+          "no": "draw"
+        },
+        {
+          "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and perform Special Activity?",
+          "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
+          "no": "flip"
+        }
+      ],
+      "blocks": [
+        {
+          "special_activity_first": true
+        },
+        {
+          "operation": "attack",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "attack_support",
+              "text": "At Support or Opposition"
+            },
+            {
+              "n": 2,
+              "id": "attack_three_rebels",
+              "text": "With 3+ CR Rebels"
+            },
+            {
+              "n": 3,
+              "id": "attack_all_active",
+              "text": "Where all CR Rebels already Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "ambush",
+          "text": "Ambush in up to 2 spaces using Attack",
+          "note": "Set both dice to 1"
+        }
+      ]
+    },
+    "W": {
+      "faction": "reclaimer",
+      "flip": "WW",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "Any CR Base in a space with no Hidden CR Rebel?",
+          "cond": "base_without_hidden_rebel",
+          "no": "draw"
+        },
+        {
+          "text": "1d6 ≤ Available CR Rebels?",
+          "cond": "1d6_le_available_rebels",
+          "no": "flip"
+        }
+      ],
+      "blocks": [
+        {
+          "operation": "rally",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "rally_place_bases",
+              "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+              "no_an_roll": true
+            },
+            {
+              "n": 2,
+              "id": "rally_upgrade_bases_deserts",
+              "text": "Upgrade Bases in Deserts",
+              "no_an_roll": true,
+              "only_if_player": "corporations"
+            },
+            {
+              "n": 3,
+              "id": "rally_alternate_place_upgrade",
+              "text": "Alternate Placing Rebels and Upgrading Bases",
+              "note": "Only make AN rolls after placing Rebels"
+            },
+            {
+              "n": 4,
+              "id": "rally_flip_hidden",
+              "text": "Flip most Rebels where all Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "X": {
+      "faction": "reclaimer",
+      "flip": "XX",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "CR Rebel in any space not at Neutral?",
+          "cond": "rebel_in_non_neutral_space",
+          "no": "draw"
+        },
+        {
+          "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and may perform Special Activity?",
+          "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
+          "no": "flip"
+        }
+      ],
+      "blocks": [
+        {
+          "special_activity_first": true
+        },
+        {
+          "operation": "attack",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "attack_support",
+              "text": "At Support or Opposition"
+            },
+            {
+              "n": 2,
+              "id": "attack_three_rebels",
+              "text": "With 3+ CR Rebels"
+            },
+            {
+              "n": 3,
+              "id": "attack_all_active",
+              "text": "Where all CR Rebels already Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "ambush",
+          "text": "Ambush in up to 2 spaces using Attack",
+          "note": "Set both dice to 1"
+        }
+      ]
+    },
+    "Y": {
+      "faction": "reclaimer",
+      "flip": "YY",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "10+ CR Rebels on map?",
+          "cond": "ten_rebels_on_map",
+          "no": "draw"
+        },
+        {
+          "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and may perform Special Activity?",
+          "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
+          "no": "flip"
+        }
+      ],
+      "blocks": [
+        {
+          "special_activity_first": true
+        },
+        {
+          "operation": "attack",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "attack_support",
+              "text": "At Support or Opposition"
+            },
+            {
+              "n": 2,
+              "id": "attack_three_rebels",
+              "text": "With 3+ CR Rebels"
+            },
+            {
+              "n": 3,
+              "id": "attack_all_active",
+              "text": "Where all CR Rebels already Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "ambush",
+          "text": "Ambush in up to 2 spaces using Attack",
+          "note": "Set both dice to 1"
+        }
+      ]
+    },
+    "Z": {
+      "faction": "reclaimer",
+      "flip": "ZZ",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "3+ CR Rebels in any space?",
+          "cond": "three_rebels_in_a_space",
+          "no": "draw"
+        },
+        {
+          "text": "3+ CR Rebels in any space with an enemy Base or no CR Control?",
+          "cond": "three_rebels_at_enemy_base_or_uncontrolled",
+          "no": "flip"
+        }
+      ],
+      "blocks": [
+        {
+          "special_activity_first": true
+        },
+        {
+          "operation": "attack",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "attack_support",
+              "text": "At Support or Opposition"
+            },
+            {
+              "n": 2,
+              "id": "attack_three_rebels",
+              "text": "With 3+ CR Rebels"
+            },
+            {
+              "n": 3,
+              "id": "attack_all_active",
+              "text": "Where all CR Rebels already Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ambush",
+          "text": "Ambush in up to 2 spaces using Attack",
+          "note": "Set both dice to 1"
+        },
+        {
+          "letter": "C",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "UU": {
+      "faction": "reclaimer",
+      "flip": "U",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [],
+      "blocks": [
+        {
+          "special_activity_first": true,
+          "only": [
+            {
+              "letter": "A",
+              "id": "ransack",
+              "text": "Ransack using Ransack",
+              "note": "solo se Asset Total < 3"
+            }
+          ]
+        },
+        {
+          "branch": {
+            "cond": "rebel_with_support_opposition_or_population",
+            "yes": {
+              "operation": "preach",
+              "instructions": [
+                {
+                  "n": 1,
+                  "id": "preach",
+                  "text": "Using Place Damage",
+                  "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
+                }
+              ]
+            },
+            "no": {
+              "operation": "travel",
+              "instructions": [
+                {
+                  "n": 1,
+                  "id": "travel",
+                  "text": "Using Move Priorities",
+                  "note": "No AN roll after selecting Wilderness"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "VV": {
+      "faction": "reclaimer",
+      "flip": "V",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [],
+      "blocks": [
+        {
+          "operation": "rally",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "rally_place_bases",
+              "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+              "no_an_roll": true
+            },
+            {
+              "n": 2,
+              "id": "rally_upgrade_bases_deserts",
+              "text": "Upgrade Bases in Deserts",
+              "no_an_roll": true,
+              "only_if_player": "corporations"
+            },
+            {
+              "n": 3,
+              "id": "rally_alternate_place_upgrade",
+              "text": "Alternate Placing Rebels and Upgrading Bases",
+              "note": "Only make AN rolls after placing Rebels"
+            },
+            {
+              "n": 4,
+              "id": "rally_flip_hidden",
+              "text": "Flip most Rebels where all Active"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "WW": {
+      "faction": "reclaimer",
+      "flip": "W",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [
+        {
+          "text": "3+ CR Rebels in any space with an enemy Base or no CR Control?",
+          "cond": "three_rebels_at_enemy_base_or_uncontrolled",
+          "no": "branch_travel"
+        }
+      ],
+      "blocks": [
+        {
+          "special_activity_first": true,
+          "only": [
+            {
+              "letter": "A",
+              "id": "ambush",
+              "text": "Ambush in up to 2 spaces using Attack",
+              "note": "Set both dice to 1"
+            }
+          ]
+        },
+        {
+          "operation": "attack",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "attack_support",
+              "text": "At Support or Opposition"
+            },
+            {
+              "n": 2,
+              "id": "attack_three_rebels",
+              "text": "With 3+ CR Rebels"
+            },
+            {
+              "n": 3,
+              "id": "attack_all_active",
+              "text": "Where all CR Rebels already Active"
+            }
+          ]
+        },
+        {
+          "alternative": {
+            "operation": "travel",
+            "instructions": [
+              {
+                "n": 1,
+                "id": "travel",
+                "text": "Using Move Priorities",
+                "note": "No AN roll after selecting Wilderness"
+              }
+            ]
+          }
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "XX": {
+      "faction": "reclaimer",
+      "flip": "X",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [],
+      "blocks": [
+        {
+          "operation": "preach",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "preach",
+              "text": "Using Place Damage",
+              "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
+            }
+          ]
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "YY": {
+      "faction": "reclaimer",
+      "flip": "Y",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [],
+      "blocks": [
+        {
+          "branch": {
+            "cond": "rebel_with_support_opposition_or_population",
+            "yes": {
+              "operation": "preach",
+              "instructions": [
+                {
+                  "n": 1,
+                  "id": "preach",
+                  "text": "Using Place Damage",
+                  "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
+                }
+              ]
+            },
+            "no": {
+              "operation": "travel",
+              "instructions": [
+                {
+                  "n": 1,
+                  "id": "travel",
+                  "text": "Using Move Priorities",
+                  "note": "No AN roll after selecting Wilderness"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    },
+    "ZZ": {
+      "faction": "reclaimer",
+      "flip": "Z",
+      "activation_number": 3,
+      "pass_if": "fail_le_asset_total",
+      "limits": {
+        "min_spaces": 2,
+        "limop_max": 5
+      },
+      "checks": [],
+      "blocks": [
+        {
+          "branch": {
+            "cond": "2d6_le_available_rebels",
+            "yes": {
+              "operation": "rally",
+              "instructions": [
+                {
+                  "n": 1,
+                  "id": "rally_place_bases",
+                  "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+                  "no_an_roll": true
+                },
+                {
+                  "n": 2,
+                  "id": "rally_upgrade_bases_deserts",
+                  "text": "Upgrade Bases in Deserts",
+                  "no_an_roll": true,
+                  "only_if_player": "corporations"
+                },
+                {
+                  "n": 3,
+                  "id": "rally_alternate_place_upgrade",
+                  "text": "Alternate Placing Rebels and Upgrading Bases",
+                  "note": "Only make AN rolls after placing Rebels"
+                },
+                {
+                  "n": 4,
+                  "id": "rally_flip_hidden",
+                  "text": "Flip most Rebels where all Active"
+                }
+              ]
+            },
+            "no": {
+              "operation": "travel",
+              "instructions": [
+                {
+                  "n": 1,
+                  "id": "travel",
+                  "text": "Using Move Priorities",
+                  "note": "No AN roll after selecting Wilderness"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "special_activities": [
+        {
+          "letter": "A",
+          "id": "purify",
+          "text": "Purify",
+          "instructions": [
+            {
+              "n": 1,
+              "id": "purify_replace_bases",
+              "text": "Replace Bases"
+            },
+            {
+              "n": 2,
+              "id": "purify_replace_units",
+              "text": "Replace Units"
+            }
+          ]
+        },
+        {
+          "letter": "B",
+          "id": "ransack",
+          "text": "Ransack using Ransack",
+          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+        }
+      ]
+    }
+  }
+}

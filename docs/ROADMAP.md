@@ -188,10 +188,13 @@ fatto su Cuba Libre e All Bridges Burning.
       tabella cade sull'ultima riga e `degraded` lo dichiara
 - [ ] Collegare il motore di movimento a Secure, Recon, March, Travel, Transport
       e Raid nel ciclo A/B/C completo con i tiri di Activation Number
-- [ ] Da trascrivere dalle scansioni (già nel repo, ignorate da git): le 24 carte
-      *Curiosity* (48 facce), Eligibility Table, Effective Events, Event
-      Instructions, Capability & Campaign Effects, istruzioni NP di Flashpoint e
-      Dust Storm Round
+- [x] Interprete delle carte *Curiosity* (§8.5.3) e le **12 facce dei
+      Reclaimer** in `data/np_cards.json`: riquadri in cima con sì/no verso
+      «pesca» o «gira», bivi, blocchi di istruzioni e Attività Speciali. Gli `id`
+      delle istruzioni puntano alle funzioni di `NonPlayerOps.gd`
+- [ ] Le altre 36 facce: Red Dust (12), MarsGov (12), CORP (12)
+- [ ] Da trascrivere: Effective Events, Event Instructions, Capability &
+      Campaign Effects, istruzioni NP di Flashpoint e Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
       Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il

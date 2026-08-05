@@ -81,6 +81,7 @@ func _init() -> void:
 	test_np_piece_priorities()
 	test_np_movement()
 	test_np_eligibility()
+	test_np_cards()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -2268,6 +2269,65 @@ func test_np_eligibility() -> void:
 	# La riga ⑥ è solo dei Reclaimer: al Red Dust non si applica.
 	eq(String(np.choose_action("red_dust", "second", {})["action"]), "lim_op",
 		"la riga sull'Asset Total non vale per il Red Dust")
+
+
+func test_np_cards() -> void:
+	print("Non-Player — carte Curiosity (§8.5.3)")
+	var s := fresh()
+	var np := np_for(s, ["reclaimer"])
+	var npo := RDRNonPlayerOps.new(np, ops_for(s))
+	var r := RandomNumberGenerator.new()
+	r.seed = 31337
+
+	eq(npo.cards.size(), 12, "le 12 facce dei Reclaimer sono trascritte")
+	for cid in ["U", "V", "W", "X", "Y", "Z", "UU", "VV", "WW", "XX", "YY", "ZZ"]:
+		ok(npo.cards.has(cid), "c'è la carta CR–%s" % cid)
+
+	# Fronte e retro si rimandano a vicenda.
+	eq(String((npo.cards["U"] as Dictionary)["flip"]), "UU", "CR–U gira su CR–UU")
+	eq(String((npo.cards["UU"] as Dictionary)["flip"]), "U", "…e viceversa")
+
+	# CR–U: con Basi e Ribelli disponibili si arriva al Rally.
+	var res: Dictionary = npo.read_card("U", "reclaimer", r)
+	eq(res.get("ok", false), true, "CR–U si legge")
+	eq(String(res["outcome"]), "operation", "…e porta a un'Operazione")
+	eq(String(res["operation"]), "rally", "…il Rally")
+	ok(not (res["trace"] as Array).is_empty(), "il percorso è tracciato: %s"
+		% ", ".join(PackedStringArray(res["trace"])))
+	eq(int(res["activation_number"]), 3, "l'Activation Number della carta è 3")
+	eq(int((res["limits"] as Dictionary)["limop_max"]), 5,
+		"…e il tetto di 5 spazi per la Limitata")
+
+	# Senza Basi disponibili il primo riquadro fallisce: si pesca una carta nuova.
+	var s2 := fresh()
+	var np2 := np_for(s2, ["reclaimer"])
+	var npo2 := RDRNonPlayerOps.new(np2, ops_for(s2))
+	var pool: Dictionary = s2.tracks.get("available", {})
+	(pool["reclaimer"] as Dictionary)["cr_base"] = 0
+	var none: Dictionary = npo2.read_card("U", "reclaimer", r)
+	eq(String(none["outcome"]), "draw", "senza Basi disponibili si pesca una carta nuova")
+
+	# CR–ZZ è un bivio: senza Ribelli disponibili si va al Travel invece che al Rally.
+	(pool["reclaimer"] as Dictionary)["cr_rebel"] = 0
+	var forked: Dictionary = npo2.read_card("ZZ", "reclaimer", r)
+	eq(String(forked["operation"]), "travel",
+		"CR–ZZ senza Ribelli disponibili sceglie il Travel")
+
+	# Le istruzioni della carta puntano a funzioni che esistono davvero.
+	var rally: Dictionary = npo.read_card("VV", "reclaimer", r)
+	eq(String(rally["operation"]), "rally", "CR–VV va diritta al Rally")
+	var ids: Array = []
+	for i in rally["instructions"]:
+		ids.append(String((i as Dictionary)["id"]))
+	ok(ids.has("rally_place_bases"), "la prima istruzione è «place bases»")
+	ok(bool((rally["instructions"][0] as Dictionary).get("no_an_roll", false)),
+		"…col numerale bianco: dopo non si tira l'Activation Number")
+
+	# Una carta non ancora trascritta lo dice, invece di fingere.
+	var missing: Dictionary = npo.read_card("A", "marsgov", r)
+	eq(missing.get("ok", true), false, "una carta non trascritta è dichiarata mancante")
+	ok(String(missing.get("error", "")).contains("non ancora trascritta"),
+		"…con il motivo esplicito")
 
 
 func test_np_operations() -> void:
