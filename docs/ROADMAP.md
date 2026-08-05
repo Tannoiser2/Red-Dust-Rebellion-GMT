@@ -175,8 +175,14 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] **Move Priorities** (§8.5.7) trascritte in `data/np_move_priorities.json`:
       passi A/B/C per Fazione, 11 istruzioni «keep in origin», 17 «move to
       destination»
-- [ ] Motore di movimento NP che consumi la Move Priorities, e con esso Secure,
-      Recon, March, Travel, Transport e Raid
+- [x] Motore di movimento NP (`rules/NonPlayerMove.gd`): «Keep» e «Get» del
+      glossario applicati alla lettera (lascia/muovi appena quanto basta,
+      contando ciò che c'è già), scelta dell'origine col criterio delle forze
+      muovibili, condizioni in rosso della tabella, scelta dei pezzi con le
+      Piece Priorities. `RDROperations.legal_origins()` è salita dalle scene alle
+      regole perché la usano entrambi
+- [ ] Collegare il motore di movimento a Secure, Recon, March, Travel, Transport
+      e Raid nel ciclo A/B/C completo con i tiri di Activation Number
 - [ ] Da trascrivere dalle scansioni (già nel repo, ignorate da git): le 24 carte
       *Curiosity* (48 facce), Eligibility Table, Effective Events, Event
       Instructions, Capability & Campaign Effects, istruzioni NP di Flashpoint e

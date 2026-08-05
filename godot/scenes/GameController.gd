@@ -368,25 +368,9 @@ func movable_types(op_id: String, fid: String) -> Array[String]:
 
 
 ## Origini legali per portare `type_id` in `dest` con l'Operazione in corso.
+## La regola vive in RDROperations: la usa anche il sistema Non-Player.
 func legal_origins(op_id: String, fid: String, dest: String, type_id: String) -> PackedStringArray:
-	var out := PackedStringArray()
-	var control := "coin" if op_id in ["secure", "recon"] else \
-		("red_dust" if op_id == "march" else "reclaimer")
-	for s in state.game_def.spaces:
-		if s.id == dest or rdr().count_in(state, s.id, type_id) == 0:
-			continue
-		if op_id == "travel":
-			# §5.8: le forze Reclaimer si spostano di uno spazio adiacente.
-			if state.game_def.space(dest).adjacent.has(s.id):
-				out.append(s.id)
-			continue
-		var reach := ops.reachable_labyrinths(s.id, control)
-		if op_id in ["recon", "march"]:
-			for x in ops.reachable_deserts(s.id, control):
-				reach.append(x)
-		if reach.has(dest):
-			out.append(s.id)
-	return out
+	return ops.legal_origins(op_id, fid, dest, type_id)
 
 
 ## §6.0: esegue un'Attività Speciale della Fazione di turno. Non consuma il turno

@@ -308,6 +308,44 @@ func reachable_deserts(origin: String, control: String) -> PackedStringArray:
 	return out
 
 
+## Spazi da cui `type_id` può raggiungere `dest` con quell'Operazione. Stava solo
+## nella scena; serve anche al sistema Non-Player, quindi vive qui.
+func legal_origins(op_id: String, faction: String, dest: String,
+		type_id: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	var control := "coin" if op_id in ["secure", "recon"] \
+		else ("red_dust" if op_id == "march" else "reclaimer")
+	var dest_def: SpaceDef = state.game_def.space(dest)
+	if dest_def == null:
+		return out
+	for s in state.game_def.spaces:
+		if s.id == dest or module.count_in(state, s.id, type_id) == 0:
+			continue
+		if op_id == "travel":
+			# §5.8: le forze Reclaimer si spostano di uno spazio adiacente.
+			if Array(dest_def.adjacent).has(s.id):
+				out.append(s.id)
+			continue
+		var reach := reachable_labyrinths(s.id, control)
+		if op_id in ["recon", "march"]:
+			for x in reachable_deserts(s.id, control):
+				reach.append(x)
+		if Array(reach).has(dest):
+			out.append(s.id)
+	return out
+
+
+## Come sopra, per più tipi di unità in una volta sola.
+func legal_origins_for(op_id: String, faction: String, dest: String,
+		types: Array) -> PackedStringArray:
+	var out := PackedStringArray()
+	for t in types:
+		for sid in legal_origins(op_id, faction, dest, String(t)):
+			if not Array(out).has(String(sid)):
+				out.append(String(sid))
+	return out
+
+
 func _enemy_controlled(sid: String, control: String) -> bool:
 	var c: String = state.spaces[sid].control
 	return c != "" and c != control

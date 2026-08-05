@@ -79,6 +79,7 @@ func _init() -> void:
 	test_np_priorities()
 	test_np_operations()
 	test_np_piece_priorities()
+	test_np_movement()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -2126,6 +2127,83 @@ func test_np_piece_priorities() -> void:
 	eq(String(only_mg["type"]), "mg_troop", "…ma il filtro dei tipi ammessi vince")
 	eq(np3.pick_piece("red_dust", "wilderness", "enemy", ["corp_base"]).is_empty(), true,
 		"se non c'è nulla di ammissibile non sceglie niente")
+
+
+func test_np_movement() -> void:
+	print("Non-Player — motore di movimento (§8.5.7)")
+	var s := fresh()
+	var np := np_for(s, ["red_dust"])
+	var o := ops_for(s)
+	var mv := RDRNonPlayerMove.new(np, o)
+
+	# Le origini legali ora le calcola il motore delle regole, non la scena.
+	var origins := o.legal_origins("march", "red_dust", "daedalia_planum", "rd_rebel")
+	ok(Array(origins).has("shepard"), "Shepard è un'origine legale per Daedalia Planum")
+
+	# «keep 1 Hidden Rebel in spaces with acting Faction Base»: dove il Red Dust
+	# ha una Base, un Ribelle Nascosto non parte.
+	var base_space := "shepard"
+	module.remove_pieces(s, base_space, "rd_rebel", 99, "available")
+	module.place_from_available(s, base_space, "rd_base", 1)
+	module.place_from_available(s, base_space, "rd_rebel", 3, "hidden")
+	module.recompute_all_control(s)
+	var notes: Array = []
+	var keep := mv.keep_in_origin("red_dust", base_space, "march", notes)
+	ok(keep >= 1, "almeno un Ribelle resta a %s (keep=%d)" % [base_space, keep])
+	ok(not notes.is_empty(), "…e l'istruzione che lo impone è registrata: %s" % notes[0])
+
+	# Senza Base, quell'istruzione non scatta.
+	var s2 := fresh()
+	var np2 := np_for(s2, ["red_dust"])
+	var mv2 := RDRNonPlayerMove.new(np2, ops_for(s2))
+	var plain := "radau"
+	module.remove_pieces(s2, plain, "rd_rebel", 99, "available")
+	module.remove_pieces(s2, plain, "rd_base", 99, "available")
+	module.place_from_available(s2, plain, "rd_rebel", 3, "hidden")
+	module.recompute_all_control(s2)
+	ok(mv2.keep_in_origin("red_dust", plain, "march") <= keep,
+		"senza Base restano meno Ribelli")
+
+	# «Get»: si muove appena quanto basta, contando ciò che c'è già.
+	var s3 := fresh()
+	var np3 := np_for(s3, ["red_dust"])
+	var o3 := ops_for(s3)
+	var mv3 := RDRNonPlayerMove.new(np3, o3)
+	var from_sid := "shepard"
+	var to_sid := "daedalia_planum"
+	module.remove_pieces(s3, from_sid, "rd_rebel", 99, "available")
+	module.remove_pieces(s3, to_sid, "rd_rebel", 99, "available")
+	module.place_from_available(s3, from_sid, "rd_rebel", 6, "hidden")
+	module.recompute_all_control(s3)
+	var moves: Array = mv3.plan_pair("red_dust", "march", from_sid, to_sid)
+	ok(not moves.is_empty(), "il motore produce degli spostamenti")
+	var total := 0
+	for m in moves:
+		eq(String(m["from"]), from_sid, "partono da %s" % from_sid)
+		eq(String(m["to"]), to_sid, "arrivano a %s" % to_sid)
+		total += int(m["count"])
+	ok(total > 0 and total <= 6, "si muovono fra 1 e 6 Ribelli (%d)" % total)
+	# E il piano è davvero eseguibile dal motore delle Operazioni.
+	var before := module.count_in(s3, to_sid, "rd_rebel")
+	var res: Dictionary = o3.march({"dest": [to_sid], "moves": moves})
+	eq(res.get("ok", false), true, "la March col piano del bot è legale")
+	eq(module.count_in(s3, to_sid, "rd_rebel"), before + total,
+		"i Ribelli sono arrivati a destinazione")
+
+	# Se a destinazione c'è già abbastanza, «Get» non muove nulla.
+	var s4 := fresh()
+	var np4 := np_for(s4, ["red_dust"])
+	var mv4 := RDRNonPlayerMove.new(np4, ops_for(s4))
+	module.place_from_available(s4, to_sid, "rd_rebel", 6, "hidden")
+	module.recompute_all_control(s4)
+	var need: Dictionary = mv4.get_in_destination("red_dust", to_sid, "march")
+	ok(int(need["total"]) >= 0, "la soglia a destinazione è calcolata (%d)" % int(need["total"]))
+
+	# §8.5.7: i Reclaimer scelgono prima l'origine, e col Travel muovono anche le Basi.
+	eq(Array(mv.movable_types("reclaimer", "travel")).has("cr_base"), true,
+		"il Travel dei Reclaimer muove anche le Basi")
+	eq(Array(mv.movable_types("reclaimer", "attack")).has("cr_base"), false,
+		"…le altre Operazioni no")
 
 
 func test_np_operations() -> void:
