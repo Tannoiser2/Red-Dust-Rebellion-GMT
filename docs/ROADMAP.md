@@ -195,9 +195,11 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Istruzioni di Train (col Pacify), Logistics (Basi, acquisti su Earth,
       Aldrin Cycler, Security) e Assault (nelle sue due varianti, con Suppress e
       Bombard nel piano): **tutte e 11 le Operazioni NP agiscono**
-- [ ] Attività Speciali delle Fazioni NP: la carta le sceglie ma non le esegue
-      ancora (Purify, Ransack, Ambush, Coordinate, Redistribute, Entrench,
-      Petition, Public Relations, Exploit, Raid)
+- [x] Attività Speciali delle Fazioni NP: «Select 1 Special Activity» prende la
+      prima dell'elenco che abbia effetto — Purify, Ransack, Coordinate,
+      Redistribute, Entrench, Petition, Public Relations, Exploit, Raid
+- [ ] Ambush e Transport: vanno intrecciate, non aggiunte — la prima modifica
+      l'Attack mentre lo si risolve, il secondo è un'Operazione di movimento
 - [ ] Transport e Raid (Attività Speciali di movimento)
 - [x] Interprete delle carte *Curiosity* (§8.5.3) e **tutte e 48 le facce**
       delle 24 carte in `data/np_cards.json`: riquadri in cima con sì/no verso

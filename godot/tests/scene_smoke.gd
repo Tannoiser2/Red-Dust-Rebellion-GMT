@@ -419,6 +419,7 @@ func _initialize() -> void:
 	_ok(gc.np.draw_card("marsgov") != "", "il mazzo Curiosity di NP MarsGov pesca")
 
 	var turns := 0
+	var specials_done := 0
 	var errors: Array = []
 	var guard_np := 0
 	while gc.sequence != null and guard_np < 24:
@@ -438,6 +439,8 @@ func _initialize() -> void:
 			errors.append("%s: %s" % [fid_np, res_np.get("error", "")])
 		else:
 			turns += 1
+			if String(res_np.get("special", "")) != "":
+				specials_done += 1
 		if turns >= 6:
 			break
 	_ok(errors.is_empty(), "sei turni di bot senza errori (%s)" % ", ".join(errors))
@@ -450,6 +453,9 @@ func _initialize() -> void:
 			stubs.append(String(line))
 	_ok(stubs.is_empty(), "nessuna istruzione della carta resta inerte (%s)"
 		% ", ".join(PackedStringArray(stubs)))
+	# §4.1: l'Attività Speciale accompagna l'Operazione. Se il bot non ne
+	# eseguisse mai nessuna, giocherebbe metà del proprio turno.
+	_ok(specials_done > 0, "il bot ha eseguito %d Attività Speciali" % specials_done)
 	_ok(gc.state != null, "la partita è ancora coerente dopo i turni del bot")
 
 	if shot_path != "":

@@ -479,7 +479,26 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 		return out
 
 	out["spaces"] = _run_instructions(faction, op_id, read.get("instructions", []), an, limited)
+	_maybe_special(faction, action, read, out, trace)
 	return out
+
+
+## §4.1: l'Attività Speciale accompagna l'Operazione, quindi solo con Op+SA.
+func _maybe_special(faction: String, action: String, read: Dictionary,
+		out: Dictionary, trace: Array) -> void:
+	if action != "op_sa":
+		return
+	var list: Array = read.get("special_activities", [])
+	if list.is_empty():
+		return
+	var done := run_special_activity(faction, list)
+	if bool(done.get("ok", false)):
+		out["special"] = String(done["special"])
+		out["special_spaces"] = done["spaces"]
+		trace.append("Attività Speciale: %s" % done["special"])
+	elif not (done.get("skipped", []) as Array).is_empty():
+		trace.append("Attività Speciale saltata (%s: non ancora eseguibile)"
+			% ", ".join(PackedStringArray(done["skipped"])))
 
 
 ## Esegue le istruzioni della carta che sappiamo già eseguire (§8.6).
@@ -532,6 +551,142 @@ func _run_instructions(faction: String, op_id: String, instructions: Array,
 				log_lines.append("NP %s: istruzione «%s» non ancora eseguibile." % [
 					faction, i["id"]])
 	return used
+
+
+## Attività Speciali che il bot sa eseguire. Ambush e Transport restano fuori:
+## la prima modifica l'Attack mentre lo si risolve, il secondo è un'Operazione di
+## movimento a sé — vanno intrecciate, non aggiunte.
+const RUNNABLE_SPECIALS := ["purify", "ransack", "coordinate", "redistribute",
+	"entrench", "petition", "public_relations", "exploit", "raid"]
+
+## Colonna delle Space Selection Priorities con cui scegliere gli spazi.
+const SPECIAL_COLUMN := {
+	"purify": "remove_or_replace", "ransack": "ransack",
+	"coordinate": "place_population", "redistribute": "redistribute",
+	"entrench": "place_bases", "public_relations": "place_population",
+	"exploit": "exploit", "raid": "remove_or_replace",
+}
+
+
+## «Select 1 Special Activity»: si prende la prima dell'elenco che abbia effetto.
+## Restituisce {ok, special, spaces, skipped}.
+func run_special_activity(faction: String, list: Array) -> Dictionary:
+	var skipped: Array[String] = []
+	for entry in list:
+		var sa: Dictionary = entry
+		var sa_id := String(sa.get("id", ""))
+		if not RUNNABLE_SPECIALS.has(sa_id):
+			skipped.append(sa_id)
+			continue
+		# Le voci con una condizione (per esempio «solo con EG−») la rispettano.
+		if sa.has("when") and not _special_condition(String(sa["when"]), faction):
+			continue
+		var done := _run_special(faction, sa_id)
+		if not (done["spaces"] as Array).is_empty() or bool(done.get("ok", false)):
+			log_lines.append("NP %s: %s in %d spazi." % [
+				faction, sa_id, (done["spaces"] as Array).size()])
+			return {"ok": true, "special": sa_id, "spaces": done["spaces"],
+				"skipped": skipped}
+	return {"ok": false, "special": "", "spaces": [], "skipped": skipped}
+
+
+func _special_condition(cond: String, faction: String) -> bool:
+	match cond:
+		"eg_minus":
+			return int(state.tracks.get("eg_side", -1)) < 0
+		"three_rebels_activated":
+			# Approssimazione dichiarata: si guarda se ci sono Ribelli Attivi.
+			for sid in module.mars_spaces(state):
+				var s := String(sid)
+				if module.count_in(state, s, "rd_rebel", "active") \
+						+ module.count_in(state, s, "cr_rebel", "active") >= 3:
+					return true
+			return false
+		"secure_performed", "recon_performed":
+			return true   # la carta le offre solo dopo quell'Operazione
+	return true
+
+
+## Sceglie gli spazi con la colonna giusta ed esegue l'Attività Speciale.
+func _run_special(faction: String, sa_id: String) -> Dictionary:
+	var sp := RDRSpecials.new(state, module)
+	sp.cards = ops.cards
+	var column := String(SPECIAL_COLUMN.get(sa_id, ""))
+	var pool := _special_candidates(faction, sa_id)
+	var picks: Array = []
+	if column != "" and not pool.is_empty():
+		picks = np.select_spaces(faction, column, pool, 2)
+	var res: Dictionary = {"ok": false}
+	match sa_id:
+		"petition":
+			res = sp.petition({})
+		"exploit":
+			res = sp.exploit({"spaces": picks})
+		"ransack":
+			res = sp.ransack({"spaces": picks})
+		"redistribute":
+			res = sp.redistribute({"spaces": picks})
+		"purify":
+			var e1: Array = []
+			for sid in picks:
+				e1.append({"id": sid, "mode": "convert"})
+			res = sp.purify({"spaces": e1})
+		"coordinate":
+			var e2: Array = []
+			for sid in picks:
+				e2.append({"id": sid, "action": "", "at_max": "remove"})
+			res = sp.coordinate({"spaces": e2})
+		"entrench":
+			var e3: Array = []
+			for sid in picks:
+				e3.append({"id": sid, "fortify": 9})
+			res = sp.entrench({"spaces": e3})
+		"public_relations":
+			var e4: Array = []
+			for sid in picks:
+				e4.append({"id": sid, "repairs": 1, "house": true})
+			res = sp.public_relations({"spaces": e4})
+		"raid":
+			var e5: Array = []
+			for sid in picks:
+				e5.append({"id": sid, "targets": ["rd_rebel", "cr_rebel"]})
+			res = sp.raid({"spaces": e5})
+	log_lines.append_array(sp.log_lines)
+	return {"ok": bool(res.get("ok", false)),
+		"spaces": picks if bool(res.get("ok", false)) else []}
+
+
+## Spazi dove quell'Attività Speciale avrebbe davvero effetto.
+func _special_candidates(faction: String, sa_id: String) -> Array:
+	var out: Array = []
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		var st: SpaceState = state.spaces[s]
+		var okk := false
+		match sa_id:
+			"purify":
+				okk = st.control == "reclaimer" \
+					and module.count_in(state, s, "cr_rebel", "hidden") > 0
+			"ransack":
+				okk = module.marker(state, s, "damage") > 0 \
+					and module.count_in(state, s, "cr_rebel", "hidden") > 0
+			"redistribute":
+				okk = module.population(state, s) > 0 and st.control == "red_dust" \
+					and module.count_in(state, s, "rd_rebel", "hidden") > 0
+			"coordinate":
+				okk = st.support <= 0 and module.count_in(state, s, "rd_rebel", "hidden") > 0
+			"entrench":
+				okk = st.control == "coin" and module.count_in(state, s, "mg_troop") > 0
+			"public_relations":
+				okk = st.control == "coin" and module.count_in(state, s, "security") > 0
+			"exploit":
+				okk = module.count_in(state, s, "corp_base") > 0 \
+					and module.marker(state, s, "damage") == 0
+			"raid":
+				okk = module.count_in(state, s, "specops") > 0
+		if okk:
+			out.append(s)
+	return out
 
 
 ## Si può eseguire questa Operazione per questa Fazione NP, con i dati che ci sono?
