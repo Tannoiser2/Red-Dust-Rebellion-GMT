@@ -172,7 +172,15 @@ fatto su Cuba Libre e All Bridges Burning.
       Space Selection Priorities di NP MarsGov, e le tabelle Move Priorities,
       Piece Priorities, Eligibility, Effective Events, Event Instructions,
       Capability & Campaign Effects
-- [ ] Esecuzione di Operazioni e Attività Speciali secondo §8.6/§8.7
+- [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
+      Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
+      varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il
+      tiro di Activation Number fra uno e l'altro, così le priorità rileggono la
+      plancia come al tavolo
+- [ ] Operazioni di movimento NP (Secure, Recon, March, Travel, Transport,
+      Raid): bloccate, serve la tabella Move Priorities
+- [ ] Attività Speciali §8.7 senza movimento (Redistribute, Coordinate, Purify,
+      Ransack, Exploit, Public Relations, Entrench, Petition)
 - [ ] Round di Flashpoint e Dust Storm per le Fazioni NP (§8.5.9)
 - [ ] L'esempio di gioco del libretto (§8.9, 12 pagine, setup e tiri noti) come
       test di regressione del sistema

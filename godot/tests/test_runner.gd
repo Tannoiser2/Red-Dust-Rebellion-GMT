@@ -77,6 +77,7 @@ func _init() -> void:
 	test_capabilities()
 	test_np_setup()
 	test_np_priorities()
+	test_np_operations()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -2044,6 +2045,88 @@ func test_np_priorities() -> void:
 	ok(["europa", "tenzing"].has(String(blind["space"])), "senza tabella sceglie comunque")
 	ok(String(blind["row"]).contains("mancante"),
 		"…e dichiara che la tabella manca: «%s»" % blind["row"])
+
+
+func test_np_operations() -> void:
+	print("Non-Player — Operazioni (§8.6)")
+	var s := fresh()
+	var np := np_for(s, ["red_dust", "reclaimer", "corporations"])
+	var o := ops_for(s)
+	var npo := RDRNonPlayerOps.new(np, o)
+
+	# Le Operazioni che spostano pezzi restano fuori: manca la Move Priorities.
+	for op_id in ["secure", "recon", "march", "travel"]:
+		var gate: Dictionary = npo.can_run("red_dust", op_id)
+		eq(gate["ok"], false, "%s è bloccata: serve la Move Priorities" % op_id)
+		ok(String(gate["error"]).contains("Move Priorities"), "…e il motivo è dichiarato")
+	eq(npo.can_run("red_dust", "rally")["ok"], true, "il Rally invece si può eseguire")
+	# Senza la tabella di MarsGov nemmeno le sue Operazioni ferme sono eseguibili.
+	eq(npo.can_run("marsgov", "train")["ok"], false, "NP MarsGov è fermo: manca la sua tabella")
+
+	# Rally: piazza Basi dove ci sono 3+ Ribelli e almeno uno Nascosto.
+	var s1 := fresh()
+	var np1 := np_for(s1, ["red_dust"])
+	var o1 := ops_for(s1)
+	var npo1 := RDRNonPlayerOps.new(np1, o1)
+	var target := "radau"
+	module.place_from_available(s1, target, "rd_rebel", 4, "hidden")
+	s1.spaces[target].support = CoinEnums.Support.NEUTRAL
+	module.recompute_all_control(s1)
+	var bases_before := module.count_in(s1, target, "rd_base")
+	var used: Array = npo1.rally_place_bases("red_dust", 0, true)
+	ok(used.size() >= 1, "il Rally NP sceglie almeno uno spazio (%s)" % ", ".join(PackedStringArray(used)))
+	ok(module.count_in(s1, String(used[0]), "rd_base") > 0,
+		"…e ci piazza una Base (%s)" % String(used[0]))
+	ok(not npo1.log_lines.is_empty(), "la scelta finisce nel Log")
+
+	# Un'Operazione Limitata di NP CR si ferma comunque al quinto spazio (§8.5.4).
+	var s2 := fresh()
+	var np2 := np_for(s2, ["reclaimer"])
+	s2.tracks["asset_total"] = 6
+	var o2 := ops_for(s2)
+	o2.cards = cards_for(s2)
+	var npo2 := RDRNonPlayerOps.new(np2, o2)
+	var picked: Array = npo2.rally_place_rebels("reclaimer", 0, true)
+	ok(picked.size() <= 5, "il Rally Limitato di NP CR non supera 5 spazi (%d)" % picked.size())
+	ok(picked.size() >= 1, "…ma almeno uno lo sceglie")
+
+	# Attack «all_active»: solo dove non restano Ribelli Nascosti.
+	var s3 := fresh()
+	var np3 := np_for(s3, ["red_dust"])
+	var o3 := ops_for(s3)
+	var npo3 := RDRNonPlayerOps.new(np3, o3)
+	var atk := "radau"
+	# Allo schieramento Radau può già avere Ribelli Nascosti: si parte puliti,
+	# altrimenti la condizione «tutti Attivi» non sarebbe mai vera.
+	module.remove_pieces(s3, atk, "rd_rebel", 99, "available")
+	module.place_from_available(s3, atk, "rd_rebel", 3, "active")
+	module.place_from_available(s3, atk, "mg_troop", 2)
+	module.recompute_all_control(s3)
+	var hit: Array = npo3.attack("red_dust", "all_active", 0, true)
+	ok(hit.has(atk), "l'Attack «tutti Attivi» sceglie %s" % atk)
+	# Con un Ribelle Nascosto lì, quello spazio non è più eleggibile.
+	var s4 := fresh()
+	var np4 := np_for(s4, ["red_dust"])
+	var o4 := ops_for(s4)
+	var npo4 := RDRNonPlayerOps.new(np4, o4)
+	module.remove_pieces(s4, atk, "rd_rebel", 99, "available")
+	module.place_from_available(s4, atk, "rd_rebel", 3, "hidden")
+	module.place_from_available(s4, atk, "mg_troop", 2)
+	module.recompute_all_control(s4)
+	ok(not npo4.attack("red_dust", "all_active", 0, true).has(atk),
+		"…e lo scarta se lì resta un Ribelle Nascosto")
+
+	# Campaign: non si sceglie uno spazio che lascerebbe scoperta una Base RD.
+	var s5 := fresh()
+	var np5 := np_for(s5, ["red_dust"])
+	var o5 := ops_for(s5)
+	o5.cards = cards_for(s5)
+	var npo5 := RDRNonPlayerOps.new(np5, o5)
+	var camp := "shepard"
+	module.place_from_available(s5, camp, "rd_base", 1)
+	module.place_from_available(s5, camp, "rd_rebel", 1, "hidden")
+	ok(not npo5.campaign(0, true).has(camp),
+		"la Campaign salta %s: l'unico Ribelle Nascosto copre la Base" % camp)
 
 
 # ===========================================================================
