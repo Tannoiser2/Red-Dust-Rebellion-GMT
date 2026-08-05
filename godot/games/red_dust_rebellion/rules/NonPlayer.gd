@@ -25,6 +25,7 @@ const DATA_FILE := "np_priorities.json"
 const PIECE_FILE := "np_piece_priorities.json"
 const MOVE_FILE := "np_move_priorities.json"
 const ELIGIBILITY_FILE := "np_eligibility.json"
+const SYMBOLS_FILE := "np_event_symbols.json"
 
 ## §8.4.1: valori iniziali dei contatori surrogati.
 const START_SUPPLY := 0
@@ -43,6 +44,8 @@ var missing: Array = []
 var piece_priorities: Dictionary = {}
 var move_priorities: Dictionary = {}
 var eligibility_table: Dictionary = {}
+## §8.5.5: ★ Critical e ⊘ Not Performed, per carta e per Fazione.
+var event_symbols: Dictionary = {}
 var log_lines: Array[String] = []
 
 
@@ -57,6 +60,7 @@ func _init(p_state: GameState, p_module: RDRModule,
 	piece_priorities = _load(PIECE_FILE)
 	move_priorities = _load(MOVE_FILE)
 	eligibility_table = _load(ELIGIBILITY_FILE)
+	event_symbols = _load(SYMBOLS_FILE).get("cards", {})
 
 
 func _load(file_name: String) -> Dictionary:
@@ -352,6 +356,17 @@ func _piece_categories(faction: String, e: Dictionary) -> Array:
 		if owner2 == faction:
 			out.append("own_forces")
 	return out
+
+
+## §8.5.5: l'Evento è Critico per questa Fazione? (simbolo ★ sulla carta)
+func event_critical(faction: String, card: int) -> bool:
+	return String((event_symbols.get(str(card), {}) as Dictionary).get(faction, "")) == "critical"
+
+
+## §8.5.5: questa Fazione non esegue l'Evento? (simbolo ⊘ sulla carta)
+func event_not_performed(faction: String, card: int) -> bool:
+	return String((event_symbols.get(str(card), {}) as Dictionary).get(faction, "")) \
+		== "not_performed"
 
 
 # ---------------------------------------------------------------------------

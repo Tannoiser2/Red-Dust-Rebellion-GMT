@@ -210,9 +210,12 @@ fatto su Cuba Libre e All Bridges Burning.
       testo — si legge da `event_effects.json`, che gli effetti li ha già
       scomposti, traducendo ogni operazione nella categoria della tabella e
       separando ciò che AGGIUNGE da ciò che TOGLIE
-- [ ] Simboli ★ (Critical) e ⊘ (Not Performed) sotto le icone delle Fazioni sulle
-      51 carte Evento: è l'ultimo dato mancante, e senza di esso la tabella di
-      Eligibility cade sempre sull'ultima riga
+- [x] **Simboli ★ (Critical) e ⊘ (Not Performed)** estratti dalle immagini del
+      Vassal (`sources/vassal/estrai_simboli_np.py`) contando i buchi racchiusi
+      dal simbolo, e verificati a vista tutti e 204 su un foglio di contatto
+- [x] Le Fazioni NP giocano gli Eventi: scelgono fra opzione normale e
+      ombreggiata quella che risulta efficace per loro, e saltano gli Eventi
+      marcati ⊘
 - [ ] Da trascrivere: Event Instructions, Capability & Campaign Effects,
       istruzioni NP di Flashpoint e Dust Storm Round
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza

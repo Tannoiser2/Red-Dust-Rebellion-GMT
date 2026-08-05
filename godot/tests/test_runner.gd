@@ -82,6 +82,7 @@ func _init() -> void:
 	test_np_movement()
 	test_np_eligibility()
 	test_np_effective_events()
+	test_np_event_symbols()
 	test_np_cards()
 	test_campaign_effects()
 
@@ -2317,6 +2318,47 @@ func test_np_effective_events() -> void:
 				if bool(np.event_effective(String(fid2), opt.get("effects", []))["effective"]):
 					hits += 1
 		ok(hits >= 10, "%s trova %d opzioni efficaci fra le 93" % [fid2, hits])
+
+
+func test_np_event_symbols() -> void:
+	print("Non-Player — simboli ★/⊘ delle carte Evento (§8.5.5)")
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "corporations", "red_dust", "reclaimer"])
+	# 48 e non 51: le tre carte Dust Storm non hanno icone di Fazione, quindi
+	# nemmeno simboli.
+	eq(np.event_symbols.size(), 48, "i simboli delle 48 carte Evento sono estratti")
+
+	# Cinque carte lette a video durante l'estrazione, usate come pietra di paragone.
+	eq(np.event_critical("marsgov", 1), true, "#1 è Critica per MarsGov")
+	eq(np.event_critical("corporations", 1), false, "…e non per le Corporations")
+	eq(np.event_critical("marsgov", 5), true, "#5 è Critica per MarsGov")
+	eq(np.event_not_performed("corporations", 5), true, "…e le Corporations non la eseguono")
+	eq(np.event_not_performed("red_dust", 37), true, "#37 non è eseguita dal Red Dust")
+	eq(np.event_not_performed("reclaimer", 37), true, "…né dai Reclaimer")
+	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		eq(np.event_not_performed(String(fid), 47), true,
+			"#47 non è eseguita da nessuno (%s)" % fid)
+
+	# Un simbolo esclude l'altro: nessuna carta può essere ★ e ⊘ per la stessa Fazione.
+	var both: Array[String] = []
+	for number in range(1, 52):
+		for fid2 in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+			if np.event_critical(String(fid2), number) and np.event_not_performed(String(fid2), number):
+				both.append("#%d/%s" % [number, fid2])
+	eq(both.size(), 0, "nessuna carta è insieme Critica e Non eseguita (%s)" % ", ".join(both))
+
+	# Ogni Fazione deve avere sia Critici sia Non eseguiti: se l'estrazione avesse
+	# sbagliato in blocco una classe, questo test se ne accorgerebbe.
+	for fid3 in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		var crit := 0
+		var skip := 0
+		for number2 in range(1, 52):
+			if np.event_critical(String(fid3), number2):
+				crit += 1
+			if np.event_not_performed(String(fid3), number2):
+				skip += 1
+		ok(crit >= 2, "%s ha %d Eventi Critici" % [fid3, crit])
+		ok(skip >= 3, "%s ha %d Eventi che non esegue" % [fid3, skip])
 
 
 func test_np_cards() -> void:

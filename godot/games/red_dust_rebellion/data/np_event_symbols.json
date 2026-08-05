@@ -1,0 +1,195 @@
+{
+  "_note": "Simboli Non-Player stampati sotto le icone delle Fazioni sulle carte Evento (§8.5.5): `critical` = ★, l'Evento è Critico per quella Fazione; `not_performed` = ⊘, quella Fazione non lo esegue. Estratti dalle immagini del modulo Vassal contando i buchi racchiusi dal simbolo — il ⊘ è un anello e ne ha due, la ★ è piena e non ne ha — e poi VERIFICATI A VISTA tutti e 204, raggruppati per classe su un foglio di contatto. La carta 37 ha l'intestazione più alta e il riquadro sfiorava l'icona nera: è l'unica letta a mano. Le Fazioni assenti da una voce non hanno simbolo su quella carta.",
+  "cards": {
+    "1": {
+      "marsgov": "critical",
+      "red_dust": "critical",
+      "reclaimer": "critical"
+    },
+    "2": {
+      "corporations": "not_performed",
+      "red_dust": "critical",
+      "reclaimer": "critical"
+    },
+    "3": {
+      "red_dust": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "4": {
+      "corporations": "not_performed",
+      "red_dust": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "5": {
+      "marsgov": "critical",
+      "corporations": "not_performed"
+    },
+    "6": {
+      "corporations": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "7": {
+      "corporations": "not_performed"
+    },
+    "8": {
+      "marsgov": "critical",
+      "corporations": "not_performed"
+    },
+    "9": {
+      "corporations": "not_performed"
+    },
+    "10": {
+      "marsgov": "critical",
+      "corporations": "not_performed",
+      "red_dust": "critical",
+      "reclaimer": "not_performed"
+    },
+    "11": {
+      "marsgov": "not_performed",
+      "corporations": "not_performed",
+      "red_dust": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "12": {
+      "reclaimer": "not_performed"
+    },
+    "13": {
+      "red_dust": "critical",
+      "reclaimer": "not_performed"
+    },
+    "14": {
+      "corporations": "critical",
+      "red_dust": "critical",
+      "marsgov": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "15": {
+      "red_dust": "critical",
+      "corporations": "not_performed",
+      "marsgov": "critical",
+      "reclaimer": "critical"
+    },
+    "16": {
+      "marsgov": "not_performed"
+    },
+    "17": {
+      "reclaimer": "not_performed"
+    },
+    "18": {
+      "marsgov": "critical",
+      "red_dust": "critical",
+      "reclaimer": "critical"
+    },
+    "19": {},
+    "20": {
+      "red_dust": "critical",
+      "reclaimer": "not_performed"
+    },
+    "21": {
+      "marsgov": "not_performed",
+      "red_dust": "critical",
+      "reclaimer": "critical"
+    },
+    "22": {
+      "red_dust": "critical",
+      "reclaimer": "not_performed"
+    },
+    "23": {},
+    "24": {
+      "marsgov": "critical",
+      "reclaimer": "not_performed"
+    },
+    "25": {
+      "red_dust": "not_performed",
+      "marsgov": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "26": {
+      "corporations": "critical",
+      "marsgov": "not_performed",
+      "reclaimer": "critical"
+    },
+    "27": {
+      "marsgov": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "28": {
+      "corporations": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "29": {},
+    "30": {
+      "red_dust": "critical",
+      "reclaimer": "critical"
+    },
+    "31": {
+      "corporations": "not_performed"
+    },
+    "32": {
+      "marsgov": "not_performed",
+      "red_dust": "not_performed",
+      "corporations": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "33": {
+      "red_dust": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "34": {},
+    "35": {
+      "corporations": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "36": {
+      "red_dust": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "37": {
+      "red_dust": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "38": {
+      "marsgov": "not_performed"
+    },
+    "39": {
+      "marsgov": "not_performed"
+    },
+    "40": {},
+    "41": {
+      "corporations": "not_performed",
+      "marsgov": "critical",
+      "reclaimer": "not_performed"
+    },
+    "42": {
+      "corporations": "not_performed",
+      "marsgov": "critical",
+      "reclaimer": "not_performed"
+    },
+    "43": {
+      "red_dust": "not_performed",
+      "corporations": "not_performed",
+      "marsgov": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "44": {
+      "red_dust": "critical",
+      "reclaimer": "not_performed"
+    },
+    "45": {
+      "reclaimer": "critical"
+    },
+    "46": {},
+    "47": {
+      "corporations": "not_performed",
+      "red_dust": "not_performed",
+      "marsgov": "not_performed",
+      "reclaimer": "not_performed"
+    },
+    "48": {
+      "marsgov": "critical",
+      "red_dust": "critical",
+      "corporations": "not_performed",
+      "reclaimer": "not_performed"
+    }
+  }
+}

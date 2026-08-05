@@ -683,6 +683,17 @@ func np_take_turn() -> Dictionary:
 		_undo.pop_back()
 		return res
 
+	# §8.5.5: se la tabella ha scelto l'Evento, lo si gioca davvero.
+	if String(res.get("action", "")) == "event":
+		var which := _np_event_option(fid, state.current_card)
+		if which >= 0:
+			var ev_res: Dictionary = events.play(state.current_card, which == 1, {}, fid)
+			for line in events.log_lines:
+				emit_signal("log_line", line)
+			events.log_lines.clear()
+			res["event_option"] = "ombreggiato" if which == 1 else "non ombreggiato"
+			res["event_ok"] = ev_res.get("ok", false)
+
 	# Si registra l'azione nella sequenza, come farebbe un giocatore.
 	match String(res.get("action", "")):
 		"pass":
@@ -715,12 +726,30 @@ func _np_context() -> Dictionary:
 	# (★/⊘ sotto l'icona della Fazione), che non abbiamo ancora estratto.
 	var fid := sequence.pending_faction() if sequence != null else ""
 	if fid != "" and np != null and np.is_np(fid):
-		var opt: Dictionary = events.option(state.current_card, false)
-		var shaded: Dictionary = events.option(state.current_card, true)
-		var eff: Dictionary = np.event_effective(fid, opt.get("effects", []))
-		var eff2: Dictionary = np.event_effective(fid, shaded.get("effects", []))
-		ctx["current_effective"] = bool(eff["effective"]) or bool(eff2["effective"])
+		ctx["current_effective"] = _np_event_option(fid, state.current_card) >= 0
+		# §8.5.5: ★ Critico e ⊘ Non eseguito sono stampati sulle carte.
+		ctx["current_critical"] = np.event_critical(fid, state.current_card) \
+			and not np.event_not_performed(fid, state.current_card)
+		if rounds != null:
+			ctx["next_critical"] = np.event_critical(fid, rounds.next_card())
+		var second := sequence.next_eligible()
+		if second != "":
+			ctx["current_critical_for_second"] = np.event_critical(second, state.current_card)
 	return ctx
+
+
+## Quale opzione dell'Evento gioverebbe alla Fazione: 0 non ombreggiata,
+## 1 ombreggiata, -1 nessuna. Chi ha il ⊘ non lo esegue affatto.
+func _np_event_option(fid: String, card: int) -> int:
+	if np.event_not_performed(fid, card):
+		return -1
+	for shaded in [false, true]:
+		var opt: Dictionary = events.option(card, shaded)
+		if opt.is_empty():
+			continue
+		if bool(np.event_effective(fid, opt.get("effects", []))["effective"]):
+			return 1 if shaded else 0
+	return -1
 
 
 var _np_first_choice := ""

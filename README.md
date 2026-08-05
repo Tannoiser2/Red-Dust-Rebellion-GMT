@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**880 test del modulo + 109 controlli di smoke test della scena, 0 falliti.**
+**900 test del modulo + 109 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -108,7 +108,8 @@ disponibile in UI è il Passo.
 | Non-Player: Train, Logistics e Assault | ✅ tutte e 11 le Operazioni agiscono |
 | Non-Player: Attività Speciali | ✅ 9 su 12 (restano Ambush e Transport) |
 | Non-Player: Effective Events §8.5.5 | ✅ calcolati dagli effetti scomposti |
-| Non-Player: simboli ★/⊘ sulle carte Evento | ⬜ ultimo dato mancante |
+| Non-Player: simboli ★/⊘ sulle carte Evento | ✅ estratti dalle immagini e verificati a vista |
+| Non-Player: gioca gli Eventi | ✅ sceglie l'opzione che gli giova |
 | Non-Player: 24 carte *Curiosity* | ✅ tutte e 48 le facce, con l'interprete |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 
