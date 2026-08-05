@@ -22,6 +22,16 @@ var cards: RDRCards
 ## Esecuzione degli Eventi (§7.0).
 var events: RDREvents
 
+## §Annulla: istantanee dello stato prima di ogni azione. Bastano lo stato di
+## gioco (GameState sa serializzarsi) e la sequenza della carta; i round e i
+## mazzi leggono tutto da lì. NB: il generatore casuale non torna indietro,
+## quindi rifare un'azione con dadi può dare un risultato diverso.
+const UNDO_LIMIT := 25
+var _undo: Array = []
+
+## Formato dei salvataggi (user://): stato + sequenza della carta in corso.
+const SAVE_VERSION := 1
+
 ## Geometrie della tavola (regions.json / board_layout.json), normalizzate [0..1].
 var regions: Dictionary = {}
 var off_map: Dictionary = {}
@@ -64,6 +74,7 @@ func new_game(scenario: String = "standard", seed_value: int = 0) -> void:
 	events = RDREvents.new(state, rdr())
 	events.cards = cards
 	events.rounds = rounds
+	_undo.clear()
 	rounds.begin_game()
 	_drain_log()
 	_start_card()
@@ -92,7 +103,9 @@ func do_pass() -> bool:
 		return false
 	var fid := sequence.pending_faction()
 	var before := sequence.pass_effects.size()
+	snapshot("Passo di %s" % game_def.faction(fid).short_name)
 	if not sequence.act_pass():
+		_undo.pop_back()
 		return false
 	emit_signal("log_line", "%s Passa." % game_def.faction(fid).short_name)
 	# Il Passo delle Corporations attiva l'Aldrin Cycler; quello dei Reclaimer
@@ -170,8 +183,10 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
 		if not sequence.is_legal(action) or spaces.size() > 1:
 			return {"ok": false, "error": "Azione non consentita adesso."}
 
+	snapshot(OPERATION_NAMES.get(op_id, op_id))
 	var res: Dictionary = _run_operation(op_id, fid, spaces, plan_extra)
 	if not res.get("ok", false):
+		_undo.pop_back()
 		return res
 	for line in ops.log_lines:
 		emit_signal("log_line", line)
@@ -368,8 +383,10 @@ func legal_origins(op_id: String, fid: String, dest: String, type_id: String) ->
 func execute_special(sa_id: String, spaces: Array) -> Dictionary:
 	if sequence == null or sequence.pending_faction() == "":
 		return {"ok": false, "error": "Non è il turno di nessuno."}
+	snapshot(SPECIAL_NAMES.get(sa_id, sa_id))
 	var res: Dictionary = _run_special(sa_id, spaces)
 	if not res.get("ok", false):
+		_undo.pop_back()
 		return res
 	for line in specials.log_lines:
 		emit_signal("log_line", line)
@@ -425,8 +442,10 @@ func execute_event(shaded: bool, choices = {}) -> Dictionary:
 	if not sequence.is_legal(CoinEnums.ActionType.EVENT):
 		return {"ok": false, "error": "L'Evento non è consentito adesso."}
 	var fid := sequence.pending_faction()
+	snapshot("Evento #%d" % state.current_card)
 	var res: Dictionary = events.play(state.current_card, shaded, choices, fid)
 	if not res.get("ok", false):
+		_undo.pop_back()
 		return res
 	for line in events.log_lines:
 		emit_signal("log_line", line)
@@ -437,6 +456,91 @@ func execute_event(shaded: bool, choices = {}) -> Dictionary:
 	sequence.act(CoinEnums.ActionType.EVENT)
 	_after_action()
 	return res
+
+
+# ---------------------------------------------------------------------------
+# Annulla e salvataggio
+# ---------------------------------------------------------------------------
+
+## Fotografa lo stato prima di un'azione, così la si può disfare.
+func snapshot(label: String) -> void:
+	if state == null:
+		return
+	_undo.append({
+		"label": label,
+		"state": state.to_dict(),
+		"has_sequence": sequence != null,
+		"sequence": sequence.snapshot() if sequence != null else {},
+	})
+	while _undo.size() > UNDO_LIMIT:
+		_undo.pop_front()
+
+
+func can_undo() -> bool:
+	return not _undo.is_empty()
+
+
+## Cosa si sta per disfare ("" se non c'è nulla): serve al tasto Annulla.
+func undo_label() -> String:
+	return String((_undo[-1] as Dictionary)["label"]) if can_undo() else ""
+
+
+func undo() -> bool:
+	if not can_undo():
+		return false
+	var snap: Dictionary = _undo.pop_back()
+	state.load_dict(snap["state"])
+	_start_card()
+	if sequence != null and bool(snap["has_sequence"]):
+		sequence.restore_snapshot(snap["sequence"])
+	emit_signal("log_line", "Annullato: %s." % snap["label"])
+	refresh()
+	return true
+
+
+func clear_undo() -> void:
+	_undo.clear()
+
+
+## Salva la partita (stato + sequenza della carta in corso).
+func save_game(path: String) -> bool:
+	if state == null:
+		return false
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		emit_signal("log_line", "Salvataggio fallito: %s non scrivibile." % path)
+		return false
+	f.store_string(JSON.stringify({
+		"version": SAVE_VERSION,
+		"state": state.to_dict(),
+		"has_sequence": sequence != null,
+		"sequence": sequence.snapshot() if sequence != null else {},
+	}, "\t"))
+	f.close()
+	emit_signal("log_line", "Partita salvata in %s." % path)
+	return true
+
+
+func load_game(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		emit_signal("log_line", "Nessun salvataggio in %s." % path)
+		return false
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(parsed) != TYPE_DICTIONARY or not (parsed as Dictionary).has("state"):
+		emit_signal("log_line", "Salvataggio illeggibile: %s." % path)
+		return false
+	var d: Dictionary = parsed
+	# Si riparte da una partita pulita e le si sovrascrive lo stato: così mazzi,
+	# round e Operazioni restano agganciati agli stessi oggetti.
+	new_game("standard", int(state.tracks.get("seed", 0)) if state != null else 0)
+	state.load_dict(d["state"])
+	_start_card()
+	if sequence != null and bool(d.get("has_sequence", false)):
+		sequence.restore_snapshot(d.get("sequence", {}))
+	clear_undo()
+	emit_signal("log_line", "Partita ripresa da %s." % path)
+	refresh()
+	return true
 
 
 ## §7.0: Operazioni gratuite concesse dagli Eventi e non ancora eseguite.
@@ -460,11 +564,13 @@ func execute_free_op(index: int, plan_extra: Dictionary = {}) -> Dictionary:
 	var sa_id := String(entry.get("special", ""))
 	if op_id == "" and sa_id == "":
 		return {"ok": false, "error": "L'Evento lascia la scelta dell'Operazione: %s" % entry.get("note", "")}
+	snapshot("Operazione gratuita")
 	ops.free = true
 	var res: Dictionary = _run_operation(op_id, fid, spaces, plan_extra) if op_id != "" \
 		else _run_special(sa_id, spaces)
 	ops.free = false
 	if not res.get("ok", false):
+		_undo.pop_back()
 		return res
 	for line in ops.log_lines:
 		emit_signal("log_line", line)
@@ -487,6 +593,7 @@ func execute_free_op(index: int, plan_extra: Dictionary = {}) -> Dictionary:
 func end_card() -> void:
 	if sequence == null:
 		return
+	snapshot("Chiusura della carta #%d" % state.current_card)
 	sequence.finish()
 	rounds.advance_card()
 	_drain_log()

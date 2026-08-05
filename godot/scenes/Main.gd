@@ -5,8 +5,14 @@ extends Control
 
 const BUILD_VERSION := "b001"
 
-var _map_root: Control
+var _board: ScrollContainer   ## area scorrevole della mappa
+var _map_wrap: Control        ## definisce l'estensione scrollabile (base × zoom)
+var _map_root: Control        ## la mappa vera, scalata dallo zoom
+var _map_base := Vector2.ZERO ## dimensione della mappa a zoom 1 (adattata all'area)
+var _zoom := 1.0
+var _panning := false
 var _map_tex: TextureRect
+var _instr: RichTextLabel     ## riga che dice sempre cosa si può fare adesso
 var _regions_layer: Control
 var _tracks: TrackOverlay
 var _moves: MovesOverlay    ## frecce degli spostamenti dichiarati
@@ -19,6 +25,10 @@ var _card_next: TextureRect         ## anteprima della prossima carta
 var _card_zoom: Control             ## ingrandimento a schermo intero
 var _btn_pass: Button
 var _btn_end: Button
+var _btn_undo: Button
+
+## Dove finisce la partita salvata (cartella dati dell'app).
+const SAVE_PATH := "user://partita.json"
 var _ops_box: HFlowContainer
 var _op_mode := ""          ## Operazione in corso di pianificazione
 var _op_spaces: Array[String] = []
@@ -53,21 +63,48 @@ func _ready() -> void:
 # ---------------------------------------------------------------------------
 
 func _build_ui() -> void:
+	theme = RDRTheme.make_theme()
+	var bg := ColorRect.new()
+	bg.color = RDRTheme.BG
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bg)
+
 	var split := HSplitContainer.new()
 	split.set_anchors_preset(Control.PRESET_FULL_RECT)
 	split.split_offset = -360
 	add_child(split)
 
 	# --- Mappa -------------------------------------------------------------
-	var map_wrap := Control.new()
-	map_wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	map_wrap.clip_contents = true
-	map_wrap.resized.connect(_relayout_map)
-	split.add_child(map_wrap)
+	# ScrollContainer + wrapper: lo zoom è una SCALA sul nodo mappa, così mappa,
+	# pedine e marcatori ingrandiscono insieme, e il wrapper (base × zoom) dice
+	# allo scroll quanto c'è da scorrere.
+	var map_col := VBoxContainer.new()
+	map_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.add_child(map_col)
+
+	var instr_panel := PanelContainer.new()
+	_instr = RichTextLabel.new()
+	_instr.bbcode_enabled = true
+	_instr.fit_content = true
+	_instr.custom_minimum_size = Vector2(0, 22)
+	_instr.add_theme_font_size_override("normal_font_size", 13)
+	instr_panel.add_child(_instr)
+	map_col.add_child(instr_panel)
+
+	_board = ScrollContainer.new()
+	_board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_board.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_board.resized.connect(_relayout_map)
+	map_col.add_child(_board)
+
+	_map_wrap = Control.new()
+	_map_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_board.add_child(_map_wrap)
 
 	_map_root = Control.new()
 	_map_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	map_wrap.add_child(_map_root)
+	_map_wrap.add_child(_map_root)
 
 	_map_tex = TextureRect.new()
 	_map_tex.texture = RDRAssets.tex("map.jpg")
@@ -144,10 +181,39 @@ func _build_ui() -> void:
 	_side.add_child(_space_info)
 
 	var buttons := HBoxContainer.new()
-	var b_new := Button.new()
-	b_new.text = "Nuova partita"
-	b_new.pressed.connect(func(): GameController.new_game())
-	buttons.add_child(b_new)
+	# Partita: nuova, salva, riprendi. Il salvataggio sta in user://, cioè nella
+	# cartella dati dell'app: non serve scegliere un percorso.
+	var game_menu := MenuButton.new()
+	game_menu.text = "Partita…"
+	var pm := game_menu.get_popup()
+	pm.add_item("Nuova partita", 0)
+	pm.add_item("Salva", 1)
+	pm.add_item("Riprendi l'ultima salvata", 2)
+	pm.id_pressed.connect(_on_game_menu)
+	buttons.add_child(game_menu)
+
+	_btn_undo = Button.new()
+	_btn_undo.text = "Annulla"
+	_btn_undo.pressed.connect(func():
+		GameController.undo()
+		_cancel_op())
+	buttons.add_child(_btn_undo)
+	# Zoom: la tavola è 5175×3775, a schermo intero le pedine sono minuscole.
+	var b_out := Button.new()
+	b_out.text = "−"
+	b_out.tooltip_text = "Rimpicciolisci (tasto −)"
+	b_out.pressed.connect(func(): _zoom_at(1.0 / 1.25))
+	buttons.add_child(b_out)
+	var b_in := Button.new()
+	b_in.text = "+"
+	b_in.tooltip_text = "Ingrandisci (tasto +, rotellina, pinch)"
+	b_in.pressed.connect(func(): _zoom_at(1.25))
+	buttons.add_child(b_in)
+	var b_fit := Button.new()
+	b_fit.text = "Adatta"
+	b_fit.tooltip_text = "Tavola intera (tasto 0). Col tasto destro si trascina la mappa."
+	b_fit.pressed.connect(func(): _set_zoom(1.0))
+	buttons.add_child(b_fit)
 	_side.add_child(buttons)
 
 	_side.add_child(_title("Log"))
@@ -224,11 +290,26 @@ func _close_card_zoom() -> void:
 		_card_zoom = null
 
 
+## Scorciatoie da tastiera: Esc chiude l'ingrandimento o annulla la
+## pianificazione in corso, +/− regolano lo zoom, 0 riporta la tavola intera.
 func _unhandled_input(event: InputEvent) -> void:
-	if _card_zoom != null and event is InputEventKey and event.pressed \
-			and (event as InputEventKey).keycode == KEY_ESCAPE:
-		_close_card_zoom()
-		get_viewport().set_input_as_handled()
+	if not (event is InputEventKey) or not event.pressed or (event as InputEventKey).echo:
+		return
+	match (event as InputEventKey).keycode:
+		KEY_ESCAPE:
+			if _card_zoom != null:
+				_close_card_zoom()
+			else:
+				_cancel_op()
+		KEY_PLUS, KEY_EQUAL, KEY_KP_ADD:
+			_zoom_at(1.25)
+		KEY_MINUS, KEY_KP_SUBTRACT:
+			_zoom_at(1.0 / 1.25)
+		KEY_0, KEY_KP_0:
+			_set_zoom(1.0)
+		_:
+			return
+	get_viewport().set_input_as_handled()
 
 
 func _title(text: String) -> Label:
@@ -283,23 +364,103 @@ func _build_regions() -> void:
 # Layout
 # ---------------------------------------------------------------------------
 
+## Zoom 1 = la tavola intera entra nell'area disponibile; da lì si ingrandisce.
 func _relayout_map() -> void:
-	if _map_root == null or _map_root.get_parent() == null:
+	if _board == null or _map_root == null:
 		return
-	var avail: Vector2 = (_map_root.get_parent() as Control).size
+	var avail: Vector2 = _board.size
 	if avail.x <= 0.0 or avail.y <= 0.0:
 		return
 	var board_w := 5175.0
 	var board_h := 3775.0
-	var scale: float = minf(avail.x / board_w, avail.y / board_h)
-	var w := board_w * scale
-	var h := board_h * scale
-	_map_root.position = Vector2((avail.x - w) * 0.5, (avail.y - h) * 0.5)
-	_map_root.size = Vector2(w, h)
+	var fit: float = minf(avail.x / board_w, avail.y / board_h)
+	_map_base = Vector2(board_w * fit, board_h * fit)
+
+	_map_root.position = Vector2.ZERO
+	_map_root.custom_minimum_size = _map_base
+	_map_root.size = _map_base
+	_map_root.scale = Vector2(_zoom, _zoom)
+	_map_wrap.custom_minimum_size = _map_base * _zoom
+	_map_wrap.size = _map_base * _zoom
+
+	# Le viste hanno anchor a tutto il riquadro, ma le dimensioniamo comunque a
+	# mano: `relayout()` deve vedere la misura nuova subito, non al frame dopo.
+	_map_tex.size = _map_base
+	_regions_layer.size = _map_base
 	for sid in _views.keys():
-		(_views[sid] as RegionView).relayout()
+		var rv: RegionView = _views[sid]
+		rv.position = Vector2.ZERO
+		rv.size = _map_base
+		rv.relayout()
+	_tracks.size = _map_base
 	_tracks.queue_redraw()
+	_moves.size = _map_base
 	_update_moves_overlay()
+
+
+# ---------------------------------------------------------------------------
+# Zoom e scorrimento della mappa
+# ---------------------------------------------------------------------------
+
+const ZOOM_MIN := 1.0
+const ZOOM_MAX := 5.0
+
+
+func _set_zoom(z: float) -> void:
+	_zoom = clampf(z, ZOOM_MIN, ZOOM_MAX)
+	_relayout_map()
+
+
+## Zoom tenendo fermo il punto della mappa sotto il puntatore; senza puntatore
+## si tiene fermo il centro di ciò che si sta guardando.
+func _zoom_at(factor: float, screen_pos: Vector2 = Vector2(-1, -1)) -> void:
+	if _board == null:
+		return
+	var local := screen_pos - _board.global_position
+	if screen_pos.x < 0 or not Rect2(Vector2.ZERO, _board.size).has_point(local):
+		local = _board.size * 0.5
+	var old_zoom := _zoom
+	var target: float = clampf(_zoom * factor, ZOOM_MIN, ZOOM_MAX)
+	if is_equal_approx(target, old_zoom):
+		return
+	var map_pt := (Vector2(_board.scroll_horizontal, _board.scroll_vertical) + local) / old_zoom
+	_zoom = target
+	_relayout_map()
+	_board.scroll_horizontal = int(map_pt.x * _zoom - local.x)
+	_board.scroll_vertical = int(map_pt.y * _zoom - local.y)
+
+
+## Rotellina, gesto magnify del trackpad e trascinamento col tasto centrale o
+## destro per scorrere la mappa ingrandita.
+func _input(event: InputEvent) -> void:
+	if _board == null or not is_inside_tree():
+		return
+	var over_board := Rect2(_board.global_position, _board.size)
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and over_board.has_point(mb.position):
+			match mb.button_index:
+				MOUSE_BUTTON_WHEEL_UP:
+					_zoom_at(1.15, mb.position)
+					get_viewport().set_input_as_handled()
+				MOUSE_BUTTON_WHEEL_DOWN:
+					_zoom_at(1.0 / 1.15, mb.position)
+					get_viewport().set_input_as_handled()
+				MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT:
+					_panning = true
+					get_viewport().set_input_as_handled()
+		elif not mb.pressed and mb.button_index in [MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_RIGHT]:
+			_panning = false
+	elif event is InputEventMouseMotion and _panning:
+		var mm := event as InputEventMouseMotion
+		_board.scroll_horizontal -= int(mm.relative.x)
+		_board.scroll_vertical -= int(mm.relative.y)
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMagnifyGesture:
+		var mg := event as InputEventMagnifyGesture
+		if over_board.has_point(mg.position):
+			_zoom_at(mg.factor, mg.position)
+			get_viewport().set_input_as_handled()
 
 
 # ---------------------------------------------------------------------------
@@ -316,8 +477,71 @@ func _on_state_changed() -> void:
 	_refresh_status()
 	_refresh_card_info()
 	_refresh_op_bar()
+	_refresh_instructions()
+	_refresh_undo_btn()
 	if _selected != "":
 		_refresh_space_info(_selected)
+
+
+## Il tasto Annulla dice anche COSA si sta per disfare: senza, non si sa se si
+## sta togliendo l'ultima Operazione o la chiusura della carta.
+func _refresh_undo_btn() -> void:
+	if _btn_undo == null:
+		return
+	var gc := GameController
+	_btn_undo.disabled = not gc.can_undo()
+	_btn_undo.tooltip_text = "Annulla: %s" % gc.undo_label() if gc.can_undo() \
+		else "Niente da annullare"
+
+
+func _on_game_menu(id: int) -> void:
+	match id:
+		0:
+			GameController.new_game()
+			_cancel_op()
+		1:
+			GameController.save_game(SAVE_PATH)
+		2:
+			GameController.load_game(SAVE_PATH)
+			_cancel_op()
+
+
+## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
+## Senza, l'unico modo di capirlo è leggere il Log a posteriori.
+func _refresh_instructions() -> void:
+	if _instr == null:
+		return
+	var gc := GameController
+	var txt := ""
+	if gc.rounds != null and gc.rounds.is_game_over():
+		txt = "[b]Partita finita.[/b] Vincitore: %s" % String(gc.state.tracks.get("winner", "—"))
+	elif _ev_active and _ev_index < _ev_reqs.size():
+		var req: Dictionary = _ev_reqs[_ev_index]
+		txt = "[color=#%s]Evento (%d/%d): %s[/color]" % [
+			RDRTheme.FOCUS.to_html(false), _ev_index + 1, _ev_reqs.size(),
+			req.get("prompt", "scegli")]
+	elif _op_mode != "":
+		var extra := ""
+		if gc.MOVEMENT_OPERATIONS.has(_op_mode):
+			extra = " · trascina i pezzi da uno spazio all'altro"
+		txt = "[color=#%s]%s: %d spazi scelti su %d candidati%s — poi «Esegui».[/color]" % [
+			RDRTheme.FOCUS.to_html(false), gc.OPERATION_NAMES.get(_op_mode, _op_mode),
+			_op_spaces.size(), _op_candidates.size(), extra]
+	elif _sa_mode != "":
+		txt = "[color=#%s]%s: scegli gli spazi (%d candidati), poi «Esegui».[/color]" % [
+			RDRTheme.FOCUS.to_html(false), gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode),
+			_op_candidates.size()]
+	elif gc.sequence != null and gc.sequence.pending_faction() != "":
+		var fid := gc.sequence.pending_faction()
+		txt = "Tocca a %s (%s Disponibile): scegli un'Operazione, l'Evento, oppure Passa." % [
+			RDRTheme.faction_chip(gc.game_def.faction(fid).short_name, fid),
+			"1ª" if gc.sequence.is_first_slot() else "2ª"]
+	elif gc.sequence != null:
+		txt = "Carta conclusa: premi «Concludi carta» per passare alla successiva."
+	if not gc.pending_free_ops().is_empty():
+		txt += "  [color=#%s]★ %d Operazione/i gratuita/e in sospeso.[/color]" % [
+			RDRTheme.ACCENT.to_html(false), gc.pending_free_ops().size()]
+	_instr.text = txt
 
 
 func _refresh_status() -> void:
@@ -614,6 +838,7 @@ func _paint_op_highlight() -> void:
 func _refresh_op_bar() -> void:
 	for c in _ops_box.get_children():
 		c.queue_free()
+	_refresh_instructions()
 	var gc := GameController
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return

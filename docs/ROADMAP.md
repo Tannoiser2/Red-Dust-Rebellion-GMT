@@ -41,10 +41,20 @@ fatto su Cuba Libre e All Bridges Burning.
       più solo Disponibile/Non Disponibile
 - [x] Spostamenti a trascinamento dei pezzi, con le frecce sulla mappa
       (`MovesOverlay`) e la lista degli spostamenti dichiarati
-- [ ] Zoom/pan sulla mappa (rimandato)
-- [ ] Riallineamento alla UI di Cuba Libre: menu iniziale, tema, pannello
-      guidato delle azioni (ActionFlow/SpecialFlow), anteprima di costo ed
-      effetti, Annulla, salvataggio/ripresa, animazioni
+- [x] Zoom e scorrimento della mappa: rotellina, gesto magnify, +/−/0,
+      trascinamento col tasto destro; lo zoom è una scala sul nodo mappa, così
+      pedine e marcatori ingrandiscono insieme alla tavola
+- [x] Riga di istruzioni sopra la mappa: di chi è il turno, cosa si sta
+      pianificando, quante Operazioni gratuite sono in sospeso
+- [x] Tema unico dei comandi (`RDRTheme`), applicato come risorsa `Theme` alla
+      scena: vale anche per i tasti creati al volo a ogni turno
+- [x] Annulla l'ultima azione (25 passi) con il nome di ciò che si disfa
+- [x] Salvataggio e ripresa (`user://partita.json`): stato + sequenza della
+      carta in corso, dal menu «Partita…»
+- [ ] Restano da portare da Cuba Libre: menu iniziale come scena a sé,
+      pannello guidato delle azioni (ActionFlow/SpecialFlow) con anteprima di
+      costo ed effetti prima di eseguire, animazioni dei pezzi, tooltip
+      diffusi, autosalvataggio
 
 ## Fase 3 — Sequenza di gioco ✅
 

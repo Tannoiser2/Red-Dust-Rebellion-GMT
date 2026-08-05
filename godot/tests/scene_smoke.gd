@@ -287,6 +287,58 @@ func _initialize() -> void:
 	else:
 		_ok(false, "non si è riusciti ad arrivare al turno del Red Dust")
 
+	# --- Zoom e scorrimento della mappa ------------------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	var base_size: Vector2 = main.get("_map_base")
+	_ok(base_size.x > 100.0, "la mappa ha una dimensione base (%.0f px)" % base_size.x)
+	main.call("_set_zoom", 2.0)
+	await process_frame
+	_ok(is_equal_approx(float(main.get("_zoom")), 2.0), "lo zoom arriva a 2×")
+	_ok(main.get("_map_root").scale.x > 1.9, "la mappa è davvero scalata (pedine comprese)")
+	_ok(main.get("_map_wrap").size.x > base_size.x * 1.9,
+		"l'area scorrevole cresce con lo zoom")
+	var views2: Dictionary = main.get("_views")
+	_ok((views2["europa"] as RegionView).size.x == base_size.x,
+		"le zone restano nel sistema di coordinate della mappa non scalata")
+	main.call("_set_zoom", 0.2)
+	_ok(float(main.get("_zoom")) == 1.0, "sotto la tavola intera non si rimpicciolisce")
+
+	# --- Annulla ------------------------------------------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	_ok(not gc.can_undo(), "a inizio partita non c'è nulla da annullare")
+	var fid_u: String = gc.sequence.pending_faction()
+	var res_u: int = gc.state.get_resources("marsgov")
+	gc.do_pass()
+	await process_frame
+	_ok(gc.can_undo(), "dopo il Passo si può annullare")
+	_ok(gc.undo_label().contains("Passo"), "il tasto dice cosa annulla: «%s»" % gc.undo_label())
+	gc.undo()
+	await process_frame
+	_ok(gc.sequence.pending_faction() == fid_u, "annullando torna il turno di %s" % fid_u)
+	_ok(gc.state.get_resources("marsgov") == res_u, "…e le Risorse tornano quelle di prima")
+	_ok(not gc.can_undo(), "la pila di annullamento si è svuotata")
+
+	# --- Salvataggio e ripresa ---------------------------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	gc.do_pass()
+	await process_frame
+	var card_s: int = gc.state.current_card
+	var elig_s: int = gc.state.eligibility["marsgov"]
+	var pending_s: String = gc.sequence.pending_faction()
+	var save_path := "user://test_partita.json"
+	_ok(gc.save_game(save_path), "la partita si salva")
+	gc.new_game("standard", 999)
+	await process_frame
+	_ok(gc.load_game(save_path), "…e si riprende")
+	_ok(gc.state.current_card == card_s, "torna la stessa carta (#%d)" % card_s)
+	_ok(gc.state.eligibility["marsgov"] == elig_s, "torna la stessa Disponibilità")
+	_ok(gc.sequence != null and gc.sequence.pending_faction() == pending_s,
+		"…e la carta riprende dalla Fazione giusta (%s)" % pending_s)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()
