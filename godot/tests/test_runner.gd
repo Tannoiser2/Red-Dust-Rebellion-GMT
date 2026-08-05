@@ -73,6 +73,8 @@ func _init() -> void:
 	test_events_effects()
 	test_events_eligibility()
 	test_events_free_ops()
+	test_asset_events()
+	test_capabilities()
 	test_campaign_effects()
 
 	print("\n%d passati, %d falliti" % [passed, failed])
@@ -1696,6 +1698,226 @@ func test_events_free_ops() -> void:
 	module.remove_pieces(s3, lab, "rd_base", 9, "available")
 	ev3.apply_after(pending[0])
 	eq(int(s3.tracks["profits"]), 4, "+4 Profits quando l'Assault ha tolto la Base")
+
+
+# ===========================================================================
+# Fase 5 — Eventi delle Asset card (§1.5)
+# ===========================================================================
+
+func test_asset_events() -> void:
+	print("Asset card — Eventi (§1.5)")
+	var s := fresh()
+	var ev := events_for(s, "reclaimer")
+	# I 10 Eventi delle Asset card hanno tutti i loro effetti.
+	var covered := 0
+	for number in [7, 8, 9, 10, 11, 12, 13, 27, 28, 29]:
+		if not ev.asset_option(number).is_empty():
+			covered += 1
+	eq(covered, 10, "tutti e 10 gli Eventi delle Asset card hanno effetti")
+
+	# Tutti devono risolversi su uno stato fresco, senza errori.
+	var errors: Array[String] = []
+	for number in [7, 8, 9, 10, 11, 12, 13, 27, 28, 29]:
+		var si := fresh()
+		var evi := events_for(si, "reclaimer")
+		var res: Dictionary = evi.play_asset(number)
+		if not res.get("ok", false):
+			errors.append("#%d: %s" % [number, res.get("error", "")])
+	eq(errors.size(), 0, "i 10 Eventi Asset si risolvono (%s)" % ", ".join(errors))
+
+	# #10 Converts: sostituisce Ribelli RD con Ribelli CR, uno per spazio scelto.
+	var s10 := fresh()
+	var ev10 := events_for(s10, "reclaimer")
+	var with_rd: Array = []
+	for sid in module.mars_spaces(s10):
+		if module.count_in(s10, sid, "rd_rebel") > 0 and with_rd.size() < 2:
+			with_rd.append(sid)
+	var rd_before := module.count_in(s10, String(with_rd[0]), "rd_rebel")
+	ev10.play_asset(10, {"a": with_rd})
+	eq(module.count_in(s10, String(with_rd[0]), "rd_rebel"), rd_before - 1,
+		"un Ribelle RD in meno nel primo spazio")
+	ok(module.count_in(s10, String(with_rd[0]), "cr_rebel") > 0, "…sostituito da un CR")
+
+	# #8 Weaponized Asteroid: 2 Danni e metà delle unità, arrotondata per eccesso.
+	var s8 := fresh()
+	var ev8 := events_for(s8, "reclaimer")
+	var lab := ""
+	for sid in module.mars_spaces(s8):
+		if module.is_labyrinth(s8, sid) and lab == "":
+			lab = sid
+	var units_before := 0
+	for t in ["mg_troop", "security", "eg_troop", "specops", "rd_rebel", "cr_rebel"]:
+		units_before += module.count_in(s8, lab, String(t))
+	var dmg_before := module.marker(s8, lab, "damage")
+	ev8.play_asset(8, {"a": [lab]})
+	ok(module.marker(s8, lab, "damage") > dmg_before, "%s ha preso Danno" % lab)
+	var units_after := 0
+	for t in ["mg_troop", "security", "eg_troop", "specops", "rd_rebel", "cr_rebel"]:
+		units_after += module.count_in(s8, lab, String(t))
+	eq(units_after, units_before - int(ceil(units_before / 2.0)),
+		"rimossa metà delle unità per eccesso (%d su %d)" % [units_before - units_after, units_before])
+
+	# #7 Children of the Desert: Travel gratuito, poi un Attack per Deserto.
+	var s7 := fresh()
+	var ev7 := events_for(s7, "reclaimer")
+	ev7.play_asset(7, {"a": ["rutherford"]})
+	var queue: Array = s7.tracks.get("pending_free_ops", [])
+	eq(queue.size(), 2, "#7 concede Travel e Attack gratuiti")
+	eq(String((queue[0] as Dictionary)["operation"]), "travel", "prima il Travel")
+	eq(String((queue[1] as Dictionary)["operation"]), "attack", "poi l'Attack")
+	ok(Array((queue[1] as Dictionary)["spaces"]).has("rutherford"),
+		"l'Attack include il Deserto scelto")
+
+
+# ===========================================================================
+# Fase 5 — Capability delle Asset card (§1.5)
+# ===========================================================================
+
+func with_capability(n: int) -> GameState:
+	var s := fresh()
+	s.tracks["capabilities"] = [n]
+	return s
+
+
+func test_capabilities() -> void:
+	print("Asset card — Capability (§1.5)")
+
+	# Il riconoscimento sopravvive al salvataggio (i numeri tornano come float).
+	var sj := fresh()
+	sj.tracks["capabilities"] = [2.0]
+	eq(module.capability_active(sj, 2), true, "la Capability si riconosce anche dopo un salvataggio")
+
+	# #2 Dust-Adaptation: i Reclaimer possono scegliere spazi in Raging Storm.
+	var s2 := with_capability(2)
+	var storm_space := ""
+	for sid in module.mars_spaces(s2):
+		if module.is_desert(s2, sid) and s2.spaces[sid].support == CoinEnums.Support.NEUTRAL \
+				and storm_space == "":
+			storm_space = sid
+	module.set_marker(s2, storm_space, "storm", 2)
+	var o2 := ops_for(s2)
+	ok(Array(o2.rally_candidates("reclaimer")).has(storm_space),
+		"#2: %s in tempesta resta selezionabile dai Reclaimer" % storm_space)
+	var s2b := fresh()
+	module.set_marker(s2b, storm_space, "storm", 2)
+	ok(not Array(ops_for(s2b).rally_candidates("reclaimer")).has(storm_space),
+		"…senza la Capability no")
+
+	# #23 MPS Uplink Hacked: un Satellite conta come Base Reclaimer in più.
+	var s23 := with_capability(23)
+	# I Satelliti non stanno fra le Disponibili: allo schieramento sono in Orbita.
+	module.move_pieces(s23, "orbit", "rutherford", "satellite", 1)
+	eq(module.cr_bases_in(s23, "rutherford"), module.count_in(s23, "rutherford", "cr_base") + 1,
+		"#23: il Satellite vale una Base CR in più")
+	eq(module.cr_bases_in(fresh(), "rutherford"), 0, "…senza la Capability no")
+
+	# #5 Neural Conditioning: Rally "fill" anche senza Base CR.
+	var s5 := with_capability(5)
+	var neutral := ""
+	for sid in module.mars_spaces(s5):
+		if s5.spaces[sid].support == CoinEnums.Support.NEUTRAL \
+				and module.population(s5, sid) > 0 and module.count_in(s5, sid, "cr_base") == 0 \
+				and neutral == "":
+			neutral = sid
+	var o5 := ops_for(s5)
+	var cr_before := module.count_in(s5, neutral, "cr_rebel")
+	o5.rally({"faction": "reclaimer", "spaces": [{"id": neutral, "mode": "fill"}]})
+	ok(module.count_in(s5, neutral, "cr_rebel") > cr_before,
+		"#5: Rally «fill» riempie %s pur senza Base" % neutral)
+	var s5b := fresh()
+	var o5b := ops_for(s5b)
+	var cr_b2 := module.count_in(s5b, neutral, "cr_rebel")
+	o5b.rally({"faction": "reclaimer", "spaces": [{"id": neutral, "mode": "fill"}]})
+	eq(module.count_in(s5b, neutral, "cr_rebel"), cr_b2, "…senza la Capability non piazza nulla")
+
+	# #4 The Mind Twister: Purify converte una forza nemica in più.
+	var s4 := with_capability(4)
+	var pur := "radau"
+	module.place_from_available(s4, pur, "mg_troop", 2)
+	module.place_from_available(s4, pur, "cr_rebel", 6, "hidden")
+	module.recompute_all_control(s4)
+	eq(s4.spaces[pur].control, "reclaimer", "#4: Radau è sotto Controllo Reclaimer")
+	var mg_before := module.count_in(s4, pur, "mg_troop")
+	var sp4 := RDRSpecials.new(s4, module)
+	var r4: Dictionary = sp4.purify({"spaces": [
+		{"id": pur, "mode": "convert", "targets": ["mg_troop"]}]})
+	eq(r4.get("ok", false), true, "#4: il Purify riesce")
+	eq(module.count_in(s4, pur, "mg_troop"), mg_before - 2,
+		"#4: Purify converte 2 Truppe MG invece di 1")
+
+	# #24 AI Unleashed: il Ransack colpisce anche le Risorse MarsGov.
+	var s24 := with_capability(24)
+	var rans := ""
+	for sid in module.mars_spaces(s24):
+		if module.marker(s24, sid, "damage") > 0 and rans == "":
+			rans = sid
+	module.place_from_available(s24, rans, "cr_rebel", 1, "hidden")
+	var mg_res := s24.get_resources("marsgov")
+	var sp24 := RDRSpecials.new(s24, module)
+	sp24.ransack({"spaces": [rans]})
+	eq(s24.get_resources("marsgov"), mg_res - 3, "#24: −3 Risorse MarsGov dopo il Ransack")
+
+	# #1 Subdermal Weaponry: l'Attack CR toglie una forza in più per dado riuscito.
+	var s1 := with_capability(1)
+	var atk := "radau"
+	module.place_from_available(s1, atk, "cr_rebel", 6, "hidden")
+	module.place_from_available(s1, atk, "mg_troop", 6)
+	var o1 := ops_for(s1)
+	o1.attack({"faction": "reclaimer", "spaces": [atk], "ambush": {atk: [1, 1]}})
+	var left_with := module.count_in(s1, atk, "mg_troop")
+	var s1b := fresh()
+	module.place_from_available(s1b, atk, "cr_rebel", 6, "hidden")
+	module.place_from_available(s1b, atk, "mg_troop", 6)
+	ops_for(s1b).attack({"faction": "reclaimer", "spaces": [atk], "ambush": {atk: [1, 1]}})
+	var left_without := module.count_in(s1b, atk, "mg_troop")
+	ok(left_with < left_without,
+		"#1: con la Capability restano meno Truppe MG (%d contro %d)" % [left_with, left_without])
+
+	# #26 Ares Rockets: l'Attack CR può abbattere Satelliti altrove su Mars.
+	var s26 := with_capability(26)
+	module.place_from_available(s26, atk, "cr_rebel", 6, "hidden")
+	module.move_pieces(s26, "orbit", "marth", "satellite", 1)
+	var sat_before := module.count_in(s26, "marth", "satellite")
+	var o26 := ops_for(s26)
+	o26.attack({"faction": "reclaimer", "spaces": [atk], "ambush": {atk: [1, 1]}})
+	ok(module.count_in(s26, "marth", "satellite") < sat_before,
+		"#26: il Satellite di Marth è stato abbattuto da un Attack a Radau")
+
+	# #25 Genetic Masking: dove c'è una Base CR, Secure/Recon contano 2 unità in meno.
+	var s25 := with_capability(25)
+	var lab25 := "tenzing"
+	module.place_from_available(s25, lab25, "cr_base", 1)
+	module.place_from_available(s25, lab25, "cr_rebel", 4, "hidden")
+	module.place_from_available(s25, lab25, "mg_troop", 3)
+	var o25 := ops_for(s25)
+	o25.secure({"faction": "marsgov", "dest": [lab25], "moves": []})
+	var active_masked := module.count_in(s25, lab25, "cr_rebel", "active")
+	var s25b := fresh()
+	module.place_from_available(s25b, lab25, "cr_base", 1)
+	module.place_from_available(s25b, lab25, "cr_rebel", 4, "hidden")
+	module.place_from_available(s25b, lab25, "mg_troop", 3)
+	ops_for(s25b).secure({"faction": "marsgov", "dest": [lab25], "moves": []})
+	ok(active_masked < module.count_in(s25b, lab25, "cr_rebel", "active"),
+		"#25: il Secure Attiva meno Ribelli (%d contro %d)" % [
+			active_masked, module.count_in(s25b, lab25, "cr_rebel", "active")])
+
+	# #3 Enhanced Metabolism: dopo un Assault che toglie forze CR, ne torna una.
+	var s3 := with_capability(3)
+	var ass := "tenzing"
+	module.place_from_available(s3, ass, "cr_rebel", 3, "active")
+	module.place_from_available(s3, ass, "mg_troop", 6)
+	var o3 := ops_for(s3)
+	var cr_pre := module.count_in(s3, ass, "cr_rebel")
+	o3.assault({"faction": "marsgov", "spaces": [ass]})
+	var cr_post := module.count_in(s3, ass, "cr_rebel")
+	var s3b := fresh()
+	module.place_from_available(s3b, ass, "cr_rebel", 3, "active")
+	module.place_from_available(s3b, ass, "mg_troop", 6)
+	ops_for(s3b).assault({"faction": "marsgov", "spaces": [ass]})
+	ok(cr_post > module.count_in(s3b, ass, "cr_rebel"),
+		"#3: un Ribelle CR rientra dopo l'Assault (%d contro %d)" % [
+			cr_post, module.count_in(s3b, ass, "cr_rebel")])
+	ok(cr_post <= cr_pre, "…senza però annullare l'Assault")
 
 
 # ===========================================================================

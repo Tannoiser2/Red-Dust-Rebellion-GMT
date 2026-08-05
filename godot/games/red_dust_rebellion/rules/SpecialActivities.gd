@@ -388,17 +388,29 @@ func purify(plan: Dictionary) -> Dictionary:
 				break
 		else:
 			var swaps := 2 if module.count_in(state, sid, "cr_base", "conversion_center") > 0 else 1
-			for t in e.get("targets", ["mg_troop", "security", "eg_troop", "rd_rebel"]):
-				if swaps <= 0:
+			# Capability #4 "The Mind Twister": una forza nemica in più per spazio.
+			if module.capability_active(state, 4):
+				swaps += 1
+			# NB: si cicla sulle SOSTITUZIONI, non sui tipi di bersaglio: con due
+			# sostituzioni disponibili e un solo tipo indicato se ne faceva una
+			# sola, e il Conversion Center non serviva a niente.
+			var targets: Array = e.get("targets",
+				["mg_troop", "security", "eg_troop", "rd_rebel"])
+			while swaps > 0:
+				var done := false
+				for t in targets:
+					var type_id := String(t)
+					var pt: PieceTypeDef = state.game_def.piece_type(type_id)
+					if pt != null and pt.is_base:
+						continue
+					if module.remove_pieces(state, sid, type_id, 1, "available") == 0:
+						continue
+					module.place_from_available(state, sid, "cr_rebel", 1, "hidden")
+					swaps -= 1
+					done = true
 					break
-				var type_id := String(t)
-				var pt: PieceTypeDef = state.game_def.piece_type(type_id)
-				if pt != null and pt.is_base:
-					continue
-				if module.remove_pieces(state, sid, type_id, 1, "available") == 0:
-					continue
-				module.place_from_available(state, sid, "cr_rebel", 1, "hidden")
-				swaps -= 1
+				if not done:
+					break
 	return _done()
 
 
@@ -422,6 +434,15 @@ func ransack(plan: Dictionary) -> Dictionary:
 		draws += module.marker(state, s, "damage")
 	_cr_draw(draws)
 	log_lines.append("Ransack: %d Asset card." % draws)
+	# Capability #24 "AI Unleashed": il Ransack toglie anche 3 Risorse MarsGov
+	# oppure 1 Profit — si sceglie col piano, di default le Risorse.
+	if module.capability_active(state, 24) and not spaces.is_empty():
+		if String(plan.get("ai_target", "resources")) == "profits":
+			_profits(-1)
+			log_lines.append("AI Unleashed: −1 Profit.")
+		else:
+			state.add_resources("marsgov", -3, 50)
+			log_lines.append("AI Unleashed: −3 Risorse MarsGov.")
 	return _done()
 
 

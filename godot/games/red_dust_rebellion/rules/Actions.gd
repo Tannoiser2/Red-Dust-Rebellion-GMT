@@ -212,6 +212,12 @@ func selectable(sid: String, ignore_storms: bool = false) -> bool:
 	return not (module.is_desert(state, sid) and module.has_raging_storm(state, sid))
 
 
+## §1.5 Capability #2 "Dust-Adaptation": i Reclaimer possono scegliere spazi con
+## Raging Storm per qualsiasi Operazione, Attività Speciale o Evento.
+func storm_free(faction: String) -> bool:
+	return faction == "reclaimer" and module.capability_active(state, 2)
+
+
 func can_enter(sid: String, ignore_storms: bool = false) -> bool:
 	return ignore_storms or not module.has_raging_storm(state, sid)
 

@@ -1,0 +1,460 @@
+{
+  "_note": "Effetti degli Eventi delle Asset card dei Reclaimer (§1.5), scritti a mano con la stessa grammatica di event_effects.json e risolti dalla stessa macchina (rules/Events.gd). Le Capability non stanno qui: sono modificatori permanenti delle regole, agganciati direttamente a Operazioni e Attività Speciali.",
+  "cards": {
+    "7": {
+      "title": "Children of the Desert",
+      "text": "Free Travel to 1 Desert and any adjacent Deserts, then free Attack in each destination space.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 1,
+          "min": 1,
+          "filter": {
+            "terrain": "desert"
+          },
+          "prompt": "Deserto di destinazione del Travel gratuito"
+        }
+      ],
+      "effects": [
+        {
+          "op": "free_op",
+          "faction": "reclaimer",
+          "operation": "travel",
+          "where": {
+            "choice": "a"
+          }
+        },
+        {
+          "op": "free_op",
+          "faction": "reclaimer",
+          "operation": "attack",
+          "where": {
+            "filter": {
+              "terrain": "desert",
+              "adjacent_to": {
+                "choice": "a"
+              },
+              "include_anchor": true
+            }
+          },
+          "note": "un Attack gratuito in ogni Deserto di arrivo"
+        }
+      ]
+    },
+    "8": {
+      "title": "Weaponized Asteroid",
+      "text": "Place 2 Damage in a Labyrinth, then remove half the units there (rounded up).",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 1,
+          "min": 1,
+          "filter": {
+            "terrain": "labyrinth"
+          },
+          "prompt": "Labirinto colpito dall'asteroide"
+        }
+      ],
+      "effects": [
+        {
+          "op": "damage",
+          "where": {
+            "choice": "a"
+          },
+          "count": 2
+        },
+        {
+          "op": "capture",
+          "id": "units",
+          "count": {
+            "kind": "pieces",
+            "where": {
+              "choice": "a"
+            },
+            "types": [
+              "coin_units",
+              "rebels"
+            ]
+          }
+        },
+        {
+          "op": "remove",
+          "where": {
+            "choice": "a"
+          },
+          "types": [
+            "mg_troop",
+            "security",
+            "eg_troop",
+            "satellite",
+            "specops",
+            "rd_rebel",
+            "cr_rebel"
+          ],
+          "count": {
+            "kind": "var",
+            "name": "units",
+            "per": 2,
+            "round": "up"
+          }
+        }
+      ]
+    },
+    "9": {
+      "title": "The Reclaimer Faith",
+      "text": "Place 1 CR Base into each of 3 spaces with no other Faction's forces.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 3,
+          "filter": {
+            "has_none": [
+              "mg_troop",
+              "security",
+              "specops",
+              "eg_troop",
+              "satellite",
+              "mg_base",
+              "corp_base",
+              "rd_rebel",
+              "rd_base"
+            ],
+            "base_room": true
+          },
+          "prompt": "3 spazi senza forze di altre Fazioni"
+        }
+      ],
+      "effects": [
+        {
+          "op": "place",
+          "faction": "reclaimer",
+          "where": {
+            "choice": "a"
+          },
+          "pieces": [
+            {
+              "type": "cr_base",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "10": {
+      "title": "Converts",
+      "text": "Replace up to 4 RD Rebels with CR Rebels.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 4,
+          "repeat": true,
+          "filter": {
+            "has_any": [
+              "rd_rebel"
+            ]
+          },
+          "prompt": "Fino a 4 Ribelli Red Dust da convertire"
+        }
+      ],
+      "effects": [
+        {
+          "op": "replace",
+          "where": {
+            "choice": "a"
+          },
+          "from": [
+            "rd_rebel"
+          ],
+          "to": [
+            "cr_rebel"
+          ],
+          "count": 4,
+          "per_space": 1
+        }
+      ]
+    },
+    "11": {
+      "title": "Church Assets",
+      "text": "Draw 1 Asset card for each Labyrinth with CR forces, then place 1 CR Base in each of 2 Labyrinths.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 2,
+          "filter": {
+            "terrain": "labyrinth",
+            "base_room": true
+          },
+          "prompt": "2 Labirinti dove piazzare una Base Reclaimer"
+        }
+      ],
+      "effects": [
+        {
+          "op": "draw_asset",
+          "count": {
+            "kind": "spaces",
+            "filter": {
+              "terrain": "labyrinth",
+              "has": [
+                {
+                  "types": [
+                    "cr_rebel",
+                    "cr_base"
+                  ],
+                  "min": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "op": "place",
+          "faction": "reclaimer",
+          "where": {
+            "choice": "a"
+          },
+          "pieces": [
+            {
+              "type": "cr_base",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "12": {
+      "title": "The Lost Patrol",
+      "text": "Remove all COIN units from 1 Desert, then place 1 Damage on an adjacent Labyrinth.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 1,
+          "min": 1,
+          "filter": {
+            "terrain": "desert",
+            "has_any": [
+              "coin_units"
+            ]
+          },
+          "prompt": "Deserto da cui sparisce la pattuglia"
+        },
+        {
+          "id": "b",
+          "kind": "space",
+          "count": 1,
+          "filter": {
+            "terrain": "labyrinth",
+            "adjacent_to": {
+              "choice": "a"
+            }
+          },
+          "prompt": "Labirinto adiacente da danneggiare"
+        }
+      ],
+      "effects": [
+        {
+          "op": "remove",
+          "where": {
+            "choice": "a"
+          },
+          "types": [
+            "coin_units"
+          ],
+          "all": true
+        },
+        {
+          "op": "damage",
+          "where": {
+            "choice": "b"
+          },
+          "count": 1
+        }
+      ]
+    },
+    "13": {
+      "title": "The Ma'adim",
+      "text": "Flip all CR Rebels to Hidden and move up to 6 CR Rebels to any 1 Desert.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 1,
+          "min": 1,
+          "filter": {
+            "terrain": "desert"
+          },
+          "prompt": "Deserto in cui radunarsi"
+        },
+        {
+          "id": "b",
+          "kind": "space",
+          "count": 3,
+          "repeat": true,
+          "filter": {
+            "has_any": [
+              "cr_rebel"
+            ]
+          },
+          "prompt": "Spazi da cui far partire i Ribelli Reclaimer"
+        }
+      ],
+      "effects": [
+        {
+          "op": "hide",
+          "where": {
+            "filter": {}
+          },
+          "types": [
+            "cr_rebel"
+          ]
+        },
+        {
+          "op": "move",
+          "from": {
+            "choice": "b"
+          },
+          "to": {
+            "choice": "a"
+          },
+          "types": [
+            "cr_rebel"
+          ],
+          "count": 6
+        }
+      ]
+    },
+    "27": {
+      "title": "Loyalty",
+      "text": "Remove up to 2 Security or MG Troops each from 4 spaces on Mars without Support.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 4,
+          "filter": {
+            "support": "no_support",
+            "has_any": [
+              "security",
+              "mg_troop"
+            ]
+          },
+          "prompt": "Fino a 4 spazi senza Supporto"
+        }
+      ],
+      "effects": [
+        {
+          "op": "remove",
+          "where": {
+            "choice": "a"
+          },
+          "types": [
+            "security",
+            "mg_troop"
+          ],
+          "count": 2
+        }
+      ]
+    },
+    "28": {
+      "title": "Remote Base",
+      "text": "Place a CR Base and 2 CR Rebels in an Unpopulated Desert. Flip that Base to its Conversion Center side and draw 1 Asset card.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 1,
+          "min": 1,
+          "filter": {
+            "terrain": "desert",
+            "populated": false,
+            "base_room": true
+          },
+          "prompt": "Deserto Spopolato dove nasce la base remota"
+        }
+      ],
+      "effects": [
+        {
+          "op": "place",
+          "faction": "reclaimer",
+          "where": {
+            "choice": "a"
+          },
+          "pieces": [
+            {
+              "type": "cr_base",
+              "count": 1,
+              "state": "conversion_center"
+            },
+            {
+              "type": "cr_rebel",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "op": "draw_asset",
+          "count": 1
+        }
+      ]
+    },
+    "29": {
+      "title": "Pilgrimage",
+      "text": "Move up to 4 CR Rebels to one Labyrinth no more than 2 spaces away from any of them. Place 1 Damage in that Labyrinth, then remove up to 3 Population markers from Displaced Population.",
+      "choices": [
+        {
+          "id": "a",
+          "kind": "space",
+          "count": 1,
+          "min": 1,
+          "filter": {
+            "terrain": "labyrinth"
+          },
+          "prompt": "Labirinto del pellegrinaggio"
+        },
+        {
+          "id": "b",
+          "kind": "space",
+          "count": 3,
+          "repeat": true,
+          "filter": {
+            "has_any": [
+              "cr_rebel"
+            ]
+          },
+          "prompt": "Spazi da cui partono i pellegrini"
+        }
+      ],
+      "effects": [
+        {
+          "op": "move",
+          "from": {
+            "choice": "b"
+          },
+          "to": {
+            "choice": "a"
+          },
+          "types": [
+            "cr_rebel"
+          ],
+          "count": 4
+        },
+        {
+          "op": "damage",
+          "where": {
+            "choice": "a"
+          },
+          "count": 1
+        },
+        {
+          "op": "displaced",
+          "delta": -3
+        }
+      ]
+    }
+  }
+}

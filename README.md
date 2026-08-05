@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**674 test del modulo + 93 controlli di smoke test della scena, 0 falliti.**
+**700 test del modulo + 100 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -94,7 +94,9 @@ disponibile in UI è il Passo.
 | Eventi: Operazioni gratuite concesse | ✅ in coda, eseguite a costo zero |
 | Eventi: «Ineligible» / «remains Eligible» | ✅ applicati alla chiusura della carta |
 | Effetti continuativi delle 12 Campaign card | ✅ tutte attive sulle regole |
-| Capability delle Asset card | ⬜ in gioco ma ancora inerti |
+| Capability delle Asset card (10) | ✅ agganciate a Operazioni e Attività Speciali |
+| Eventi delle Asset card (10) | ✅ stessa libreria degli Eventi §7.0 |
+| Mano dei Reclaimer giocabile in UI | ✅ Capability ed Eventi dal pannello |
 | Non-Player *Curiosity* | ⬜ regolamento ancora da leggere |
 | Interazione di gioco (scelta azioni) | ⬜ dopo Operazioni e round |
 

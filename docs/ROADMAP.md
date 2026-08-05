@@ -142,8 +142,15 @@ fatto su Cuba Libre e All Bridges Burning.
       l'Opposizione (#6), unità CORP escluse dal Controllo nei Labirinti (#7),
       costi maggiorati per MarsGov (#9/#10), Transit e Aldrin Cycler bloccati
       (#11), Supporto Passivo che salta il Neutrale (#12)
-- [ ] Effetti degli Eventi e delle Capability sulle Asset card (le 30 carte
-      Reclaimer: la libreria degli Eventi §7.0 è il modello da riusare)
+- [x] **Capability delle 10 Asset card** agganciate alle regole: Attack che
+      colpisce di più (#1) e abbatte Satelliti ovunque (#26), tempeste ignorate
+      (#2), Ribelle che rientra dopo l'Assault (#3), Purify potenziato (#4),
+      Rally senza Base (#5), Bombard che non tocca i Reclaimer (#6), Satelliti
+      che contano come Base (#23), Ransack che erode Risorse o Profits (#24),
+      Secure/Recon depistati dalle Basi CR (#25)
+- [x] **Eventi delle 10 Asset card** in `data/asset_effects.json`, scritti con la
+      stessa grammatica delle carte Evento e risolti dalla stessa macchina
+- [x] Mano dei Reclaimer giocabile dal pannello
 - [ ] Simboli Non-Player ★/⊘ sulle carte (sottolineato/riquadrato nel Playbook)
 - [ ] Scelte fini dentro le Operazioni gratuite: l'Evento le mette in coda con
       gli spazi già fissati, ma bersagli, dadi dell'Ambush e modalità del Rally

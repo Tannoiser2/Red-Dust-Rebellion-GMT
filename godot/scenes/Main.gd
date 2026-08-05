@@ -57,6 +57,7 @@ var _ev_reqs: Array = []
 var _ev_index := 0
 var _move_box: VBoxContainer
 var _preview: RichTextLabel   ## costo ed effetti previsti dell'azione in preparazione
+var _hand_box: HFlowContainer ## mano di Asset card dei Reclaimer (§1.5)
 var _log: RichTextLabel
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
@@ -185,6 +186,13 @@ func _build_ui() -> void:
 	_ops_box.add_theme_constant_override("h_separation", 4)
 	_ops_box.add_theme_constant_override("v_separation", 4)
 	_side.add_child(_ops_box)
+
+	# §1.5: la mano dei Reclaimer. Le Capability restano in gioco come
+	# modificatori permanenti, gli Eventi si risolvono subito.
+	_hand_box = HFlowContainer.new()
+	_hand_box.add_theme_constant_override("h_separation", 4)
+	_hand_box.add_theme_constant_override("v_separation", 4)
+	_side.add_child(_hand_box)
 
 	# Anteprima: costo ed effetti previsti PRIMA di premere «Esegui».
 	_preview = RichTextLabel.new()
@@ -504,8 +512,50 @@ func _on_state_changed() -> void:
 	_refresh_op_bar()
 	_refresh_instructions()
 	_refresh_undo_btn()
+	_refresh_hand()
 	if _selected != "":
 		_refresh_space_info(_selected)
+
+
+## §1.5: la mano dei Reclaimer. Le carte di solo valore servono a pagare le
+## Operazioni e non si giocano; Capability ed Eventi hanno un pulsante.
+func _refresh_hand() -> void:
+	if _hand_box == null:
+		return
+	for c in _hand_box.get_children():
+		c.queue_free()
+	var gc := GameController
+	if gc.cards == null:
+		return
+	var hand: Array = gc.cards.hand()
+	var title := Label.new()
+	title.text = "Mano Reclaimer (%d)  ·  Capability in gioco: %d" % [
+		hand.size(), gc.cards.active_capabilities().size()]
+	title.add_theme_font_size_override("font_size", 11)
+	title.add_theme_color_override("font_color", RDRTheme.TEXT_DIM)
+	_hand_box.add_child(title)
+	for number in hand:
+		var n := int(number)
+		var card: Dictionary = gc.cards.assets.get(n, {})
+		var kind := String(card.get("kind", ""))
+		var b := Button.new()
+		b.text = "#%d %s" % [n, card.get("title", "")]
+		b.tooltip_text = "%s\n\nValore %s · %s" % [card.get("text", ""),
+			card.get("value", "?"), kind]
+		# Le carte di puro valore non hanno nulla da giocare.
+		b.disabled = kind == "resource"
+		b.pressed.connect(_play_asset.bind(n))
+		_hand_box.add_child(b)
+
+
+func _play_asset(number: int) -> void:
+	var res: Dictionary = GameController.play_asset_card(number)
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "carta rifiutata"))
+		return
+	for entry in res.get("free_ops", []):
+		_append_log("[color=#7fc4d8]Operazione gratuita in sospeso: %s[/color]" %
+			(entry as Dictionary).get("operation", ""))
 
 
 ## Il tasto Annulla dice anche COSA si sta per disfare: senza, non si sa se si

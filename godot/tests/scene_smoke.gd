@@ -386,6 +386,30 @@ func _initialize() -> void:
 	menu.queue_free()
 	await process_frame
 
+	# --- Asset card giocabili dalla mano (§1.5) -----------------------------
+	gc.new_game("standard", 20240424)
+	await process_frame
+	_ok(gc.cards.hand().size() == 3, "i Reclaimer partono con 3 Asset card")
+	# Si mette in mano una Capability nota e la si gioca.
+	gc.cards.hand().append(2)
+	var res_cap: Dictionary = gc.play_asset_card(2)
+	_ok(res_cap.get("ok", false), "la Capability #2 si gioca")
+	_ok(gc.rdr().capability_active(gc.state, 2), "…e resta in gioco")
+	_ok(not gc.cards.hand().has(2), "…lasciando la mano")
+	# Un Evento invece si risolve subito e finisce negli scarti.
+	gc.cards.hand().append(10)
+	var rd_before_a := 0
+	for sid in gc.rdr().mars_spaces(gc.state):
+		rd_before_a += gc.rdr().count_in(gc.state, sid, "rd_rebel")
+	var res_ev: Dictionary = gc.play_asset_card(10)
+	_ok(res_ev.get("ok", false), "l'Evento #10 «Converts» si gioca")
+	var rd_after_a := 0
+	for sid in gc.rdr().mars_spaces(gc.state):
+		rd_after_a += gc.rdr().count_in(gc.state, sid, "rd_rebel")
+	_ok(rd_after_a < rd_before_a,
+		"…e converte davvero Ribelli RD (%d → %d)" % [rd_before_a, rd_after_a])
+	_ok(gc.cards.discard_pile().has(10), "…finendo negli scarti")
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()

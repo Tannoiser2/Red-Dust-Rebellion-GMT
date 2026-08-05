@@ -636,6 +636,31 @@ func load_game(path: String) -> bool:
 	return true
 
 
+## §1.5: i Reclaimer giocano una Asset card dalla mano. Una Capability resta in
+## gioco come modificatore permanente (e la applicano direttamente le regole);
+## un Evento viene risolto qui, con la stessa macchina delle carte Evento.
+func play_asset_card(number: int, choices = {}) -> Dictionary:
+	if cards == null:
+		return {"ok": false, "error": "Mazzi non collegati."}
+	snapshot("Asset card #%d" % number)
+	var res: Dictionary = cards.play_asset_event(number)
+	if not res.get("ok", false):
+		_undo.pop_back()
+		return res
+	for line in cards.log_lines:
+		emit_signal("log_line", line)
+	cards.log_lines.clear()
+	if not bool(res.get("capability", false)):
+		var ev: Dictionary = events.play_asset(number, choices, "reclaimer")
+		for line in events.log_lines:
+			emit_signal("log_line", line)
+		events.log_lines.clear()
+		res["event"] = ev
+		res["free_ops"] = ev.get("free_ops", [])
+	refresh()
+	return res
+
+
 ## §7.0: Operazioni gratuite concesse dagli Eventi e non ancora eseguite.
 func pending_free_ops() -> Array:
 	if not state.tracks.has("pending_free_ops"):

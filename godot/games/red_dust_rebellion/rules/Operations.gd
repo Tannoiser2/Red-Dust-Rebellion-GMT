@@ -27,6 +27,8 @@ var cards: RDRCards = null
 var log_lines: Array[String] = []
 ## Operazione in corso, per il valore maggiorato delle Asset card (§1.5).
 var _current_op := ""
+## Spazi in cui l'Assault in corso ha tolto forze Reclaimer (Capability #3).
+var _cr_metabolism_spaces: Array[String] = []
 ## §7.0: le Operazioni gratuite concesse dagli Eventi non costano Risorse (né
 ## Asset card per i Reclaimer).
 var free := false
@@ -393,6 +395,10 @@ func _secure_or_recon(plan: Dictionary, kind: String) -> Dictionary:
 		var units := 0
 		for t in allowed:
 			units += module.count_in(state, s, t)
+		# Capability #25 "Genetic Masking": dove c'è una Base CR, il Secure e il
+		# Recon contano 2 unità COIN in meno.
+		if module.capability_active(state, 25) and module.count_in(state, s, "cr_base") > 0:
+			units = maxi(0, units - 2)
 		var n := units
 		if s == "wilderness":
 			n = int(units / 2.0)
@@ -455,6 +461,7 @@ func assault(plan: Dictionary) -> Dictionary:
 	if not _can_pay(faction, cost):
 		return _fail("Assault: Risorse insufficienti (%d)." % cost)
 
+	_cr_metabolism_spaces.clear()
 	# Le Corporations possono rivelare SpecOps prima di risolvere.
 	for sid in plan.get("activate_specops", []):
 		act.activate(String(sid), "specops", 99)
@@ -482,8 +489,20 @@ func assault(plan: Dictionary) -> Dictionary:
 			act.shift(s, -1)
 		var before_rd := module.count_in(state, s, "rd_rebel") + module.count_in(state, s, "rd_base")
 		var before_cr := module.count_in(state, s, "cr_rebel") + module.count_in(state, s, "cr_base")
-		var removed := act.remove_enemy_forces(
-			s, ["rd_rebel", "cr_rebel", "rd_base", "cr_base"], hits, true)
+		var removed: Array[String] = []
+		if bombard and module.capability_active(state, 6):
+			# Capability #6 "Deep Tunneling": i 2 colpi in più del Bombard non
+			# possono toccare le forze Reclaimer.
+			removed = act.remove_enemy_forces(s, ["rd_rebel", "rd_base"], 2, true)
+			removed.append_array(act.remove_enemy_forces(
+				s, ["rd_rebel", "cr_rebel", "rd_base", "cr_base"], hits - 2, true))
+		else:
+			removed = act.remove_enemy_forces(
+				s, ["rd_rebel", "cr_rebel", "rd_base", "cr_base"], hits, true)
+		# Capability #3 "Enhanced Metabolism": dove i Reclaimer hanno perso
+		# qualcosa potranno rimettere un Ribelle a fine Assault.
+		if module.count_in(state, s, "cr_rebel") + module.count_in(state, s, "cr_base") < before_cr:
+			_cr_metabolism_spaces.append(s)
 		if bombard and module.is_labyrinth(state, s):
 			act.place_damage(s)
 
@@ -533,6 +552,14 @@ func assault(plan: Dictionary) -> Dictionary:
 	# Gli Attack gratuiti di risposta si risolvono senza costo.
 	for fa in free_attackers:
 		_resolve_attack_space(String(fa["space"]), String(fa["faction"]), [])
+
+	# Capability #3 "Enhanced Metabolism": dopo un Assault che ha tolto forze
+	# Reclaimer, i Reclaimer rimettono un Ribelle in uno di quegli spazi.
+	if module.capability_active(state, 3) and not _cr_metabolism_spaces.is_empty():
+		var back := String(_cr_metabolism_spaces[0])
+		if module.place_from_available(state, back, "cr_rebel", 1, "hidden") > 0:
+			log_lines.append("Enhanced Metabolism: 1 Ribelle Reclaimer torna in %s." %
+				state.game_def.space(back).name)
 	return _done(cost)
 
 
@@ -544,8 +571,9 @@ func assault(plan: Dictionary) -> Dictionary:
 ## spazi Neutrali di Mars.
 func rally_candidates(faction: String) -> PackedStringArray:
 	var out := PackedStringArray()
+	var storm_free := act.storm_free(faction)
 	for sid in module.mars_spaces(state):
-		if not act.selectable(sid):
+		if not act.selectable(sid, storm_free):
 			continue
 		var st: SpaceState = state.spaces[sid]
 		if faction == "red_dust":
@@ -579,7 +607,12 @@ func rally(plan: Dictionary) -> Dictionary:
 	for e in entries:
 		var sid := String(e["id"])
 		var mode := String(e.get("mode", "place"))
-		var has_base := module.count_in(state, sid, base) > 0
+		# §1.5: la Capability #23 fa contare i Satelliti come una Base CR in più;
+		# la #5 permette ai Reclaimer "fill" e "hide" anche senza Base.
+		var has_base := (module.cr_bases_in(state, sid) > 0) if faction == "reclaimer" \
+			else module.count_in(state, sid, base) > 0
+		if faction == "reclaimer" and module.capability_active(state, 5):
+			has_base = true
 		match mode:
 			"place":
 				module.place_from_available(state, sid, rebel, 1, "hidden")
@@ -592,7 +625,8 @@ func rally(plan: Dictionary) -> Dictionary:
 					module.place_from_available(state, sid, base, 1, side)
 			"fill":
 				if has_base:
-					var n := module.population(state, sid) + module.count_in(state, sid, base)
+					var n := module.population(state, sid) + (module.cr_bases_in(state, sid) \
+						if faction == "reclaimer" else module.count_in(state, sid, base))
 					module.place_from_available(state, sid, rebel, n, "hidden")
 			"hide":
 				if has_base:
@@ -736,9 +770,10 @@ func attack(plan: Dictionary) -> Dictionary:
 	if spaces.is_empty():
 		return _fail("Attack: nessuno spazio scelto.")
 	var rebel := "rd_rebel" if faction == "red_dust" else "cr_rebel"
+	var storm_free := act.storm_free(faction)
 	for sid in spaces:
 		var s := String(sid)
-		if not act.selectable(s):
+		if not act.selectable(s, storm_free):
 			return _fail("Attack: %s è sotto Raging Storm." % s)
 		if module.count_in(state, s, rebel) == 0:
 			return _fail("Attack: nessun Ribelle in %s." % s)
@@ -786,10 +821,17 @@ func _resolve_attack_space(sid: String, faction: String, ambush_dice: Array) -> 
 	if d1 + d2 <= total_forces:
 		act.place_damage(sid)
 	var budget := 0
+	var hits := 0
 	if d1 <= rebels:
 		budget += 2
+		hits += 1
 	if d2 <= rebels:
 		budget += 2
+		hits += 1
+	# Capability #1 "Subdermal Weaponry": ogni dado riuscito toglie una forza
+	# nemica in più.
+	if faction == "reclaimer" and module.capability_active(state, 1):
+		budget += hits
 	if budget <= 0:
 		return
 
@@ -808,6 +850,19 @@ func _resolve_attack_space(sid: String, faction: String, ambush_dice: Array) -> 
 			break
 		# Ogni Truppa EG rimossa consuma due "forze".
 		spent += 2 if removed == "eg_troop" else 1
+	# Capability #26 "Ares Rockets": quel che avanza può colpire i Satelliti
+	# ovunque su Mars, non solo nello spazio dell'Attack.
+	if faction == "reclaimer" and module.capability_active(state, 26):
+		for other in module.mars_spaces(state):
+			if spent >= budget:
+				break
+			var o := String(other)
+			if o == sid or module.count_in(state, o, "satellite") == 0:
+				continue
+			if module.remove_pieces(state, o, "satellite", 1, "casualties") > 0:
+				log_lines.append("Ares Rockets: Satellite abbattuto in %s." %
+					state.game_def.space(o).name)
+				spent += 1
 	log_lines.append("%s: Attack %s — dadi %d/%d su %d Ribelli e %d forze." % [
 		state.game_def.space(sid).name, faction, d1, d2, rebels, total_forces])
 
@@ -883,9 +938,10 @@ func preach(plan: Dictionary) -> Dictionary:
 	var spaces: Array = plan.get("spaces", [])
 	if spaces.is_empty():
 		return _fail("Preach: nessuno spazio scelto.")
+	var storm_free := act.storm_free("reclaimer")
 	for sid in spaces:
 		var s := String(sid)
-		if not act.selectable(s):
+		if not act.selectable(s, storm_free):
 			return _fail("Preach: %s è sotto Raging Storm." % s)
 		if module.population(state, s) <= 0 or module.count_in(state, s, "cr_rebel") == 0:
 			return _fail("Preach: %s non è Popolato o non ha Ribelli CR." % s)

@@ -520,6 +520,26 @@ func campaign_active(state: GameState, n: int) -> bool:
 	return int(state.tracks.get("campaign_in_play", -1)) == n
 
 
+## §1.5: è in gioco la Capability della Asset card numero `n` dei Reclaimer?
+## Il confronto è per valore: dopo un salvataggio i numeri tornano dal JSON come
+## float e un `has(n)` secco fallirebbe.
+func capability_active(state: GameState, n: int) -> bool:
+	for c in state.tracks.get("capabilities", []):
+		if int(c) == n:
+			return true
+	return false
+
+
+## Basi Reclaimer che contano in uno spazio ai fini delle Operazioni.
+## Capability #23 "MPS Uplink Hacked": uno spazio con Satelliti conta come se
+## avesse una Base Reclaimer in più.
+func cr_bases_in(state: GameState, sid: String) -> int:
+	var n := count_in(state, sid, "cr_base")
+	if capability_active(state, 23) and count_in(state, sid, "satellite") > 0:
+		n += 1
+	return n
+
+
 ## §1.10: 0 = nessuna tempesta, 1 = Approaching, 2 = Raging.
 func storm(state: GameState, sid: String) -> int:
 	return marker(state, sid, "storm")

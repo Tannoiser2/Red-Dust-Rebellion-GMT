@@ -54,6 +54,9 @@ var cards: RDRCards = null
 var executing_faction: String = ""
 
 var effects: Dictionary = {}
+## §1.5: gli Eventi delle 10 Asset card dei Reclaimer, scritti con la stessa
+## grammatica delle carte Evento e risolti dalla stessa macchina.
+var asset_effects: Dictionary = {}
 var log_lines: Array[String] = []
 
 
@@ -61,11 +64,16 @@ func _init(p_state: GameState, p_module: RDRModule) -> void:
 	state = p_state
 	module = p_module
 	act = RDRActions.new(p_state, p_module)
-	var path := RDRModule.DATA_DIR + "event_effects.json"
-	if FileAccess.file_exists(path):
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-		if typeof(parsed) == TYPE_DICTIONARY:
-			effects = parsed.get("events", {})
+	effects = _load_library("event_effects.json", "events")
+	asset_effects = _load_library("asset_effects.json", "cards")
+
+
+func _load_library(file_name: String, key: String) -> Dictionary:
+	var path := RDRModule.DATA_DIR + file_name
+	if not FileAccess.file_exists(path):
+		return {}
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed.get(key, {}) if typeof(parsed) == TYPE_DICTIONARY else {}
 
 
 # ---------------------------------------------------------------------------
@@ -86,9 +94,13 @@ func is_manual(number: int, shaded: bool) -> bool:
 ## attuale. `known` permette di risolvere le scelte che dipendono dalle
 ## precedenti (per esempio "in uno spazio adiacente a quello scelto prima").
 func requirements(number: int, shaded: bool, known: Dictionary = {}) -> Array:
+	return _requirements_of(option(number, shaded), known)
+
+
+func _requirements_of(opt: Dictionary, known: Dictionary) -> Array:
 	var ctx := _new_ctx(known)
 	var out: Array = []
-	for c in option(number, shaded).get("choices", []):
+	for c in opt.get("choices", []):
 		var desc: Dictionary = (c as Dictionary).duplicate(true)
 		var cid := String(desc.get("id", ""))
 		match String(desc.get("kind", "space")):
@@ -148,6 +160,29 @@ func play(number: int, shaded: bool, choices = {}, faction: String = "") -> Dict
 		return {"ok": false, "manual": false, "residual": "", "applied": 0,
 			"choices": {}, "free_ops": [],
 			"error": "Evento #%d senza testo per questa opzione." % number}
+	return _play_option(opt, choices, faction)
+
+
+## §1.5: Evento di una Asset card dei Reclaimer. Stessa grammatica e stessa
+## macchina delle carte Evento, solo una libreria diversa.
+func asset_option(number: int) -> Dictionary:
+	return asset_effects.get(str(number), {})
+
+
+func asset_requirements(number: int, known: Dictionary = {}) -> Array:
+	return _requirements_of(asset_option(number), known)
+
+
+func play_asset(number: int, choices = {}, faction: String = "reclaimer") -> Dictionary:
+	var opt := asset_option(number)
+	if opt.is_empty():
+		return {"ok": false, "manual": false, "residual": "", "applied": 0,
+			"choices": {}, "free_ops": [],
+			"error": "Asset card #%d senza Evento." % number}
+	return _play_option(opt, choices, faction)
+
+
+func _play_option(opt: Dictionary, choices, faction: String) -> Dictionary:
 	if faction != "":
 		executing_faction = faction
 
@@ -555,7 +590,8 @@ func _count(desc, ctx: Dictionary) -> int:
 		"var":
 			total = int((ctx.get("vars", {}) as Dictionary).get(String(d.get("name", "")), 0))
 	if d.has("per"):
-		total = int(floor(float(total) / float(maxi(1, int(d["per"])))))
+		var q := float(total) / float(maxi(1, int(d["per"])))
+		total = int(ceil(q)) if String(d.get("round", "down")) == "up" else int(floor(q))
 	if d.has("mult"):
 		total *= int(d["mult"])
 	if d.has("max"):
@@ -810,7 +846,7 @@ func _apply(e: Dictionary, ctx: Dictionary) -> int:
 		"draw_asset":
 			if cards == null:
 				return 0
-			var drawn := cards.draw_asset(int(e.get("count", 1)))
+			var drawn := cards.draw_asset(_count(e.get("count", 1), ctx))
 			log_lines.append_array(cards.log_lines)
 			cards.log_lines.clear()
 			log_lines.append("I Reclaimer pescano %d Asset card." % drawn)
