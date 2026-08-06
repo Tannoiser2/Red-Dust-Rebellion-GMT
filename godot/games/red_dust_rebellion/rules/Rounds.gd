@@ -20,6 +20,19 @@ var rng: RandomNumberGenerator
 var cards: RDRCards = null
 var log_lines: Array[String] = []
 
+## §8.5.9: ganci del sistema Non-Player, riempiti da `RDRNonPlayerOps`. I Round
+## periodici fanno scelte che al tavolo spetterebbero ai giocatori — quali pezzi
+## partono da Earth, quale forza nemica toglie una tempesta, dove finiscono i
+## Ribelli della Conversion se non bastano — e per un bot vanno lette dalle
+## tabelle Piece Priorities e Space Selection Priorities.
+## `np_piece_order.call(acting, sid, purpose) -> Array[String]`
+## `np_space_order.call(acting, column, candidates) -> String`
+var np_piece_order: Callable = Callable()
+var np_space_order: Callable = Callable()
+## §8.5.9: il Dust Storm Round delle Fazioni NP ha una scheda tutta sua, e vive
+## in `RDRNonPlayerRound`. Se non c'è, i Round si comportano come sempre.
+var np_round: RDRNonPlayerRound = null
+
 
 func _init(p_state: GameState, p_module: RDRModule, p_rng: RandomNumberGenerator = null) -> void:
 	state = p_state
@@ -136,7 +149,9 @@ func flashpoint_round() -> void:
 
 
 ## §4.2 fase 1 (anche da Logistics e dal Passo delle Corporations).
-func aldrin_cycler() -> void:
+## `extra`: pezzi in più che le Corporations comprano a 1 Profit l'uno oltre ai
+## cinque gratuiti. Vale solo per un giocatore in carne e ossa.
+func aldrin_cycler(extra: int = 0) -> void:
 	# Transit -> Phobos (forze e marker).
 	_move_everything("transit", "phobos")
 
@@ -198,7 +213,17 @@ func aldrin_cycler() -> void:
 	if controller == "":
 		log_line("Aldrin Cycler: nessun EarthGov Controller, nessun pezzo parte da Earth.")
 	else:
-		var moved := _ship_from_earth(controller, 5)
+		# §4.2: oltre ai cinque, le Corporations possono comprarne altri a 1
+		# Profit l'uno. §8.5.9: «NP CORP will never spend any Profits to move
+		# additional pieces from Earth to Transit» — per un bot non si compra.
+		var bought := 0
+		if extra > 0 and controller == "corporations" and state.is_player("corporations"):
+			bought = mini(extra, int(state.tracks.get("profits", 0)))
+		var moved := _ship_from_earth(controller, 5 + bought)
+		var paid: int = maxi(0, moved - 5)
+		if paid > 0:
+			_add_profits(-paid)
+			log_line("Aldrin Cycler: %d pezzi in più comprati per %d Profits." % [paid, paid])
 		log_line("Aldrin Cycler: %s spedisce %d pezzi da Earth a Transit." % [controller, moved])
 
 
@@ -209,6 +234,21 @@ func _ship_from_earth(controller: String, budget: int) -> int:
 	var order: Array[String] = ["supply", "eg_troop", "satellite", "security", "specops"]
 	if controller == "corporations":
 		order = ["security", "specops", "satellite", "supply", "eg_troop"]
+	# §8.5.9: per un EarthGov Controller gestito dal bot l'ordine lo detta la
+	# tabella Piece Priorities — che per NP MG mette le Supply in cima, e sono
+	# proprio quelle che gli servono, visto che il Supply Total sostituisce le
+	# sue Risorse.
+	if not np_piece_order.is_null() and module.is_np(state, controller):
+		var np_order: Array = np_piece_order.call(controller, "", "place")
+		var out: Array[String] = []
+		for token in np_order:
+			var t := String(token).split(":")[0]
+			if order.has(t) and not out.has(t):
+				out.append(t)
+		for t in order:
+			if not out.has(t):
+				out.append(t)
+		order = out
 	var moved := 0
 	for key in order:
 		if moved >= budget:
@@ -323,13 +363,36 @@ func attrition() -> void:
 			module.remove_pieces(state, sid, "rd_rebel", 1, "available")
 
 
-## §4.2 fase 7.
+## §4.2 fase 7: un Ribelle Reclaimer in ogni spazio Popolato con un Conversion
+## Center. §8.5.9: se i Ribelli disponibili non bastano per tutti, quali spazi
+## servire lo decide la colonna Place Rebels — e solo allora, perché finché ce
+## n'è per tutti non c'è niente da scegliere.
 func conversion() -> void:
+	var centers: Array = []
 	for sid in module.mars_spaces(state):
 		if module.population(state, sid) <= 0:
 			continue
 		if module.count_in(state, sid, "cr_base", "conversion_center") > 0:
-			module.place_from_available(state, sid, "cr_rebel", 1, "hidden")
+			centers.append(String(sid))
+	if centers.is_empty():
+		return
+	var stock := module.available(state, "cr_rebel")
+	if stock < centers.size() and not np_space_order.is_null() \
+			and module.is_np(state, "reclaimer"):
+		var ordered: Array = []
+		var pool: Array = centers.duplicate()
+		while not pool.is_empty():
+			var pick := String(np_space_order.call("reclaimer", "place_rebels", pool))
+			if pick == "":
+				break
+			ordered.append(pick)
+			pool.erase(pick)
+		ordered.append_array(pool)   # quel che la tabella non ordina resta in coda
+		centers = ordered
+		log_line("Conversion: %d Ribelli per %d Conversion Center, ordine dalla tabella." % [
+			stock, ordered.size()])
+	for sid in centers:
+		module.place_from_available(state, String(sid), "cr_rebel", 1, "hidden")
 
 
 # ---------------------------------------------------------------------------
@@ -389,12 +452,26 @@ func storm_rolls(count: int) -> void:
 
 ## §4.2/§3.2: sul secondo risultato nello stesso spazio i Reclaimer possono
 ## rimuovere una forza nemica (le Basi solo se non restano unità amiche).
-## Priorità automatica provvisoria: prima le unità, poi le Basi indifese.
+## §8.5.9: se i Reclaimer sono un bot, quale forza cade lo dice la tabella Piece
+## Priorities; per un giocatore resta l'ordine automatico — prima le unità, poi
+## le Basi indifese — perché l'interfaccia la scelta non la sa ancora chiedere.
 func _reclaimer_strike(sid: String) -> void:
-	for type_id in ["mg_troop", "security", "eg_troop", "specops", "rd_rebel"]:
-		if module.count_in(state, sid, type_id) > 0:
+	var units: Array = ["mg_troop", "security", "eg_troop", "specops", "rd_rebel"]
+	if not np_piece_order.is_null() and module.is_np(state, "reclaimer"):
+		var np_order: Array = np_piece_order.call("reclaimer", sid, "enemy")
+		var out: Array = []
+		for token in np_order:
+			var t := String(token).split(":")[0]
+			if units.has(t) and not out.has(t):
+				out.append(t)
+		for t in units:
+			if not out.has(t):
+				out.append(t)
+		units = out
+	for type_id in units:
+		if module.count_in(state, sid, String(type_id)) > 0:
 			var dest := "casualties" if type_id in ["security", "specops", "eg_troop"] else "available"
-			module.remove_pieces(state, sid, type_id, 1, dest)
+			module.remove_pieces(state, sid, String(type_id), 1, dest)
 			return
 	for base_id in ["rd_base", "mg_base", "corp_base"]:
 		if module.count_in(state, sid, base_id) == 0:
@@ -424,7 +501,7 @@ func dust_storm_round() -> void:
 	if victory_phase():
 		return
 	resources_phase()
-	log_line("Support Phase: Pacify/Lobby/Agitate sono decisioni dei giocatori — saltate (UI azioni non ancora implementata).")
+	support_phase()
 	redeploy_phase()
 	if n >= 3:
 		log_line("Terzo Dust Storm Round completato: fine partita.")
@@ -446,6 +523,9 @@ func victory_phase() -> bool:
 		if v[fid]["won"]:
 			winners.append(String(fid))
 	if winners.is_empty():
+		return false
+	if np_round != null \
+			and np_round.victory_blocked(int(state.tracks.get("dust_storm_rounds", 0))):
 		return false
 	log_line("Check di vittoria: %s ha raggiunto la propria condizione." % ", ".join(winners))
 	_end_game()
@@ -471,9 +551,13 @@ func displaced_population_penalty() -> void:
 	var pairs := int(int(state.tracks.get("displaced_population", 0)) / 2.0)
 	if pairs <= 0:
 		return
-	state.add_resources("marsgov", -3 * pairs, 50)
+	# §8.5.9: NP MG paga in Supply Total, non in Risorse. NP CORP i Profits li
+	# traccia comunque (§8.5.4), quindi quelli si tolgono a chiunque.
+	if np_round == null or not np_round.displaced_population_penalty(pairs):
+		state.add_resources("marsgov", -3 * pairs, 50)
+		log_line("Displaced Population: −%d Risorse MarsGov." % (3 * pairs))
 	_add_profits(-pairs)
-	log_line("Displaced Population: −%d Risorse MarsGov, −%d Profits." % [3 * pairs, pairs])
+	log_line("Displaced Population: −%d Profits." % pairs)
 
 
 ## §4.3 fase 2.
@@ -491,8 +575,16 @@ func resources_phase() -> void:
 		if module.is_labyrinth(state, sid):
 			corp += 2 * module.count_in(state, sid, "corp_base")
 	rd += module.bases_on_map(state, "red_dust")
-	state.add_resources("marsgov", mg, 50)
-	state.add_resources("red_dust", rd, 50)
+	# §8.5.4: «Resources are not tracked for NP MG or NP RD, so we skip their
+	# steps». NP CORP invece i Profits li traccia e li incassa come tutti.
+	if module.is_np(state, "marsgov"):
+		mg = 0
+	else:
+		state.add_resources("marsgov", mg, 50)
+	if module.is_np(state, "red_dust"):
+		rd = 0
+	else:
+		state.add_resources("red_dust", rd, 50)
 	_add_profits(corp)
 	log_line("Resources: MarsGov +%d, Red Dust +%d, Corporations +%d Profits." % [mg, rd, corp])
 	# §4.3: i Reclaimer pescano 1 Asset per ogni simbolo scoperto sulla traccia
@@ -507,6 +599,21 @@ func resources_phase() -> void:
 		log_line("Reclaimer Earnings: mazzo Asset non collegato.")
 
 
+## §4.3 fase 3. Per un giocatore Pacify, Lobby e Agitate sono decisioni sue e
+## l'interfaccia non le sa ancora chiedere; per una Fazione NP la scheda §8.5.9
+## le prescrive, e allora si risolvono.
+func support_phase() -> void:
+	if np_round != null:
+		np_round.support_phase()
+	var waiting: Array[String] = []
+	for fid in ["marsgov", "red_dust"]:
+		if state.is_player(fid):
+			waiting.append(fid)
+	if not waiting.is_empty():
+		log_line("Support Phase: Pacify/Lobby/Agitate di %s restano ai giocatori (UI non ancora pronta)." %
+			", ".join(waiting))
+
+
 ## §4.3 fase 4. Sono automatizzati solo gli spostamenti OBBLIGATORI; quelli
 ## facoltativi (Truppe MG in più, Ribelli RD/CR verso le proprie Basi, Basi CR
 ## nella Wilderness) restano ai giocatori.
@@ -514,43 +621,51 @@ func redeploy_phase() -> void:
 	for sid in module.mars_spaces(state):
 		module.set_marker(state, sid, "storm", 0)
 
+	# §8.5.9: chi è gestito dal bot ridispiega con le proprie istruzioni, e la
+	# procedura minima qui sotto non lo tocca più.
+	var np_done: Array = np_round.redeploy_phase() if np_round != null else []
+
 	# Truppe EarthGov: da Mars a Phobos (o su spazi con Base MG; qui Phobos).
-	for sid in module.mars_spaces(state):
-		var t := module.count_in(state, sid, "eg_troop")
-		if t > 0:
-			module.move_pieces(state, sid, "phobos", "eg_troop", t)
+	var eg_ctrl := module.eg_controller(state)
+	if eg_ctrl == "" or state.is_player(eg_ctrl):
+		for sid in module.mars_spaces(state):
+			var eg := module.count_in(state, sid, "eg_troop")
+			if eg > 0:
+				module.move_pieces(state, sid, "phobos", "eg_troop", eg)
 
 	# Truppe MarsGov nei Deserti senza Base COIN.
-	var mg_dest := _mg_redeploy_targets()
-	for sid in module.mars_spaces(state):
-		if not module.is_desert(state, sid):
-			continue
-		if module.count_in(state, sid, "mg_base") + module.count_in(state, sid, "corp_base") > 0:
-			continue
-		var t := module.count_in(state, sid, "mg_troop")
-		if t <= 0:
-			continue
-		if mg_dest == "":
-			log_line("Redeploy: nessuna destinazione valida per le Truppe MarsGov in %s." % sid)
-			continue
-		module.move_pieces(state, sid, mg_dest, "mg_troop", t)
+	if not np_done.has("marsgov"):
+		var mg_dest := _mg_redeploy_targets()
+		for sid in module.mars_spaces(state):
+			if not module.is_desert(state, sid):
+				continue
+			if module.count_in(state, sid, "mg_base") + module.count_in(state, sid, "corp_base") > 0:
+				continue
+			var t := module.count_in(state, sid, "mg_troop")
+			if t <= 0:
+				continue
+			if mg_dest == "":
+				log_line("Redeploy: nessuna destinazione valida per le Truppe MarsGov in %s." % sid)
+				continue
+			module.move_pieces(state, sid, mg_dest, "mg_troop", t)
 
 	# Ribelli Red Dust nei Deserti senza Opposizione né Base RD.
-	var rd_dest := _rd_redeploy_target()
-	for sid in module.mars_spaces(state):
-		if not module.is_desert(state, sid):
-			continue
-		var st: SpaceState = state.spaces[sid]
-		if st.support < 0 or module.count_in(state, sid, "rd_base") > 0:
-			continue
-		var r := module.count_in(state, sid, "rd_rebel")
-		if r <= 0:
-			continue
-		if rd_dest == "":
-			# §4.3: senza Basi RD in gioco i Ribelli che devono muovere sono rimossi.
-			module.remove_pieces(state, sid, "rd_rebel", r, "available")
-		else:
-			module.move_pieces(state, sid, rd_dest, "rd_rebel", r)
+	if not np_done.has("red_dust"):
+		var rd_dest := _rd_redeploy_target()
+		for sid in module.mars_spaces(state):
+			if not module.is_desert(state, sid):
+				continue
+			var st: SpaceState = state.spaces[sid]
+			if st.support < 0 or module.count_in(state, sid, "rd_base") > 0:
+				continue
+			var r := module.count_in(state, sid, "rd_rebel")
+			if r <= 0:
+				continue
+			if rd_dest == "":
+				# §4.3: senza Basi RD in gioco i Ribelli che devono muovere sono rimossi.
+				module.remove_pieces(state, sid, "rd_rebel", r, "available")
+			else:
+				module.move_pieces(state, sid, rd_dest, "rd_rebel", r)
 
 	module.recompute_all_control(state)
 
@@ -574,6 +689,8 @@ func _rd_redeploy_target() -> String:
 
 ## §4.3 fase 5.
 func reset_phase() -> void:
+	if np_round != null:
+		np_round.reset_phase()
 	# La Popolazione su Earth pareggia il valore della traccia EG Confidence.
 	module.set_marker(state, "earth", "population", module.eg_confidence_value(state))
 

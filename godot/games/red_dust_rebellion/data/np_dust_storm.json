@@ -1,0 +1,128 @@
+{
+  "_note": "Istruzioni del Dust Storm Round per le Fazioni Non-Player (§8.5.9), trascritte dalla scheda «NP Dust Storm Round Instructions». I nomi delle colonne sono quelli di np_priorities.json; le voci con `only_if_player` valgono solo se quella Fazione è di un giocatore, quelle con `when` solo se la condizione è vera. Le istruzioni `get` sono numerate come sulla scheda ed eseguite in ordine.",
+
+  "victory": {
+    "_note": "Un umano in solitario contro tre Fazioni NP può vincere solo all'ultimo Dust Storm Round.",
+    "solitaire_only_final_round": true,
+    "marsgov": {"supply_total_per_2_displaced": -1}
+  },
+
+  "support": {
+    "marsgov": {
+      "house_column": "place_population",
+      "house_where": "without_opposition",
+      "repair_column": "place_population",
+      "repair_where": "without_opposition",
+      "shift_column": "shift_toward_active_support",
+      "shift_step": 1,
+      "budget": "2d6",
+      "after": "eg_confidence_up"
+    },
+    "red_dust": {
+      "house_column": "place_population",
+      "house_where": "at_opposition",
+      "repair_column": "place_population",
+      "repair_where": "with_opposition",
+      "shift_column": "shift_active_opposition",
+      "shift_step": -1,
+      "budget": "agitate_total",
+      "spend": "agitate_total"
+    }
+  },
+
+  "redeploy": {
+    "eg_controller": {
+      "corporations": {
+        "label": "NP CORP is EG Controller: place all EG Troops on Phobos",
+        "rule": "all_eg_to_phobos"
+      },
+      "marsgov": {
+        "label": "NP MG is EG Controller: 4 EG Troops to each MG Base, the rest on Phobos",
+        "rule": "eg_to_mg_bases_then_phobos",
+        "per_base": 4,
+        "column": "place_cubes"
+      }
+    },
+
+    "marsgov": {
+      "moves": ["mg_troop"],
+      "column": "place_cubes",
+      "keep": [
+        {"label": "keep MG forces to exceed CORP forces in Populated spaces at Support with a CORP Base",
+         "rule": "keep_mg_gt_corp", "when": "populated_at_support_with_corp_base"},
+        {"label": "keep 3 cubes in each space with Support (if possible)",
+         "rule": "keep_3_cubes", "when": "at_support"},
+        {"label": "change no Control", "rule": "keep_no_control_change"}
+      ],
+      "origin_order": [
+        {"label": "Troops in Deserts without a COIN Base first", "rule": "desert_without_coin_base"},
+        {"label": "then one at a time from spaces with the most Troops", "rule": "most_moving_pieces"}
+      ],
+      "get": [
+        {"n": 1, "label": "get COIN forces to exceed Rebel forces in Labyrinths and in all Deserts with an MG Base",
+         "rule": "coin_gt_rebels", "where": "labyrinth_or_desert_with_mg_base"},
+        {"n": 2, "label": "get 4 cubes to each Desert with an MG Base",
+         "rule": "count", "count": 4, "where": "desert_with_mg_base",
+         "only_if_player": "reclaimer"},
+        {"n": 3, "label": "get MG forces to exceed CORP forces in each space at Support with a CORP Base",
+         "rule": "mg_gt_corp", "where": "at_support_with_corp_base"},
+        {"n": 4, "label": "move any Troops still in Deserts without a COIN Base",
+         "rule": "evacuate", "where": "desert_without_coin_base"}
+      ]
+    },
+
+    "red_dust": {
+      "moves": ["rd_rebel"],
+      "column": "place_rebels",
+      "all_rebels_hidden": true,
+      "keep": [
+        {"label": "keep 3 RD Rebels in each space with room for an Available RD Base",
+         "rule": "keep_3_rebels_with_base_room"},
+        {"label": "keep 1 RD Rebel in each Populated space without Active Opposition (if possible)",
+         "rule": "keep_1_rebel", "when": "populated_without_active_opposition"}
+      ],
+      "origin_order": [
+        {"label": "Rebels in Deserts without Opposition or an RD Base first",
+         "rule": "desert_without_opposition_or_own_base"},
+        {"label": "then one at a time from spaces with the most RD Rebels", "rule": "most_moving_pieces"}
+      ],
+      "get": [
+        {"n": 1, "label": "get 1 RD Rebel to each space with an RD Base",
+         "rule": "count", "count": 1, "where": "with_own_base"},
+        {"n": 2, "label": "get 3 RD Rebels to each space with room for an Available RD Base",
+         "rule": "count", "count": 3, "where": "room_for_own_base"},
+        {"n": 3, "label": "move any Rebels still in Deserts without Opposition or an RD Base",
+         "rule": "evacuate", "where": "desert_without_opposition_or_own_base"}
+      ]
+    },
+
+    "reclaimer": {
+      "moves": ["cr_rebel"],
+      "column": "place_rebels",
+      "all_rebels_hidden": true,
+      "keep": [
+        {"label": "keep 3 CR Rebels in each space with room for an Available CR Base",
+         "rule": "keep_3_rebels_with_base_room"},
+        {"label": "keep 1 CR Rebel in all other spaces", "rule": "keep_1_rebel"},
+        {"label": "change no Control", "rule": "keep_no_control_change"}
+      ],
+      "origin_order": [
+        {"label": "one at a time from spaces with the most CR Rebels", "rule": "most_moving_pieces"}
+      ],
+      "get": [
+        {"n": 1, "label": "move 1 CR Base to the Wilderness from all other spaces with 2 CR Bases",
+         "rule": "cr_base_to_wilderness", "when": "no_enemy_forces_in_wilderness"},
+        {"n": 2, "label": "get 1 CR Rebel to each space with a CR Base",
+         "rule": "count", "count": 1, "where": "with_own_base"},
+        {"n": 3, "label": "get 3 CR Rebels to each space with room for an Available CR Base",
+         "rule": "count", "count": 3, "where": "room_for_own_base"}
+      ]
+    }
+  },
+
+  "reset": {
+    "_note": "Rimescola il mazzo Curiosity. Se l'Agitate Total di NP RD è 0, riportalo a 1d3.",
+    "shuffle_curiosity": true,
+    "red_dust": {"agitate_total_if_zero": "1d3"}
+  }
+}

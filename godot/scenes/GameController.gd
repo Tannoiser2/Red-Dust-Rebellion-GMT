@@ -90,6 +90,9 @@ func new_game(scenario: String = "standard", seed_value: int = 0,
 	np.setup(np_factions)
 	np_ops = RDRNonPlayerOps.new(np, ops)
 	np_move = RDRNonPlayerMove.new(np, ops)
+	# §8.5.9: i Round periodici delle Fazioni NP hanno una scheda tutta loro.
+	if not np_factions.is_empty():
+		rounds.np_round = RDRNonPlayerRound.new(np, rounds)
 	np_ops.move = np_move
 	for fid in np_factions:
 		np.setup_deck(String(fid), RDRNonPlayerOps.DECKS.get(String(fid), []))

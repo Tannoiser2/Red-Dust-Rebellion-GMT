@@ -85,6 +85,7 @@ func _init() -> void:
 	test_np_event_symbols()
 	test_np_event_instructions()
 	test_np_capability_campaign_effects()
+	test_np_dust_storm_round()
 	test_np_example_of_play()
 	test_np_cards()
 	test_campaign_effects()
@@ -2418,6 +2419,204 @@ func _minus(pool, used: Array) -> Array:
 ## Coronae Montes, per dire, perde il Controllo COIN proprio perché i Reclaimer
 ## ci hanno appena messo un Ribelle, ed è quello a renderla l'unica scelta per il
 ## Train di MarsGov.
+## La scheda «NP Dust Storm Round Instructions» (§8.5.9): Victory, Resources,
+## Support, Redeploy, Reset per le Fazioni gestite dal bot.
+func test_np_dust_storm_round() -> void:
+	print("Non-Player — Dust Storm Round (§8.5.9)")
+
+	# --- Victory: NP MG paga la Displaced Population in Supply Total ---------
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "corporations", "reclaimer"])
+	var r := rounds_for(s)
+	r.np_round = RDRNonPlayerRound.new(np, r)
+	s.tracks["supply_total"] = 5
+	s.tracks["displaced_population"] = 4
+	s.tracks["profits"] = 5
+	var mg0 := s.get_resources("marsgov")
+	var pr0 := int(s.tracks.get("profits", 0))
+	r.displaced_population_penalty()
+	eq(np.supply_total(), 3, "4 marker Displaced: NP MG paga 2 di Supply Total")
+	eq(s.get_resources("marsgov"), mg0, "…e non un briciolo di Risorse")
+	eq(int(s.tracks.get("profits", 0)), pr0 - 2, "i Profits li perde comunque anche NP CORP")
+
+	# Con MarsGov giocatore la penalità torna quella di sempre.
+	var sp := fresh()
+	var rp := rounds_for(sp)
+	sp.tracks["displaced_population"] = 4
+	var mgp := sp.get_resources("marsgov")
+	rp.displaced_population_penalty()
+	eq(sp.get_resources("marsgov"), mgp - 6, "MarsGov giocatore paga 6 Risorse")
+
+	# --- Resources: NP MG e NP RD non incassano ----------------------------
+	var s2 := fresh()
+	np_for(s2, ["marsgov", "red_dust"])
+	var r2 := rounds_for(s2)
+	var mg2 := s2.get_resources("marsgov")
+	var rd2 := s2.get_resources("red_dust")
+	r2.resources_phase()
+	eq(s2.get_resources("marsgov"), mg2, "NP MG non incassa Risorse")
+	eq(s2.get_resources("red_dust"), rd2, "NP RD nemmeno")
+	eq(int(s2.tracks["profits"]), 2, "le Corporations invece i Profits li prendono")
+
+	# NP CR incassa in Asset Total, non in carte.
+	var s2b := fresh()
+	var np2b := np_for(s2b, ["reclaimer"])
+	var r2b := rounds_for(s2b)
+	r2b.cards = cards_for(s2b)
+	s2b.tracks["asset_total"] = 1
+	r2b.resources_phase()
+	ok(np2b.asset_total() > 1, "NP CR incassa in Asset Total (%d)" % np2b.asset_total())
+	eq(r2b.cards.hand().size(), 0, "…senza toccare una sola carta")
+
+	# --- Support: NP MG spende 2d6, NP RD l'Agitate Total -------------------
+	var s3 := fresh()
+	var np3 := np_for(s3, ["red_dust"])
+	var r3 := rounds_for(s3)
+	r3.np_round = RDRNonPlayerRound.new(np3, r3)
+	s3.tracks["agitate_total"] = 3
+	s3.tracks["displaced_population"] = 0   # niente House o Repair: solo shift
+	var op_before := module.total_opposition(s3)
+	r3.support_phase()
+	ok(module.total_opposition(s3) > op_before,
+		"NP RD sposta il Supporto verso l'Opposizione (%d → %d)" % [
+			op_before, module.total_opposition(s3)])
+	eq(np3.agitate_total(), 0, "…spendendo tutto l'Agitate Total")
+
+	# Con l'Agitate Total a zero NP RD non muove niente.
+	var s3b := fresh()
+	var np3b := np_for(s3b, ["red_dust"])
+	var r3b := rounds_for(s3b)
+	r3b.np_round = RDRNonPlayerRound.new(np3b, r3b)
+	s3b.tracks["agitate_total"] = 0
+	s3b.tracks["displaced_population"] = 0
+	var op_b := module.total_opposition(s3b)
+	r3b.support_phase()
+	eq(module.total_opposition(s3b), op_b, "senza Agitate Total NP RD sta fermo")
+
+	# NP MG alza la EG Confidence in coda alla propria fase.
+	var s3c := fresh()
+	var np3c := np_for(s3c, ["marsgov"])
+	var r3c := rounds_for(s3c)
+	r3c.np_round = RDRNonPlayerRound.new(np3c, r3c)
+	var eg_before := int(s3c.tracks.get("eg_confidence", 0))
+	r3c.support_phase()
+	ok(int(s3c.tracks.get("eg_confidence", 0)) >= eg_before,
+		"NP MG chiude alzando la EG Confidence")
+
+	# --- Redeploy ----------------------------------------------------------
+	# NP CORP come EG Controller porta tutte le Truppe EG su Phobos.
+	var s4 := fresh()
+	var np4 := np_for(s4, ["corporations"])
+	var r4 := rounds_for(s4)
+	r4.np_round = RDRNonPlayerRound.new(np4, r4)
+	module.move_pieces(s4, "phobos", "shenzhou", "eg_troop", 2)
+	ok(module.count_in(s4, "shenzhou", "eg_troop") > 0, "ci sono Truppe EG su Mars")
+	s4.tracks["eg_confidence"] = 8   # le Corporations come EG Controller
+	module.recompute_all_control(s4)
+	if module.eg_controller(s4) == "corporations":
+		r4.redeploy_phase()
+		var on_mars := 0
+		for sid in module.mars_spaces(s4):
+			on_mars += module.count_in(s4, String(sid), "eg_troop")
+		eq(on_mars, 0, "NP CORP richiama tutte le Truppe EG da Mars")
+
+	# NP CR: ❶ una Base va nella Wilderness da ogni spazio che ne ha due, se là
+	# non ci sono nemici; ❷/❸ i Ribelli si radunano sulle Basi.
+	var s5 := fresh()
+	var np5 := np_for(s5, ["reclaimer"])
+	var r5 := rounds_for(s5)
+	r5.np_round = RDRNonPlayerRound.new(np5, r5)
+	# Due Basi CR in uno spazio, e la Wilderness sgombra.
+	var twin := ""
+	for sid in module.mars_spaces(s5):
+		if module.count_in(s5, String(sid), "cr_base") > 0 and String(sid) != "wilderness":
+			twin = String(sid)
+			break
+	ok(twin != "", "trovato uno spazio con una Base CR (%s)" % twin)
+	module.place_from_available(s5, twin, "cr_base", 1)
+	eq(module.count_in(s5, twin, "cr_base"), 2, "%s ha due Basi CR" % twin)
+	for t in ["mg_troop", "security", "eg_troop", "specops", "rd_rebel"]:
+		var n := module.count_in(s5, "wilderness", String(t))
+		if n > 0:
+			module.remove_pieces(s5, "wilderness", String(t), n, "available")
+	var wild_before := module.count_in(s5, "wilderness", "cr_base")
+	r5.redeploy_phase()
+	eq(module.count_in(s5, "wilderness", "cr_base"), wild_before + 1,
+		"NP CR ❶: una Base CR si sposta nella Wilderness sgombra")
+	eq(module.count_in(s5, twin, "cr_base"), 1, "…e in %s ne resta una" % twin)
+
+	# Con nemici nella Wilderness l'istruzione ❶ non si applica.
+	var s6 := fresh()
+	var np6 := np_for(s6, ["reclaimer"])
+	var r6 := rounds_for(s6)
+	r6.np_round = RDRNonPlayerRound.new(np6, r6)
+	module.place_from_available(s6, twin, "cr_base", 1)
+	module.place_from_available(s6, "wilderness", "mg_troop", 1)
+	var wild6 := module.count_in(s6, "wilderness", "cr_base")
+	r6.redeploy_phase()
+	eq(module.count_in(s6, "wilderness", "cr_base"), wild6,
+		"con forze nemiche nella Wilderness nessuna Base CR si muove")
+
+	# --- Reset: l'Agitate Total a zero torna a 1d3 --------------------------
+	var s7 := fresh()
+	var np7 := np_for(s7, ["red_dust"])
+	var r7 := rounds_for(s7)
+	r7.np_round = RDRNonPlayerRound.new(np7, r7)
+	s7.tracks["agitate_total"] = 0
+	r7.reset_phase()
+	ok(np7.agitate_total() >= 1 and np7.agitate_total() <= 3,
+		"Reset: l'Agitate Total azzerato torna a 1d3 (%d)" % np7.agitate_total())
+	# Se non è a zero resta com'è.
+	var s8 := fresh()
+	var np8 := np_for(s8, ["red_dust"])
+	var r8 := rounds_for(s8)
+	r8.np_round = RDRNonPlayerRound.new(np8, r8)
+	s8.tracks["agitate_total"] = 2
+	r8.reset_phase()
+	eq(np8.agitate_total(), 2, "un Agitate Total già positivo non si tocca")
+
+	# --- Victory: il solitario vince solo all'ultimo round -------------------
+	var s9 := fresh()
+	var np9 := np_for(s9, ["marsgov", "corporations", "reclaimer"])
+	var r9 := rounds_for(s9)
+	r9.np_round = RDRNonPlayerRound.new(np9, r9)
+	r9.begin_game()
+	s9.tracks["profits"] = 45          # le Corporations avrebbero già vinto
+	s9.tracks["dust_storm_rounds"] = 1
+	eq(r9.victory_phase(), false,
+		"in solitario contro tre bot non si vince al primo Dust Storm Round")
+	s9.tracks["dust_storm_rounds"] = 3
+	s9.tracks["profits"] = 45
+	eq(r9.victory_phase(), true, "…ma all'ultimo sì")
+
+	# Con due Fazioni in mano ai giocatori il vincolo non si applica.
+	var s10 := fresh()
+	var np10 := np_for(s10, ["marsgov", "corporations"])
+	var r10 := rounds_for(s10)
+	r10.np_round = RDRNonPlayerRound.new(np10, r10)
+	r10.begin_game()
+	s10.tracks["profits"] = 45
+	s10.tracks["dust_storm_rounds"] = 1
+	eq(r10.victory_phase(), true, "con due giocatori si vince quando capita")
+
+	# --- Un Dust Storm Round intero con tre bot al tavolo -------------------
+	var s11 := fresh()
+	var np11 := np_for(s11, ["marsgov", "corporations", "reclaimer"])
+	var r11 := rounds_for(s11)
+	r11.cards = cards_for(s11)
+	r11.np_round = RDRNonPlayerRound.new(np11, r11)
+	r11.begin_game()
+	r11.dust_storm_round()
+	eq(int(s11.tracks["dust_storm_rounds"]), 1, "il round intero gira senza intoppi")
+	eq(r11.storms_on_map() <= 6, true, "le tempeste restano entro il limite")
+	# I Ribelli CR non spariscono nel nulla: pezzi sulla mappa + disponibili +
+	# perdite devono fare sempre il totale del gioco.
+	var cr_total := module.available(s11, "cr_rebel")
+	for sid in s11.spaces.keys():
+		cr_total += module.count_in(s11, String(sid), "cr_rebel")
+	eq(cr_total, 20, "i 20 Ribelli Reclaimer sono tutti contati dopo il Redeploy NP")
+
+
 ## Le sei voci della tabella «Capability & Campaign Effects» della scheda
 ## Curiosity: tre Capability dei Reclaimer e tre Campaign del Red Dust, che
 ## cambiano comportamento quando la Fazione è gestita dal bot.

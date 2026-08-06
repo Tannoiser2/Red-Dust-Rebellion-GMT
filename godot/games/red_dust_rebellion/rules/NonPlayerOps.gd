@@ -35,11 +35,17 @@ func _init(p_np: RDRNonPlayer, p_ops: RDROperations) -> void:
 	ops = p_ops
 	state = p_np.state
 	module = p_np.module
-	# Le Operazioni chiamano queste due dove al tavolo sceglierebbe il giocatore.
-	ops.np_piece_order = func(acting: String, sid: String, purpose: String) -> Array:
+	# Le Operazioni e i Round periodici chiamano queste due dove al tavolo
+	# sceglierebbe il giocatore.
+	var piece_hook := func(acting: String, sid: String, purpose: String) -> Array:
 		return np.piece_order(acting, sid, purpose)
-	ops.np_space_order = func(acting: String, column: String, candidates: Array) -> String:
+	var space_hook := func(acting: String, column: String, candidates: Array) -> String:
 		return String(np.select_space(acting, column, candidates).get("space", ""))
+	ops.np_piece_order = piece_hook
+	ops.np_space_order = space_hook
+	if ops.rounds != null:
+		ops.rounds.np_piece_order = piece_hook
+		ops.rounds.np_space_order = space_hook
 	var path := RDRModule.DATA_DIR + "np_cards.json"
 	if FileAccess.file_exists(path):
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))

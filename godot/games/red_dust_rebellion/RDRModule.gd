@@ -17,6 +17,9 @@ extends RulesModule
 const DATA_DIR := "res://games/red_dust_rebellion/data/"
 
 const COIN_FACTIONS := ["marsgov", "corporations", "earthgov"]
+## Le Fazioni che qualcuno gioca davvero. L'EarthGov esiste sulla plancia ma non
+## ha né turno né giocatore: lo muove chi ne è Controller (§1.1).
+const PLAYABLE_FACTIONS := ["marsgov", "corporations", "red_dust", "reclaimer"]
 const REBEL_FACTIONS := ["red_dust", "reclaimer"]
 
 ## Fazione proprietaria di ciascun tipo di pezzo (le chiavi del setup_*.json sono
