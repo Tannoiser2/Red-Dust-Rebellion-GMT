@@ -137,6 +137,11 @@ docs/
   RULES_DIGEST.md Sintesi operativa del regolamento (il riferimento per implementare)
 ```
 
+## Riprendere il lavoro
+
+Chi subentra parta da [docs/HANDOFF.md](docs/HANDOFF.md): impianto, cosa
+funziona, cosa manca e le trappole già pagate.
+
 ## Eseguire i test
 
 ```bash

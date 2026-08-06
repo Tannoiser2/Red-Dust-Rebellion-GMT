@@ -59,9 +59,8 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Salvataggio automatico a ogni cambio carta (`user://autosave.json`)
 - [x] Tooltip di regole sulle Operazioni, col paragrafo del regolamento
 - [x] Lampeggio degli spazi toccati da un'azione o da uno spostamento
-- [ ] Restano da Cuba Libre: animazioni dei pezzi che si spostano davvero da
-      uno spazio all'altro (qui c'è solo il lampeggio), scelta dei ruoli
-      giocatore/bot nel menu (serve prima il Non-Player *Curiosity*)
+- [x] Animazioni dei pezzi che volano da uno spazio all'altro (`MapAnimator`,
+      portato da Cuba Libre) e scelta dei ruoli giocatore/bot nel menu
 
 ## Fase 3 — Sequenza di gioco ✅
 
@@ -275,6 +274,6 @@ fatto su Cuba Libre e All Bridges Burning.
       Carta, Spazio) e il Log ha un'altezza propria in fondo
 - [ ] Integrazione della FAQ ufficiale (errata delle carte Curiosity e Asset
       Event già applicate)
+- [x] Salvataggio, ripresa e salvataggio automatico a ogni cambio carta
 - [ ] Simulazioni di bilanciamento (come `sim_runner.gd` di ABB)
-- [ ] Salvataggio/ripresa partita
 - [ ] GitHub Actions: build desktop + export Web su GitHub Pages
