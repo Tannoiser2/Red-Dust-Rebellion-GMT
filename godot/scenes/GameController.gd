@@ -198,6 +198,13 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
 	var fid := sequence.pending_faction()
 	if fid == "":
 		return {"ok": false, "error": "Non è il turno di nessuno."}
+	# §5.0: ogni Fazione ha le sue Operazioni. Senza questo controllo un Train
+	# chiesto durante il turno del Red Dust veniva eseguito lo stesso, e a
+	# piazzare le Truppe era MarsGov: la barra offre solo le Operazioni giuste,
+	# ma qui ci passano anche l'anteprima, i test e ogni futuro chiamante.
+	if not Array(UI_OPERATIONS.get(fid, [])).has(op_id):
+		return {"ok": false, "error": "%s non è un'Operazione di %s." % [
+			OPERATION_NAMES.get(op_id, op_id), game_def.faction(fid).short_name]}
 	var action := CoinEnums.ActionType.OPERATION_WITH_SPECIAL if with_special \
 		else CoinEnums.ActionType.OPERATION
 	if not sequence.is_legal(action):

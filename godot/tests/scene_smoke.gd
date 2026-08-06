@@ -21,6 +21,11 @@ func _initialize() -> void:
 			shot_path = arg.substr("--shot=".length())
 
 	var gc = root.get_node("GameController")
+	# Il nodo dell'autoload esiste già, ma il suo `_ready()` — che avvia una
+	# partita di default — scatta al PRIMO FRAME, non prima. Senza questa attesa
+	# la partita col seme fisso veniva creata e poi subito sostituita da quella
+	# casuale dell'autoload: il test diceva di essere riproducibile e non lo era.
+	await process_frame
 	# Seme fisso: mazzi e dadi riproducibili, così il test non dipende dalla carta
 	# che capita per prima.
 	gc.new_game("standard", 20240424)
