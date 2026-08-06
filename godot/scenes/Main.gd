@@ -1497,7 +1497,17 @@ func _save_log() -> void:
 	f.store_line("Carta in corso: #%d · Dust Storm Round %s/3" % [
 		gc.state.current_card, gc.state.tracks.get("dust_storm_rounds", 0)])
 	f.store_line("")
-	f.store_string(_log_plain())
+	# Tutte le righe, anche i dettagli spenti: un Log salvato per essere riletto
+	# o mandato a qualcuno deve contenere quel che è successo, non quel che si
+	# stava guardando. I dettagli si riconoscono dal rientro.
+	for e in _log_entries:
+		var entry: Dictionary = e
+		if bool(entry.get("header", false)):
+			var fdef: FactionDef = GameController.game_def.faction(String(entry["faction"]))
+			f.store_line("")
+			f.store_line("== %s ==" % (fdef.short_name if fdef != null else entry["faction"]))
+			continue
+		f.store_line(("    " if bool(entry["detail"]) else "") + String(entry["text"]))
 	f.close()
 	_append_log("[i]Log salvato in %s[/i]" % path)
 

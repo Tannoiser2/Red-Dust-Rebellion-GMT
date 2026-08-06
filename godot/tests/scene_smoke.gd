@@ -515,6 +515,48 @@ func _initialize() -> void:
 	_ok(stuck == "", "una Fazione senza Operazioni possibili non blocca la partita (%s)" % stuck)
 	_ok(worst2 <= 2,
 		"…e non rigioca all'infinito: al massimo %d turni di fila" % worst2)
+
+	# REGRESSIONE: il Passo di un bot deve FRUTTARE quel che frutta il Passo.
+	# §4.1 dà l'Aldrin Cycler alle Corporations e una Asset card ai Reclaimer;
+	# §8.5.4 nega invece le Risorse a chi non le traccia. Registrando solo la
+	# casella della Sequenza — com'era prima — un bot che passava restava a mani
+	# vuote, e un MarsGov bot incassava Risorse che non dovrebbe avere.
+	# Col mazzo Curiosity vuoto il Passo è obbligato, e si può collaudare.
+	var pass_notes: Array = []
+	for fid_p in ["reclaimer", "corporations", "marsgov"]:
+		gc2.new_game("standard", 20240424, [fid_p])
+		await process_frame
+		gc2.np.setup_deck(fid_p, [])
+		var guard3 := 0
+		while gc2.sequence.pending_faction() != fid_p and guard3 < 8:
+			guard3 += 1
+			if gc2.sequence.pending_faction() == "":
+				gc2.end_card()
+				await process_frame
+				continue
+			gc2.do_pass()
+			await process_frame
+		if gc2.sequence.pending_faction() != fid_p:
+			continue
+		var res0: int = gc2.state.get_resources(fid_p)
+		var ass0: int = int(gc2.state.tracks.get("asset_total", 0))
+		var sec0: int = gc2.rdr().count_in(gc2.state, "phobos", "security")
+		var rp: Dictionary = gc2.np_take_turn()
+		await process_frame
+		_ok(String(rp.get("action", "")) == "pass", "%s col mazzo vuoto Passa" % fid_p)
+		match fid_p:
+			"reclaimer":
+				_ok(int(gc2.state.tracks.get("asset_total", 0)) == ass0 + 1,
+					"il Passo di NP CR dà una Asset card (Asset Total %d → %d)" % [
+						ass0, int(gc2.state.tracks.get("asset_total", 0))])
+			"corporations":
+				_ok(gc2.rdr().count_in(gc2.state, "phobos", "security") > sec0,
+					"il Passo di NP CORP attiva l'Aldrin Cycler")
+			"marsgov":
+				_ok(gc2.state.get_resources(fid_p) == res0,
+					"il Passo di NP MG non gli dà Risorse, che non traccia (§8.5.4)")
+		pass_notes.append(fid_p)
+	_ok(pass_notes.size() == 3, "collaudato il Passo di tutte e tre le Fazioni (%d)" % pass_notes.size())
 	_ok(cards_seen.size() >= 5,
 		"la partita di soli bot scorre fra le carte (%d carte in %d turni)" % [
 			cards_seen.size(), bot_turns])

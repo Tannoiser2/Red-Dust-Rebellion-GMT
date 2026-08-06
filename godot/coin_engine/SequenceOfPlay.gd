@@ -134,7 +134,11 @@ func act_pass() -> bool:
 	var fid := pending_faction()
 	if fid == "" or not is_legal(A.PASS):
 		return false
-	state.add_resources(fid, module.pass_resources(fid))
+	# Le Risorse del Passo vanno solo a chi le traccia: una Fazione gestita da un
+	# sistema Non-Player non ne ha (§8.5.4 in Red Dust Rebellion), e i benefici
+	# non-Risorsa del suo Passo passano da `pass_effects`.
+	if state.is_player(fid):
+		state.add_resources(fid, module.pass_resources(fid))
 	_passers.append(fid)
 	action_box[fid] = "pass"
 	_idx += 1

@@ -769,7 +769,14 @@ func np_take_turn() -> Dictionary:
 	# rigiocherebbe all'infinito la stessa carta.
 	var token := String(res.get("action", ""))
 	if token == "pass":
-		sequence.act_pass()
+		# `do_pass()` e non `sequence.act_pass()`: il Passo NON è solo saltare il
+		# turno. §4.1 dà +3 Risorse a MarsGov, +1 a Red Dust, l'Aldrin Cycler alle
+		# Corporations e una Asset card ai Reclaimer. Registrando solo la casella,
+		# un bot che passava restava a mani vuote.
+		_undo.pop_back()
+		do_pass()
+		res["action"] = "pass"
+		return res
 	else:
 		var want: int = int(NP_TOKEN_ACTION.get(token, CoinEnums.ActionType.OPERATION_WITH_SPECIAL))
 		if not sequence.act(want):
@@ -848,10 +855,37 @@ func _np_context() -> Dictionary:
 			and not np.event_not_performed(fid, state.current_card)
 		if rounds != null:
 			ctx["next_critical"] = np.event_critical(fid, rounds.next_card())
+			ctx["first_on_next_if_pass"] = _first_on_next_if_pass(fid)
 		var second := sequence.next_eligible()
 		if second != "":
 			ctx["current_critical_for_second"] = np.event_critical(second, state.current_card)
 	return ctx
+
+
+## §8.5.2: passando, questa Fazione sarebbe la 1ª Disponibile sulla prossima
+## carta? Chi passa resta Disponibile, chi agisce no; l'ordine è quello stampato
+## sulla carta successiva, che è già scoperta. Delle Fazioni che devono ancora
+## muoversi su questa carta non si può sapere se agiranno o passeranno: si
+## assume che agiscano, che è il caso normale — quindi la risposta è "sì" appena
+## nessuna Fazione che ha già passato la precede nell'ordine della prossima carta.
+func _first_on_next_if_pass(fid: String) -> bool:
+	if rounds == null or sequence == null:
+		return false
+	var next_card: CardDef = game_def.card(rounds.next_card())
+	if next_card == null:
+		return false
+	for other in next_card.faction_order:
+		var o := String(other)
+		if o == fid:
+			return true
+		# Chi ha già agito su questa carta sarà Non Disponibile sulla prossima;
+		# chi ha passato resta Disponibile e ci precede.
+		var box := String(sequence.action_box.get(o, ""))
+		if box == "pass":
+			return false
+		if box == "":
+			return false   # deve ancora muoversi: se passasse, ci precederebbe
+	return false
 
 
 ## Quale opzione dell'Evento gioverebbe alla Fazione: 0 non ombreggiata,
