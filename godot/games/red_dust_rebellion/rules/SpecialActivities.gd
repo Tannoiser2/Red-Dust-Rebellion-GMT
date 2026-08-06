@@ -186,7 +186,7 @@ func public_relations(plan: Dictionary) -> Dictionary:
 		if not did:
 			continue
 		if module.count_in(state, sid, "rd_rebel") + module.count_in(state, sid, "rd_base") > 0:
-			state.add_resources("red_dust", -3, 50)
+			module.resources_delta(state, "red_dust", -3)
 		if module.count_in(state, sid, "cr_rebel") + module.count_in(state, sid, "cr_base") > 0:
 			_cr_discard(1)
 	return _done()
@@ -225,7 +225,7 @@ func exploit(plan: Dictionary) -> Dictionary:
 		if st.support != CoinEnums.Support.NEUTRAL:
 			act.shift(s, -1 if st.support > 0 else 1)
 		if st.control == "red_dust":
-			state.add_resources("red_dust", pop, 50)
+			module.resources_delta(state, "red_dust", pop)
 		elif st.control == "reclaimer":
 			_cr_draw(1)
 	return _done()
@@ -303,8 +303,15 @@ func redistribute(plan: Dictionary) -> Dictionary:
 		var s := String(sid)
 		act.activate(s, "rd_rebel", 1)
 		gain += module.population(state, s) + module.count_in(state, s, "corp_base")
-	state.add_resources("red_dust", gain, 50)
-	log_lines.append("Redistribute: +%d Risorse Red Dust." % gain)
+	# §8.5.4 / carta Curiosity di NP RD: «Increase Agitate Total by 1 for every
+	# 2 Resources that would be gained» — un bot le Risorse non le traccia.
+	if module.is_np(state, "red_dust"):
+		var bump := int(gain / 2.0)
+		module.add_agitate(state, bump)
+		log_lines.append("Redistribute: Agitate Total +%d (per %d Risorse). " % [bump, gain])
+	else:
+		state.add_resources("red_dust", gain, 50)
+		log_lines.append("Redistribute: +%d Risorse Red Dust." % gain)
 	return _done()
 
 
@@ -436,7 +443,7 @@ func ransack(plan: Dictionary) -> Dictionary:
 			_profits(-1)
 			log_lines.append("AI Unleashed: −1 Profit.")
 		else:
-			state.add_resources("marsgov", -3, 50)
+			module.resources_delta(state, "marsgov", -3)
 			log_lines.append("AI Unleashed: −3 Risorse MarsGov.")
 	return _done()
 

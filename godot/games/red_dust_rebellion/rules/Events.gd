@@ -699,14 +699,18 @@ func _apply(e: Dictionary, ctx: Dictionary) -> int:
 			return 1
 		"resources":
 			var fid := _faction_of(e.get("faction", "marsgov"), ctx)
-			state.add_resources(fid, _amount(e, ctx), 50)
+			module.resources_delta(state, fid, _amount(e, ctx))
 			return 1
 		"resource_transfer":
 			var from_f := _faction_of(e.get("from", "marsgov"), ctx)
 			var to_f := _faction_of(e.get("to", "red_dust"), ctx)
-			var moved: int = mini(_amount(e, ctx), state.get_resources(from_f))
-			state.add_resources(from_f, -moved, 50)
-			state.add_resources(to_f, moved, 50)
+			# §8.2: se le Risorse verrebbero tolte a una Fazione NP, che non le
+			# traccia, chi le riceve le guadagna comunque per intero.
+			var moved: int = _amount(e, ctx)
+			if not module.is_np(state, from_f):
+				moved = mini(moved, state.get_resources(from_f))
+			module.resources_delta(state, from_f, -moved)
+			module.resources_delta(state, to_f, moved)
 			log_lines.append("%d Risorse da %s a %s." % [moved, from_f, to_f])
 			ctx["last"] = moved
 			return 1

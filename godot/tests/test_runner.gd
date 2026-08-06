@@ -85,6 +85,7 @@ func _init() -> void:
 	test_np_event_symbols()
 	test_np_event_instructions()
 	test_np_capability_campaign_effects()
+	test_np_no_resources()
 	test_np_ambush_transport()
 	test_np_dust_storm_round()
 	test_np_example_of_play()
@@ -2420,6 +2421,103 @@ func _minus(pool, used: Array) -> Array:
 ## Coronae Montes, per dire, perde il Controllo COIN proprio perché i Reclaimer
 ## ci hanno appena messo un Ribelle, ed è quello a renderla l'unica scelta per il
 ## Train di MarsGov.
+## §8.5.4: «NP Factions do not track or spend Resources». Trovati leggendo il Log
+## di una partita di soli bot: il Redistribute regalava Risorse a un Red Dust
+## gestito dal sistema, e il Repair ne CHIEDEVA a un MarsGov che non ne aveva più
+## — così, esaurite quelle dello schieramento, il bot smetteva di Pacificare
+## senza dire perché.
+func test_np_no_resources() -> void:
+	print("Non-Player — nessuna Risorsa né in entrata né in uscita (§8.5.4)")
+
+	# --- Redistribute: per NP RD diventa Agitate Total ----------------------
+	var s := fresh()
+	var np := np_for(s, ["red_dust"])
+	var sp := RDRSpecials.new(s, module)
+	var target := ""
+	for sid in module.mars_spaces(s):
+		var sd := String(sid)
+		if module.population(s, sd) >= 2 and s.spaces[sd].control == "red_dust" \
+				and module.count_in(s, sd, "rd_rebel", "hidden") > 0:
+			target = sd
+			break
+	ok(target != "", "trovato uno spazio Popolato da Redistribute (%s)" % target)
+	s.tracks["agitate_total"] = 0
+	var rd0 := s.get_resources("red_dust")
+	eq(sp.redistribute({"spaces": [target]})["ok"], true, "il Redistribute si esegue")
+	eq(s.get_resources("red_dust"), rd0, "NP RD non incassa Risorse")
+	ok(np.agitate_total() >= 1,
+		"…ma Agitate Total, 1 ogni 2 Risorse (ora %d)" % np.agitate_total())
+
+	# Con un Red Dust in carne e ossa le Risorse arrivano come sempre.
+	var s2 := fresh()
+	var sp2 := RDRSpecials.new(s2, module)
+	var rd2 := s2.get_resources("red_dust")
+	sp2.redistribute({"spaces": [target]})
+	ok(s2.get_resources("red_dust") > rd2, "il Red Dust giocatore incassa Risorse")
+
+	# --- Repair e Pacify: un bot non paga in Risorse ------------------------
+	# NP MG a zero Risorse deve poter comunque Riparare e spostare il Supporto.
+	var s3 := fresh()
+	np_for(s3, ["marsgov"])
+	var a3 := RDRActions.new(s3, module)
+	s3.resources["marsgov"] = 0
+	s3.tracks["displaced_population"] = 4
+	var dmg := ""
+	for sid in module.mars_spaces(s3):
+		var s3d := String(sid)
+		# Popolato (senza Popolazione il Supporto non si muove) e non già al
+		# massimo, altrimenti lo spostamento non avrebbe dove andare.
+		if s3.spaces[s3d].control == "coin" and module.population(s3, s3d) > 0 \
+				and s3.spaces[s3d].support < CoinEnums.Support.ACTIVE_SUPPORT:
+			module.add_marker(s3, s3d, "damage", 1)
+			dmg = s3d
+			break
+	ok(dmg != "", "trovato uno spazio COIN Popolato da Riparare (%s)" % dmg)
+	eq(a3.can_repair(dmg, "marsgov"), true, "NP MG a 0 Risorse può comunque Riparare")
+	eq(a3.repair(dmg, "marsgov"), true, "…e il Repair riesce")
+	eq(s3.get_resources("marsgov"), 0, "senza toccare Risorse che non ha")
+	var before3: int = s3.spaces[dmg].support
+	eq(a3.pacify(dmg, ["shift"]), 1, "NP MG a 0 Risorse può spostare il Supporto")
+	ok(s3.spaces[dmg].support > before3, "…e lo spazio si sposta davvero")
+
+	# Un MarsGov giocatore a zero Risorse invece non può.
+	var s4 := fresh()
+	var a4 := RDRActions.new(s4, module)
+	s4.resources["marsgov"] = 0
+	s4.tracks["displaced_population"] = 4
+	module.add_marker(s4, dmg, "damage", 1)
+	eq(a4.can_repair(dmg, "marsgov"), false,
+		"il MarsGov giocatore a 0 Risorse non può Riparare")
+	eq(a4.pacify(dmg, ["shift"]), 0, "…né spostare il Supporto")
+
+	# --- NP RD paga Repair e spostamenti con l'Agitate Total ----------------
+	var s5 := fresh()
+	var np5 := np_for(s5, ["red_dust"])
+	var a5 := RDRActions.new(s5, module)
+	s5.tracks["agitate_total"] = 1
+	s5.tracks["displaced_population"] = 4
+	var rd_space := ""
+	for sid in module.mars_spaces(s5):
+		if s5.spaces[String(sid)].control == "red_dust":
+			module.add_marker(s5, String(sid), "damage", 1)
+			rd_space = String(sid)
+			break
+	if rd_space != "":
+		eq(a5.repair(rd_space, "red_dust"), true, "NP RD ripara")
+		eq(np5.agitate_total(), 0, "…spendendo un Agitate Total")
+		eq(a5.can_repair(rd_space, "red_dust"), false,
+			"a Agitate Total zero non ripara più")
+
+	# --- Gli Eventi non danno né tolgono Risorse ai bot ---------------------
+	var s6 := fresh()
+	np_for(s6, ["marsgov"])
+	var mg6 := s6.get_resources("marsgov")
+	eq(module.resources_delta(s6, "marsgov", 10), 0, "un Evento non arricchisce un bot")
+	eq(s6.get_resources("marsgov"), mg6, "…e le Risorse restano quelle")
+	ok(module.resources_delta(s6, "red_dust", 5) > 0,
+		"mentre una Fazione di un giocatore le riceve")
+
+
 ## §8.7.6 e §8.7.7: l'Ambush non è un'Attività Speciale a parte, sceglie i dadi
 ## di un Attack che si sta risolvendo. §8.7.4: il Transport passa dal motore
 ## delle Move Priorities come le Operazioni di movimento.

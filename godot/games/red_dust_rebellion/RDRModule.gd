@@ -566,6 +566,19 @@ func add_asset(state: GameState, delta: int) -> void:
 	state.tracks["asset_total"] = clampi(asset_total(state) + delta, 0, ASSET_TOTAL_MAX)
 
 
+## §8.5.4: le Risorse di una Fazione NP semplicemente non esistono, quindi un
+## effetto che gliene darebbe o toglierebbe non ha su cui agire. Le poche
+## conversioni previste (Supply su Phobos, Redistribute, Asset card) sono scritte
+## dove servono, con il loro cambio; questa è la via generica per tutto il resto.
+## Restituisce quanto è stato davvero mosso.
+func resources_delta(state: GameState, faction: String, delta: int) -> int:
+	if is_np(state, faction):
+		return 0
+	var before := state.get_resources(faction)
+	state.add_resources(faction, delta, 50)
+	return state.get_resources(faction) - before
+
+
 ## §1.5: è in gioco la Capability della Asset card numero `n` dei Reclaimer?
 ## Il confronto è per valore: dopo un salvataggio i numeri tornano dal JSON come
 ## float e un `has(n)` secco fallirebbe.

@@ -479,6 +479,9 @@ func execute_event(shaded: bool, choices = {}) -> Dictionary:
 		game_def.faction(fid).short_name, state.current_card,
 		"ombreggiato" if shaded else "non ombreggiato"])
 	sequence.act(CoinEnums.ActionType.EVENT)
+	# L'Evento di un giocatore può concedere un'Operazione gratuita a una
+	# Fazione gestita dal bot: la esegue lui, non chi ha giocato la carta.
+	_run_np_free_ops()
 	_after_action()
 	return res
 
@@ -728,6 +731,9 @@ func np_take_turn() -> Dictionary:
 			var note: Dictionary = np.event_instruction(fid, state.current_card)
 			if not note.is_empty():
 				emit_signal("log_line", "  · Istruzione di carta: %s" % note.get("text", ""))
+		# §7.0: le Operazioni gratuite concesse dall'Evento, se toccano a una
+		# Fazione gestita dal bot, si eseguono subito.
+		_run_np_free_ops()
 
 	# Si registra l'azione nella sequenza, come farebbe un giocatore. Se la
 	# tabella ha scelto una casella che in questo slot non è legale — capita
@@ -760,6 +766,40 @@ func np_take_turn() -> Dictionary:
 		game_def.faction(fid).short_name, res.get("operation", res.get("action", ""))])
 	_after_action()
 	return res
+
+
+## §7.0: esegue le Operazioni gratuite in coda che toccano a una Fazione gestita
+## dal bot. NON si guarda chi ha giocato l'Evento: un Evento del Red Dust può
+## benissimo concedere un Assault gratuito a MarsGov, e prima quella voce restava
+## in coda per sempre in attesa di un giocatore che non c'era.
+## Quelle che lasciano la scelta dell'Operazione all'Evento restano in coda e si
+## dichiarano nel Log: il bot non ha una tabella per deciderle.
+func _run_np_free_ops() -> void:
+	for guard in range(6):
+		var queue: Array = pending_free_ops()
+		var idx := -1
+		for i in range(queue.size()):
+			var entry: Dictionary = queue[i]
+			var owner := String(entry.get("faction", ""))
+			if owner == "" or not np.is_np(owner):
+				continue
+			if String(entry.get("operation", "")) == "" and String(entry.get("special", "")) == "":
+				continue
+			idx = i
+			break
+		if idx < 0:
+			break
+		var res: Dictionary = execute_free_op(idx)
+		if not res.get("ok", false):
+			emit_signal("log_line",
+				"Operazione gratuita non eseguibile dal bot: %s" % res.get("error", ""))
+			pending_free_ops().remove_at(idx)
+	for entry in pending_free_ops():
+		var e: Dictionary = entry
+		if np.is_np(String(e.get("faction", ""))):
+			emit_signal("log_line",
+				"[Operazione gratuita di %s lasciata al tavolo: %s]" % [
+				e.get("faction", "?"), e.get("note", "l'Evento lascia la scelta")])
 
 
 ## Ciò che il bot sa della carta in corso. Critical/Performed/effective

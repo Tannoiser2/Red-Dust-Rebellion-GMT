@@ -24,6 +24,38 @@ func log_line(text: String) -> void:
 
 
 # ---------------------------------------------------------------------------
+# §8.5.4 Il prezzo delle azioni per una Fazione Non-Player
+# ---------------------------------------------------------------------------
+#
+# «NP Factions do not track or spend Resources». Chiedere a un bot le Risorse
+# che non ha significa vederlo smettere di agire senza dire perché: NP MG parte
+# con quelle dello schieramento, le spende, e da lì in poi non può più né
+# Riparare né spostare il Supporto durante il Pacify.
+#
+# Al loro posto: NP MG non paga niente (i suoi limiti sono l'Activation Number
+# e il budget 2d6 della Support Phase), NP RD paga in Agitate Total — 1 per ogni
+# Repair e per ogni spostamento, come dicono la sua carta Curiosity e la scheda
+# del Dust Storm Round.
+
+## Può permettersi questa azione? `cost` è il prezzo in Risorse per un giocatore.
+func _can_afford(faction: String, cost: int) -> bool:
+	if not module.is_np(state, faction):
+		return state.get_resources(faction) >= cost
+	if faction == "red_dust":
+		return module.agitate_total(state) > 0
+	return true
+
+
+## Paga: Risorse per un giocatore, Agitate Total per NP RD, niente per gli altri bot.
+func _spend(faction: String, cost: int) -> void:
+	if not module.is_np(state, faction):
+		state.add_resources(faction, -cost, 50)
+		return
+	if faction == "red_dust":
+		module.add_agitate(state, -1)
+
+
+# ---------------------------------------------------------------------------
 # EarthGov Confidence (§1.2 / §7.5)
 # ---------------------------------------------------------------------------
 
@@ -122,9 +154,9 @@ func can_repair(sid: String, actor: String) -> bool:
 		return false
 	match actor:
 		"marsgov":
-			return state.get_resources("marsgov") >= 3
+			return _can_afford("marsgov", 3)
 		"red_dust":
-			return state.get_resources("red_dust") >= 2
+			return _can_afford("red_dust", 2)
 		"corporations":
 			return module.count_in(state, sid, "security") > 0
 	return true
@@ -138,10 +170,10 @@ func repair(sid: String, actor: String, eg_choice: String = "EG+") -> bool:
 		return false
 	match actor:
 		"marsgov":
-			state.add_resources("marsgov", -3, 50)
+			_spend("marsgov", 3)
 			set_eg("EG+")
 		"red_dust":
-			state.add_resources("red_dust", -2, 50)
+			_spend("red_dust", 2)
 			set_eg("EG-")
 		"corporations":
 			module.remove_pieces(state, sid, "security", 1, "available")
@@ -170,8 +202,8 @@ func pacify(sid: String, actions: Array) -> int:
 				if repair(sid, "marsgov"):
 					done += 1
 			"shift":
-				if state.get_resources("marsgov") >= 3 and shift(sid, 1) != 0:
-					state.add_resources("marsgov", -3, 50)
+				if _can_afford("marsgov", 3) and shift(sid, 1) != 0:
+					_spend("marsgov", 3)
 					done += 1
 	return done
 
@@ -193,8 +225,8 @@ func agitate(sid: String, actions: Array) -> int:
 				if repair(sid, "red_dust"):
 					done += 1
 			"shift":
-				if state.get_resources("red_dust") >= 1 and shift(sid, -1) != 0:
-					state.add_resources("red_dust", -1, 50)
+				if _can_afford("red_dust", 1) and shift(sid, -1) != 0:
+					_spend("red_dust", 1)
 					done += 1
 	return done
 

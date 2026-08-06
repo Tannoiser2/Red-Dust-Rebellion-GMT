@@ -592,7 +592,12 @@ func resources_phase() -> void:
 	if cards != null:
 		var symbols := int(module.available(state, "cr_base") / 4.0)
 		var drawn := cards.draw_asset(maxi(1, symbols))
-		log_line("Reclaimer Earnings: %d Asset card pescate." % drawn)
+		# Per NP CR non sono carte ma Asset Total: il mazzo lo dice già nel suo
+		# log, qui basta non chiamarle "pescate".
+		if module.is_np(state, "reclaimer"):
+			log_line("Reclaimer Earnings: %d Asset in più." % drawn)
+		else:
+			log_line("Reclaimer Earnings: %d Asset card pescate." % drawn)
 		log_lines.append_array(cards.log_lines)
 		cards.log_lines.clear()
 	else:
