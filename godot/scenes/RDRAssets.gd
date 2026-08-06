@@ -40,6 +40,29 @@ const SUPPORT_FILES := {
 	CoinEnums.Support.ACTIVE_OPPOSITION: "opposition_active.png",
 }
 
+## Marcatori dei tracciati e cilindri delle Fazioni, dal modulo Vassal: sono i
+## pezzi originali del gioco, non segnaposto ridisegnati.
+const TRACK_FILES := {
+	"marsgov_resources": "pawn_marsgov.png",
+	"red_dust_resources": "pawn_red_dust.png",
+	"profits": "track_profits.png",
+	"support_plus_eg": "track_support_eg.png",
+	"oppose_plus_bases": "track_opposition_bases.png",
+	"cr_control_plus_bases": "track_cr_control.png",
+	"enemy_bases": "track_enemy_bases.png",
+	"flashpoint": "track_flashpoint.png",
+	"eg_plus": "track_eg_plus.png",
+	"eg_minus": "track_eg_minus.png",
+}
+
+## Il cilindro dell'Eligibility, uno per Fazione.
+const PAWN_FILES := {
+	"marsgov": "pawn_marsgov.png",
+	"corporations": "pawn_corporations.png",
+	"red_dust": "pawn_red_dust.png",
+	"reclaimer": "pawn_reclaimer.png",
+}
+
 const CONTROL_FILES := {
 	"coin": "control_coin.png",
 	"red_dust": "control_red_dust.png",
@@ -91,6 +114,16 @@ static func piece_tex(type_id: String, state: String = "") -> Texture2D:
 	if not PIECE_FILES.has(key):
 		key = type_id
 	return tex(String(PIECE_FILES.get(key, "")))
+
+
+## Marcatore di un tracciato (Edge Track, Flashpoint, EG Confidence).
+static func track_tex(key: String) -> Texture2D:
+	return tex(String(TRACK_FILES.get(key, "")))
+
+
+## Cilindro della Sequence of Play di una Fazione.
+static func pawn_tex(faction: String) -> Texture2D:
+	return tex(String(PAWN_FILES.get(faction, "")))
 
 
 static func support_tex(level: int) -> Texture2D:

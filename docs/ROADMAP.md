@@ -260,6 +260,19 @@ fatto su Cuba Libre e All Bridges Burning.
       altrimenti i voli si accavallano
 - [x] Copia e salvataggio del Log (menu «Partita…»), per rileggere una partita
       o mandarla a qualcuno
+- [x] **Pedine originali del gioco** anche sui tracciati: marcatore Profits,
+      Flashpoint, bifacciale EG+/EG− e i quattro cilindri delle Fazioni, presi
+      dal modulo Vassal invece dei dischi colorati disegnati a mano
+- [x] **Disposizione dei pezzi negli spazi**: righe separate per Fazione, Basi
+      in cima, righe sfalsate di mezzo passo e nessuna sovrapposizione finché
+      c'è posto. La pila cresce verso l'alto, così non copre il nome dello spazio
+- [x] **Log leggibile**: una riga di stacco a ogni cambio di Fazione, il testo
+      colorato per Fazione, e i dettagli (tiri, righe delle tabelle, passaggi
+      intermedi) nascosti dietro un interruttore
+- [x] **Pannello laterale in tre fasce**: era una colonna unica alta 2000 px in
+      una finestra da 1150, col Log sotto il bordo dello schermo. Ora carta,
+      turno e azioni stanno fisse in alto, la consultazione è a schede (Stato,
+      Carta, Spazio) e il Log ha un'altezza propria in fondo
 - [ ] Integrazione della FAQ ufficiale (errata delle carte Curiosity e Asset
       Event già applicate)
 - [ ] Simulazioni di bilanciamento (come `sim_runner.gd` di ABB)

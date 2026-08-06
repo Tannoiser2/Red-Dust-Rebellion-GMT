@@ -119,9 +119,10 @@ func refresh(state: GameState, module: RDRModule) -> void:
 			var bucket: Array = bases if (pt != null and pt.is_base) else units
 			for piece_state in st.pieces[fid][type_id].keys():
 				var tex := RDRAssets.piece_tex(String(type_id), String(piece_state))
+				var is_base := pt != null and pt.is_base
 				for i in range(int(st.pieces[fid][type_id][piece_state])):
 					bucket.append({"tex": tex, "type": String(type_id),
-						"state": String(piece_state)})
+						"state": String(piece_state), "is_base": is_base})
 	_pieces = bases + units
 
 	_sup_marker.texture = RDRAssets.support_tex(_support)
@@ -164,19 +165,7 @@ func relayout() -> void:
 		_tokens[i].visible = i < _pieces.size()
 	var n := _pieces.size()
 	if n > 0:
-		var cols: int = ceili(sqrt(float(n)))
-		var rows: int = ceili(float(n) / float(cols))
-		var step := psz * 0.92
-		for i in range(n):
-			var col := i % cols
-			var row := i / cols
-			var pos := a + Vector2(
-				(col - (cols - 1) * 0.5) * step,
-				(row - (rows - 1) * 0.5) * step - psz * 0.2)
-			var tr: TextureRect = _tokens[i]
-			tr.texture = _pieces[i]["tex"]
-			tr.size = Vector2(psz, psz)
-			tr.position = pos - tr.size * 0.5
+		_layout_pieces(a, psz, n)
 
 	# Marker Supporto sulla casella 'Neutral' stampata; Controllo appena sopra.
 	var sb := _sbox if _sbox.x >= 0.0 else _anchor
@@ -186,6 +175,65 @@ func relayout() -> void:
 	_ctrl_marker.size = Vector2(mw, mw * 0.62)
 	_ctrl_marker.position = sp - Vector2(_ctrl_marker.size.x * 0.5, _ctrl_marker.size.y * 1.6)
 	_badge.position = sp + Vector2(-mw * 0.5, mw * 0.4)
+
+
+## Dispone i pezzi attorno all'anchor.
+##
+## Il criterio è quello del tavolo vero: i pezzi della stessa Fazione stanno
+## insieme, in righe separate, e le Basi in cima. Le righe sono sfalsate di mezzo
+## passo, così due file di cubi identici non si allineano in una colonna
+## indistinguibile. Finché c'è posto le pedine NON si sovrappongono; quando sono
+## troppe si rimpiccioliscono, che è sempre più leggibile che accavallarle.
+func _layout_pieces(a: Vector2, psz: float, n: int) -> void:
+	# Righe: una per gruppo (Basi, poi ogni Fazione). Un gruppo che non ci sta in
+	# una riga sola viene spezzato.
+	var groups: Array = []
+	var last_key := "—"   # sentinella: nessun gruppo aperto
+	for i in range(n):
+		var p: Dictionary = _pieces[i]
+		var key := "base" if bool(p.get("is_base", false)) \
+			else String(RDRModule.PIECE_OWNER.get(String(p["type"]), "?"))
+		if key != last_key:
+			groups.append([])
+			last_key = key
+		(groups[groups.size() - 1] as Array).append(i)
+
+	# Larghezza disponibile: il lato più stretto fra quanto la zona è larga e un
+	# tetto ragionevole, così nei Deserti larghi le pedine non si sparpagliano.
+	var max_per_row := 5
+	var rows: Array = []
+	for g in groups:
+		var group: Array = g
+		var start := 0
+		while start < group.size():
+			rows.append(group.slice(start, mini(start + max_per_row, group.size())))
+			start += max_per_row
+
+	# Se le righe sono tante si stringe tutto invece di allargarsi a dismisura.
+	var scale_down: float = 1.0 if rows.size() <= 3 else 3.0 / float(rows.size())
+	var sz: float = maxf(8.0, psz * minf(1.0, sqrt(scale_down)))
+	var step_x := sz * 1.06        # niente sovrapposizione orizzontale
+	var step_y := sz * 0.88        # verticale un filo più stretto: le pedine sono tozze
+	var total_h := step_y * float(rows.size() - 1)
+
+	var idx := 0
+	for r in range(rows.size()):
+		var row: Array = rows[r]
+		# Sfasatura: le righe dispari scivolano di mezza pedina.
+		var offset: float = 0.0 if r % 2 == 0 else step_x * 0.5
+		var w := step_x * float(row.size() - 1)
+		for c in range(row.size()):
+			var tr: TextureRect = _tokens[idx]
+			tr.texture = _pieces[row[c]]["tex"]
+			tr.size = Vector2(sz, sz)
+			var pos := a + Vector2(
+				float(c) * step_x - w * 0.5 + offset,
+				float(r) * step_y - total_h - sz * 0.55)
+			tr.position = pos - tr.size * 0.5
+			idx += 1
+	# I token in eccesso (creati per un conteggio precedente) restano nascosti.
+	for j in range(idx, _tokens.size()):
+		_tokens[j].visible = false
 
 
 ## Accende lo spazio per un attimo (verde per chi riceve, blu per chi cede).

@@ -38,6 +38,8 @@ var _np_running := false
 var _tracks: TrackOverlay
 var _moves: MovesOverlay    ## frecce degli spostamenti dichiarati
 var _side: VBoxContainer
+var _tabs: TabContainer      ## schede di consultazione: Stato, Carta, Spazio
+var _turn_line: RichTextLabel  ## carta in corso e Fazione di turno, sempre in vista
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
@@ -64,6 +66,12 @@ var _move_box: VBoxContainer
 var _preview: RichTextLabel   ## costo ed effetti previsti dell'azione in preparazione
 var _hand_box: HFlowContainer ## mano di Asset card dei Reclaimer (§1.5)
 var _log: RichTextLabel
+var _log_details: CheckButton
+## Righe del Log, ciascuna con la Fazione a cui appartiene e se è un dettaglio.
+## Tenerle in forma strutturata è quel che permette di ricolorarle e di
+## nasconderle senza perderle: il testo del RichTextLabel si rigenera da qui.
+var _log_entries: Array = []
+var _log_last_faction := ""
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
 
@@ -155,32 +163,34 @@ func _build_ui() -> void:
 	_map_root.add_child(_moves)
 
 	# --- Pannello laterale --------------------------------------------------
+	#
+	# Tre fasce, non una colonna unica: impilando tutto, il pannello arrivava a
+	# 2000 px in una finestra da 1150 e il Log — la parte che si consulta di più —
+	# finiva sotto il bordo dello schermo.
+	#   in alto  · di chi è il turno e cosa può fare: serve sempre, non si scorre
+	#   in mezzo · schede di consultazione (Stato, Carta, Spazio)
+	#   in basso · il Log, con un'altezza propria e il suo scorrimento
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(340, 0)
+	panel.custom_minimum_size = Vector2(360, 0)
 	split.add_child(panel)
 
-	var scroll := ScrollContainer.new()
-	panel.add_child(scroll)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	panel.add_child(column)
+
+	# ❶ Fascia delle azioni, fissa.
 	_side = VBoxContainer.new()
 	_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_side.add_theme_constant_override("separation", 10)
-	scroll.add_child(_side)
+	_side.add_theme_constant_override("separation", 6)
+	column.add_child(_side)
 
-	_side.add_child(_title("Red Dust Rebellion  ·  %s" % BUILD_VERSION))
-	_status = _rich(240)
-	_side.add_child(_status)
-
-	_side.add_child(_title("Carta e turno"))
-	# Le due carte in vista, come sul tavolo: quella in corso e la prossima
-	# (serve a decidere, il suo Flashpoint conta già). Un clic le ingrandisce.
-	var cards_row := HBoxContainer.new()
-	cards_row.add_theme_constant_override("separation", 6)
-	_card_now = _add_card_slot(cards_row, "In corso", 1.0)
-	_card_next = _add_card_slot(cards_row, "Prossima", 0.55)
-	_side.add_child(cards_row)
-	_card_info = _rich(120)
-	_side.add_child(_card_info)
-
+	# Carta in corso e Fazione di turno: due righe che devono stare sempre sotto
+	# gli occhi, altrimenti per sapere a chi tocca bisogna cambiare scheda.
+	_turn_line = RichTextLabel.new()
+	_turn_line.bbcode_enabled = true
+	_turn_line.fit_content = true
+	_turn_line.custom_minimum_size = Vector2(0, 40)
+	_side.add_child(_turn_line)
 	var actions := HBoxContainer.new()
 	_btn_pass = Button.new()
 	_btn_pass.text = "Passa"
@@ -217,9 +227,46 @@ func _build_ui() -> void:
 	_move_box.add_theme_constant_override("separation", 2)
 	_side.add_child(_move_box)
 
-	_side.add_child(_title("Spazio selezionato"))
+	# ❷ Schede di consultazione: si guardano quando servono, non ingombrano.
+	var tabs := TabContainer.new()
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.custom_minimum_size = Vector2(0, 300)
+	column.add_child(tabs)
+
+	var tab_state := ScrollContainer.new()
+	tab_state.name = "Stato"
+	var state_box := VBoxContainer.new()
+	state_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_state.add_child(state_box)
+	_status = _rich(240)
+	state_box.add_child(_status)
+	tabs.add_child(tab_state)
+
+	var tab_card := ScrollContainer.new()
+	tab_card.name = "Carta"
+	var card_box := VBoxContainer.new()
+	card_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_card.add_child(card_box)
+	# Le due carte in vista, come sul tavolo: quella in corso e la prossima
+	# (serve a decidere, il suo Flashpoint conta già). Un clic le ingrandisce.
+	var cards_row := HBoxContainer.new()
+	cards_row.add_theme_constant_override("separation", 6)
+	_card_now = _add_card_slot(cards_row, "In corso", 1.0)
+	_card_next = _add_card_slot(cards_row, "Prossima", 0.55)
+	card_box.add_child(cards_row)
+	_card_info = _rich(120)
+	card_box.add_child(_card_info)
+	tabs.add_child(tab_card)
+
+	var tab_space := ScrollContainer.new()
+	tab_space.name = "Spazio"
+	var space_box := VBoxContainer.new()
+	space_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_space.add_child(space_box)
 	_space_info = _rich(150)
-	_side.add_child(_space_info)
+	space_box.add_child(_space_info)
+	tabs.add_child(tab_space)
+	_tabs = tabs
 
 	var buttons := HBoxContainer.new()
 	# Partita: nuova, salva, riprendi. Il salvataggio sta in user://, cioè nella
@@ -263,11 +310,27 @@ func _build_ui() -> void:
 	b_fit.tooltip_text = "Tavola intera (tasto 0). Col tasto destro si trascina la mappa."
 	b_fit.pressed.connect(func(): _set_zoom(1.0))
 	buttons.add_child(b_fit)
-	_side.add_child(buttons)
+	column.add_child(buttons)
 
-	_side.add_child(_title("Log"))
-	_log = _rich(200)
-	_side.add_child(_log)
+	# ❸ Log, in fondo e con un'altezza propria.
+	var log_head := HBoxContainer.new()
+	log_head.add_child(_title("Log"))
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	log_head.add_child(spacer)
+	_log_details = CheckButton.new()
+	_log_details.text = "Dettagli"
+	_log_details.tooltip_text = "Mostra tiri di dado, righe delle tabelle e passaggi intermedi."
+	_log_details.button_pressed = false
+	_log_details.toggled.connect(func(_on): _render_log())
+	log_head.add_child(_log_details)
+	column.add_child(log_head)
+	_log = RichTextLabel.new()
+	_log.bbcode_enabled = true
+	_log.scroll_following = true
+	_log.custom_minimum_size = Vector2(0, 240)
+	_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(_log)
 
 
 ## Colonna con etichetta e anteprima cliccabile di una carta Evento.
@@ -532,6 +595,7 @@ func _on_state_changed() -> void:
 	_tracks.queue_redraw()
 	_refresh_status()
 	_refresh_card_info()
+	_refresh_turn_line()
 	_refresh_op_bar()
 	_refresh_instructions()
 	_refresh_undo_btn()
@@ -619,6 +683,31 @@ func _on_game_menu(id: int) -> void:
 				_log_plain().split("\n").size())
 		6:
 			_save_log()
+
+
+## Le due righe in cima al pannello: quale carta si sta giocando e a chi tocca.
+func _refresh_turn_line() -> void:
+	if _turn_line == null:
+		return
+	var gc := GameController
+	if gc.state == null:
+		return
+	var card: CardDef = gc.game_def.card(gc.state.current_card)
+	var title := card.title if card != null else "—"
+	var line := "[b]#%d %s[/b]" % [gc.state.current_card, title]
+	if gc.sequence != null and gc.sequence.pending_faction() != "":
+		var fid := gc.sequence.pending_faction()
+		var col: Color = RDRAssets.TEXT_COLORS.get(fid, Color.WHITE)
+		var who: String = gc.game_def.faction(fid).short_name
+		var slot := "1ª" if gc.sequence.is_first_slot() else "2ª"
+		var kind := " (bot)" if gc.np != null and gc.np.is_np(fid) else ""
+		line += "\nTocca a [color=#%s][b]%s[/b][/color] — %s Disponibile%s" % [
+			col.to_html(false), who, slot, kind]
+	elif gc.rounds != null and gc.rounds.is_game_over():
+		line += "\n[b]Partita conclusa.[/b]"
+	else:
+		line += "\nCarta conclusa: «Concludi carta» per la prossima."
+	_turn_line.text = line
 
 
 ## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
@@ -780,6 +869,8 @@ func _on_space_clicked(space_id: String) -> void:
 	for sid in _views.keys():
 		(_views[sid] as RegionView).set_highlight(sid == space_id)
 	_refresh_space_info(space_id)
+	if _tabs != null:
+		_tabs.current_tab = 2   # «Spazio»: è quello che si è appena chiesto
 
 
 # ---------------------------------------------------------------------------
@@ -1411,5 +1502,84 @@ func _save_log() -> void:
 	_append_log("[i]Log salvato in %s[/i]" % path)
 
 
+## Nomi con cui una Fazione compare nel Log, dal più specifico al più generico.
+const LOG_FACTION_WORDS := {
+	"marsgov": ["marsgov", "MarsGov", "MG "],
+	"corporations": ["corporations", "CORP", "Corporations"],
+	"red_dust": ["red_dust", "Red Dust", "RD "],
+	"reclaimer": ["reclaimer", "Reclaimer"],
+}
+
+## Righe che raccontano COME si è arrivati a una decisione, non cosa è successo:
+## tiri di dado, righe delle tabelle di priorità, passaggi intermedi. Sono utili
+## per capire il bot, ma sepolte fra loro le azioni vere non si trovano più.
+func _is_log_detail(text: String) -> bool:
+	if text.begins_with("  · "):
+		return true
+	for mark in ["tira 2d6", "tiro ", "Activation Number", "→ sì", "→ no",
+			"unico candidato", "select at random"]:
+		if text.contains(mark):
+			return true
+	return false
+
+
+## Di chi parla questa riga. Se il testo non lo dice, è della Fazione di turno.
+func _log_faction(text: String) -> String:
+	var plain := text
+	for fid in LOG_FACTION_WORDS.keys():
+		for word in LOG_FACTION_WORDS[fid]:
+			if plain.contains(String(word)):
+				return String(fid)
+	var gc := GameController
+	if gc.sequence != null:
+		return gc.sequence.pending_faction()
+	return ""
+
+
 func _append_log(text: String) -> void:
-	_log.text += ("\n" if _log.text != "" else "") + text
+	var fid := _log_faction(text)
+	var detail := _is_log_detail(text)
+	# Cambio di Fazione: una riga di stacco, così il turno si vede a colpo
+	# d'occhio invece di doverlo ricostruire leggendo.
+	if fid != "" and fid != _log_last_faction and not detail:
+		_log_entries.append({"text": "", "faction": fid, "detail": false, "header": true})
+		_log_last_faction = fid
+	_log_entries.append({"text": text, "faction": fid, "detail": detail, "header": false})
+	# Il Log di una partita intera arriva a migliaia di righe: si tiene solo la
+	# coda, e per l'intero c'è «Salva il Log sulla Scrivania».
+	if _log_entries.size() > 1200:
+		_log_entries = _log_entries.slice(_log_entries.size() - 900)
+	_render_log()
+
+
+## Ricostruisce il testo del Log dalle righe registrate.
+func _render_log() -> void:
+	if _log == null:
+		return
+	var show_details: bool = _log_details != null and _log_details.button_pressed
+	var out := PackedStringArray()
+	var hidden := 0
+	for e in _log_entries:
+		var entry: Dictionary = e
+		if bool(entry["detail"]) and not show_details:
+			hidden += 1
+			continue
+		var fid := String(entry["faction"])
+		var col: Color = RDRAssets.TEXT_COLORS.get(fid, Color("d8d8d8"))
+		if bool(entry.get("header", false)):
+			var fdef: FactionDef = GameController.game_def.faction(fid) if fid != "" else null
+			var name: String = fdef.short_name if fdef != null else fid
+			out.append("[color=#%s]━━ %s ━━[/color]" % [col.to_html(false), name])
+			continue
+		var line := String(entry["text"])
+		if bool(entry["detail"]):
+			out.append("[color=#%s][i]%s[/i][/color]" % [col.darkened(0.35).to_html(false), line])
+		else:
+			out.append("[color=#%s]%s[/color]" % [col.to_html(false), line])
+	if hidden > 0 and not show_details:
+		out.append("[color=#7a7a7a][i]%d righe di dettaglio nascoste — «Dettagli» per vederle.[/i][/color]"
+			% hidden)
+	_log.text = "\n".join(out)
+	# Sempre in fondo: quel che è appena successo è la riga che interessa.
+	await get_tree().process_frame
+	_log.scroll_to_line(maxi(0, _log.get_line_count() - 1))
