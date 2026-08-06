@@ -641,9 +641,25 @@ func load_game(path: String) -> bool:
 ## §1.5: i Reclaimer giocano una Asset card dalla mano. Una Capability resta in
 ## gioco come modificatore permanente (e la applicano direttamente le regole);
 ## un Evento viene risolto qui, con la stessa macchina delle carte Evento.
+##
+## §1.5: l'Evento di una Asset card si gioca «when they are eligible to execute
+## an Event», quindi è a tutti gli effetti l'azione Evento del loro turno — e la
+## FAQ ufficiale lo conferma dal lato opposto: dopo un Asset Event dei Reclaimer
+## la 2ª Disponibile ha le stesse opzioni che avrebbe dopo un Evento normale
+## (Operazione in uno o più spazi, con Attività Speciale se vuole). Registrarlo
+## nella sequenza è quel che glielo garantisce.
 func play_asset_card(number: int, choices = {}) -> Dictionary:
 	if cards == null:
 		return {"ok": false, "error": "Mazzi non collegati."}
+	# Una Capability entra in gioco senza consumare il turno; un Evento sì.
+	var is_capability := String(cards.assets.get(number, {}).get("kind", "")) == "capability"
+	var as_turn := false
+	if not is_capability and sequence != null \
+			and sequence.pending_faction() == "reclaimer":
+		if not sequence.is_legal(CoinEnums.ActionType.EVENT):
+			return {"ok": false,
+				"error": "I Reclaimer non possono giocare un Asset Event adesso."}
+		as_turn = true
 	snapshot("Asset card #%d" % number)
 	var res: Dictionary = cards.play_asset_event(number)
 	if not res.get("ok", false):
@@ -659,7 +675,12 @@ func play_asset_card(number: int, choices = {}) -> Dictionary:
 		events.log_lines.clear()
 		res["event"] = ev
 		res["free_ops"] = ev.get("free_ops", [])
-	refresh()
+	if as_turn:
+		emit_signal("log_line", "I Reclaimer giocano l'Evento della Asset card #%d." % number)
+		sequence.act(CoinEnums.ActionType.EVENT)
+		_after_action()
+	else:
+		refresh()
 	return res
 
 

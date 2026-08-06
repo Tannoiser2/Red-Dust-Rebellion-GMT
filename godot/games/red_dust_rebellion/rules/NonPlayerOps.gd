@@ -123,9 +123,12 @@ func _card_condition(cond: String, faction: String, rng: RandomNumberGenerator) 
 			return module.available(state, _base(faction)) > 0
 		"1d6_le_available_rebels":
 			return rng.randi_range(1, 6) <= module.available(state, rebel)
-		"2d6_le_available_rebels":
+		"2d6_le_available_forces":
+			# FAQ ufficiale 15/05/2025: sulle carte N, P, T (RD) e U, V, ZZ (CR)
+			# il riquadro dice «Rebels» ma va letto «forces» — cioè Ribelli PIÙ
+			# Basi fra i Disponibili. La carta W dice «Rebels» e lì è giusto.
 			return rng.randi_range(1, 6) + rng.randi_range(1, 6) \
-				<= module.available(state, rebel)
+				<= module.available(state, rebel) + module.available(state, _base(faction))
 		"base_without_hidden_rebel":
 			for sid in module.mars_spaces(state):
 				if module.count_in(state, String(sid), _base(faction)) > 0 \
@@ -307,6 +310,13 @@ func _card_condition(cond: String, faction: String, rng: RandomNumberGenerator) 
 		"labyrinth_without_coin_control_reachable_by_mg":
 			return _reachable(faction, "secure", ["mg_troop"], func(sid: String) -> bool:
 				return module.is_labyrinth(state, sid) and state.spaces[sid].control != "coin")
+		"labyrinth_without_coin_control_reachable_by_corp":
+			# FAQ ufficiale 15/05/2025: il riquadro in cima alla carta JJ, che è
+			# una carta CORP, dice «reachable by MG units?» ma va letto «CORP».
+			return _reachable(faction, "secure", ["security", "specops"],
+				func(sid: String) -> bool:
+					return module.is_labyrinth(state, sid) \
+						and state.spaces[sid].control != "coin")
 		"desert_without_corp_base_reachable_by_corp":
 			return _reachable(faction, "recon", ["security", "specops"],
 				func(sid: String) -> bool:
@@ -329,7 +339,7 @@ func _card_condition(cond: String, faction: String, rng: RandomNumberGenerator) 
 ## Elenco delle condizioni implementate: il test verifica che le carte non ne
 ## usino nessuna fuori da qui.
 const CARD_CONDITIONS := [
-	"available_bases", "1d6_le_available_rebels", "2d6_le_available_rebels",
+	"available_bases", "1d6_le_available_rebels", "2d6_le_available_forces",
 	"base_without_hidden_rebel", "rebel_in_non_neutral_space", "ten_rebels_on_map",
 	"three_rebels_in_a_space", "three_rebels_at_enemy_base_or_uncontrolled",
 	"hidden_rebel_at_vulnerable_or_uncontrolled",
@@ -344,6 +354,7 @@ const CARD_CONDITIONS := [
 	"desert_support_with_rebel", "labyrinth_support_hidden_rebels",
 	"non_terraforming_corp_base_in_desert", "two_populated_corp_bases_corp_gt_mg_no_damage",
 	"space_coin_control_security_damage", "labyrinth_without_coin_control_reachable_by_mg",
+	"labyrinth_without_coin_control_reachable_by_corp",
 	"desert_without_corp_base_reachable_by_corp", "assault_could_remove_base",
 	"assault_could_remove_base_or_two_rebels",
 	"assault_could_remove_base_three_rebels_or_at_support",

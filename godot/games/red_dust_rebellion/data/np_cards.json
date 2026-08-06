@@ -1,3336 +1,3341 @@
 {
-  "_note": "Carte Curiosity (§8.5.3), trascritte dalle scansioni del gioco fisico. Ogni carta è un albero: `checks` sono i riquadri in cima (sì scende, no pesca una carta nuova o gira questa), `blocks` è ciò che si esegue, `special_activities` l'elenco fra cui scegliere la prima efficace. `no_an_roll` marca le istruzioni col numerale bianco, dopo le quali non si tira l'Activation Number (§8.5.4). Gli `id` delle istruzioni corrispondono alle funzioni di rules/NonPlayerOps.gd. Tutte e 48 le facce delle 24 carte: Reclaimer (U–Z/UU–ZZ), Red Dust (N–T/NN–TT), CORP (G–M/GG–MM, senza Activation Number), MarsGov (A–F/AA–FF).",
-  "cards": {
-    "U": {
-      "faction": "reclaimer",
-      "flip": "UU",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "Any Available CR Bases?",
-          "cond": "available_bases",
-          "no": "draw"
-        },
-        {
-          "text": "2d6 ≤ Available CR Rebels?",
-          "cond": "2d6_le_available_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "rally_upgrade_bases_deserts",
-              "text": "Upgrade Bases in Deserts",
-              "no_an_roll": true,
-              "only_if_player": "corporations"
-            },
-            {
-              "n": 3,
-              "id": "rally_alternate_place_upgrade",
-              "text": "Alternate Placing Rebels and Upgrading Bases",
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 4,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
+ "_note": "Carte Curiosity (§8.5.3), trascritte dalle scansioni del gioco fisico. Ogni carta è un albero: `checks` sono i riquadri in cima (sì scende, no pesca una carta nuova o gira questa), `blocks` è ciò che si esegue, `special_activities` l'elenco fra cui scegliere la prima efficace. `no_an_roll` marca le istruzioni col numerale bianco, dopo le quali non si tira l'Activation Number (§8.5.4). Gli `id` delle istruzioni corrispondono alle funzioni di rules/NonPlayerOps.gd. Tutte e 48 le facce delle 24 carte: Reclaimer (U–Z/UU–ZZ), Red Dust (N–T/NN–TT), CORP (G–M/GG–MM, senza Activation Number), MarsGov (A–F/AA–FF).",
+ "cards": {
+  "U": {
+   "faction": "reclaimer",
+   "flip": "UU",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "Any Available CR Bases?",
+     "cond": "available_bases",
+     "no": "draw"
     },
-    "V": {
-      "faction": "reclaimer",
-      "flip": "VV",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "2d6 ≤ Available CR Rebels?",
-          "cond": "2d6_le_available_rebels",
-          "no": "draw"
-        },
-        {
-          "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and perform Special Activity?",
-          "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support or Opposition"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ CR Rebels"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all CR Rebels already Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "ambush",
-          "text": "Ambush in up to 2 spaces using Attack",
-          "note": "Set both dice to 1"
-        }
-      ]
-    },
-    "W": {
-      "faction": "reclaimer",
-      "flip": "WW",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "Any CR Base in a space with no Hidden CR Rebel?",
-          "cond": "base_without_hidden_rebel",
-          "no": "draw"
-        },
-        {
-          "text": "1d6 ≤ Available CR Rebels?",
-          "cond": "1d6_le_available_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "rally_upgrade_bases_deserts",
-              "text": "Upgrade Bases in Deserts",
-              "no_an_roll": true,
-              "only_if_player": "corporations"
-            },
-            {
-              "n": 3,
-              "id": "rally_alternate_place_upgrade",
-              "text": "Alternate Placing Rebels and Upgrading Bases",
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 4,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "X": {
-      "faction": "reclaimer",
-      "flip": "XX",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "CR Rebel in any space not at Neutral?",
-          "cond": "rebel_in_non_neutral_space",
-          "no": "draw"
-        },
-        {
-          "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and may perform Special Activity?",
-          "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support or Opposition"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ CR Rebels"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all CR Rebels already Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "ambush",
-          "text": "Ambush in up to 2 spaces using Attack",
-          "note": "Set both dice to 1"
-        }
-      ]
-    },
-    "Y": {
-      "faction": "reclaimer",
-      "flip": "YY",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "10+ CR Rebels on map?",
-          "cond": "ten_rebels_on_map",
-          "no": "draw"
-        },
-        {
-          "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and may perform Special Activity?",
-          "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support or Opposition"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ CR Rebels"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all CR Rebels already Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "ambush",
-          "text": "Ambush in up to 2 spaces using Attack",
-          "note": "Set both dice to 1"
-        }
-      ]
-    },
-    "Z": {
-      "faction": "reclaimer",
-      "flip": "ZZ",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "3+ CR Rebels in any space?",
-          "cond": "three_rebels_in_a_space",
-          "no": "draw"
-        },
-        {
-          "text": "3+ CR Rebels in any space with an enemy Base or no CR Control?",
-          "cond": "three_rebels_at_enemy_base_or_uncontrolled",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support or Opposition"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ CR Rebels"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all CR Rebels already Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ambush",
-          "text": "Ambush in up to 2 spaces using Attack",
-          "note": "Set both dice to 1"
-        },
-        {
-          "letter": "C",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "UU": {
-      "faction": "reclaimer",
-      "flip": "U",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "ransack",
-              "text": "Ransack using Ransack",
-              "note": "solo se Asset Total < 3"
-            }
-          ]
-        },
-        {
-          "branch": {
-            "cond": "rebel_with_support_opposition_or_population",
-            "yes": {
-              "operation": "preach",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "preach",
-                  "text": "Using Place Damage",
-                  "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
-                }
-              ]
-            },
-            "no": {
-              "operation": "travel",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "travel",
-                  "text": "Using Move Priorities",
-                  "note": "No AN roll after selecting Wilderness"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "VV": {
-      "faction": "reclaimer",
-      "flip": "V",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "rally_upgrade_bases_deserts",
-              "text": "Upgrade Bases in Deserts",
-              "no_an_roll": true,
-              "only_if_player": "corporations"
-            },
-            {
-              "n": 3,
-              "id": "rally_alternate_place_upgrade",
-              "text": "Alternate Placing Rebels and Upgrading Bases",
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 4,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "WW": {
-      "faction": "reclaimer",
-      "flip": "W",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [
-        {
-          "text": "3+ CR Rebels in any space with an enemy Base or no CR Control?",
-          "cond": "three_rebels_at_enemy_base_or_uncontrolled",
-          "no": "branch_travel"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "ambush",
-              "text": "Ambush in up to 2 spaces using Attack",
-              "note": "Set both dice to 1"
-            }
-          ]
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support or Opposition"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ CR Rebels"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all CR Rebels already Active"
-            }
-          ]
-        },
-        {
-          "alternative": {
-            "operation": "travel",
-            "instructions": [
-              {
-                "n": 1,
-                "id": "travel",
-                "text": "Using Move Priorities",
-                "note": "No AN roll after selecting Wilderness"
-              }
-            ]
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "XX": {
-      "faction": "reclaimer",
-      "flip": "X",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [],
-      "blocks": [
-        {
-          "operation": "preach",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "preach",
-              "text": "Using Place Damage",
-              "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "YY": {
-      "faction": "reclaimer",
-      "flip": "Y",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "rebel_with_support_opposition_or_population",
-            "yes": {
-              "operation": "preach",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "preach",
-                  "text": "Using Place Damage",
-                  "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
-                }
-              ]
-            },
-            "no": {
-              "operation": "travel",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "travel",
-                  "text": "Using Move Priorities",
-                  "note": "No AN roll after selecting Wilderness"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "ZZ": {
-      "faction": "reclaimer",
-      "flip": "Z",
-      "activation_number": 3,
-      "pass_if": "fail_le_asset_total",
-      "limits": {
-        "min_spaces": 2,
-        "limop_max": 5
-      },
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "2d6_le_available_rebels",
-            "yes": {
-              "operation": "rally",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "rally_place_bases",
-                  "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
-                  "no_an_roll": true
-                },
-                {
-                  "n": 2,
-                  "id": "rally_upgrade_bases_deserts",
-                  "text": "Upgrade Bases in Deserts",
-                  "no_an_roll": true,
-                  "only_if_player": "corporations"
-                },
-                {
-                  "n": 3,
-                  "id": "rally_alternate_place_upgrade",
-                  "text": "Alternate Placing Rebels and Upgrading Bases",
-                  "note": "Only make AN rolls after placing Rebels"
-                },
-                {
-                  "n": 4,
-                  "id": "rally_flip_hidden",
-                  "text": "Flip most Rebels where all Active"
-                }
-              ]
-            },
-            "no": {
-              "operation": "travel",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "travel",
-                  "text": "Using Move Priorities",
-                  "note": "No AN roll after selecting Wilderness"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "purify",
-          "text": "Purify",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "purify_replace_bases",
-              "text": "Replace Bases"
-            },
-            {
-              "n": 2,
-              "id": "purify_replace_units",
-              "text": "Replace Units"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "ransack",
-          "text": "Ransack using Ransack",
-          "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
-        }
-      ]
-    },
-    "N": {
-      "faction": "red_dust",
-      "flip": "NN",
-      "activation_number": 2,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any Population markers in Displaced Population?",
-          "cond": "displaced_population_any",
-          "no": "draw"
-        },
-        {
-          "text": "2d6 ≤ Available RD Rebels?",
-          "cond": "2d6_le_available_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
-              "no_an_roll": true,
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 2,
-              "id": "rally_place_rebels",
-              "text": "Select spaces using Place Rebels"
-            },
-            {
-              "n": 3,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            },
-            {
-              "n": 4,
-              "id": "rally_dig_in",
-              "text": "Dig In 1 Base in a Desert",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "P": {
-      "faction": "red_dust",
-      "flip": "PP",
-      "activation_number": 2,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "1d6 ≤ Available RD Bases?",
-          "cond": "1d6_le_available_bases",
-          "no": "draw"
-        },
-        {
-          "text": "2d6 ≤ Available RD Rebels?",
-          "cond": "2d6_le_available_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
-              "no_an_roll": true,
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 2,
-              "id": "rally_place_rebels",
-              "text": "Select spaces using Place Rebels"
-            },
-            {
-              "n": 3,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            },
-            {
-              "n": 4,
-              "id": "rally_dig_in",
-              "text": "Dig In 1 Base in a Desert",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "Q": {
-      "faction": "red_dust",
-      "flip": "QQ",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "15+ RD Rebels on the map?",
-          "cond": "fifteen_rebels_on_map",
-          "no": "draw"
-        },
-        {
-          "text": "3+ RD Rebels in any space with an enemy Base?",
-          "cond": "three_rebels_at_enemy_base",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "ambush",
-              "text": "Ambush in up to 2 spaces using Ambush",
-              "note": "Set dice to remove enemy Bases, then to place Damage if the selected space is at Support, otherwise avoid placing Damage if possible"
-            }
-          ]
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ RD Rebels and no Opposition"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all RD Rebels already Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "R": {
-      "faction": "red_dust",
-      "flip": "RR",
-      "activation_number": 2,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "3+ RD Rebels in any space?",
-          "cond": "three_rebels_in_a_space",
-          "no": "draw"
-        },
-        {
-          "text": "3+ RD Rebels in a Populated space with room for an Available Base and no Support?",
-          "cond": "three_rebels_populated_base_room_no_support",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
-              "no_an_roll": true,
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 2,
-              "id": "rally_place_rebels",
-              "text": "Select spaces using Place Rebels"
-            },
-            {
-              "n": 3,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            },
-            {
-              "n": 4,
-              "id": "rally_dig_in",
-              "text": "Dig In 1 Base in a Desert",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "S": {
-      "faction": "red_dust",
-      "flip": "SS",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "RD Rebels in two or more Populated spaces not at Active Opposition?",
-          "cond": "rebels_in_two_populated_not_active_opposition",
-          "no": "draw"
-        },
-        {
-          "text": "Hidden RD Rebel in any space with a Vulnerable enemy Base, and may perform Special Activity?",
-          "cond": "hidden_rebel_at_vulnerable_base",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "ambush",
-              "text": "Ambush in up to 2 spaces using Ambush",
-              "note": "Set dice to remove enemy Bases, then to place Damage if the selected space is at Support, otherwise avoid placing Damage if possible"
-            }
-          ]
-        },
-        {
-          "operation": "attack",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "attack_support",
-              "text": "At Support"
-            },
-            {
-              "n": 2,
-              "id": "attack_three_rebels",
-              "text": "With 3+ RD Rebels and no Opposition"
-            },
-            {
-              "n": 3,
-              "id": "attack_all_active",
-              "text": "Where all RD Rebels already Active"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "ambush",
-          "text": "Ambush in up to 2 spaces using Ambush",
-          "note": "Set dice to remove enemy Bases, then to place Damage if the selected space is at Support, otherwise avoid placing Damage if possible"
-        }
-      ]
-    },
-    "T": {
-      "faction": "red_dust",
-      "flip": "TT",
-      "activation_number": 2,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "2d6 ≤ Available RD Rebels?",
-          "cond": "2d6_le_available_rebels",
-          "no": "draw"
-        },
-        {
-          "text": "RD Rebel in any 2+ Pop space not at Active Opposition?",
-          "cond": "rebel_in_pop2_not_active_opposition",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "campaign",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "campaign",
-              "text": "Using Shift Towards Active Opposition",
-              "note": "RD Base with Hidden Rebels: only where 1+ RD Rebel would remain Hidden · Select first drawn Campaign card"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "NN": {
-      "faction": "red_dust",
-      "flip": "N",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "operation": "march",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "march",
-              "text": "Using Move Priorities"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "PP": {
-      "faction": "red_dust",
-      "flip": "P",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "operation": "march",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "march",
-              "text": "Using Move Priorities"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "QQ": {
-      "faction": "red_dust",
-      "flip": "Q",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "rebels_in_two_populated_not_active_opposition",
-            "yes": {
-              "operation": "campaign",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "campaign",
-                  "text": "Using Shift Towards Active Opposition",
-                  "note": "RD Base with Hidden Rebels: only where 1+ RD Rebel would remain Hidden · Select first drawn Campaign card"
-                }
-              ]
-            },
-            "no": {
-              "operation": "march",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "march",
-                  "text": "Using Move Priorities"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "RR": {
-      "faction": "red_dust",
-      "flip": "R",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "three_rebels_with_enemy_forces",
-            "yes": {
-              "operation": "attack",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "attack_support",
-                  "text": "At Support"
-                },
-                {
-                  "n": 2,
-                  "id": "attack_three_rebels",
-                  "text": "With 3+ RD Rebels and no Opposition"
-                },
-                {
-                  "n": 3,
-                  "id": "attack_all_active",
-                  "text": "Where all RD Rebels already Active"
-                }
-              ]
-            },
-            "no": {
-              "operation": "march",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "march",
-                  "text": "Using Move Priorities"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "SS": {
-      "faction": "red_dust",
-      "flip": "S",
-      "activation_number": 3,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "operation": "campaign",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "campaign",
-              "text": "Using Shift Towards Active Opposition",
-              "note": "RD Base with Hidden Rebels: only where 1+ RD Rebel would remain Hidden · Select first drawn Campaign card"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "TT": {
-      "faction": "red_dust",
-      "flip": "T",
-      "activation_number": 2,
-      "pass_if": "fail_le_agitate_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "operation": "rally",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "rally_place_bases",
-              "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
-              "no_an_roll": true,
-              "note": "Only make AN rolls after placing Rebels"
-            },
-            {
-              "n": 2,
-              "id": "rally_place_rebels",
-              "text": "Select spaces using Place Rebels"
-            },
-            {
-              "n": 3,
-              "id": "rally_flip_hidden",
-              "text": "Flip most Rebels where all Active"
-            },
-            {
-              "n": 4,
-              "id": "rally_dig_in",
-              "text": "Dig In 1 Base in a Desert",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "coordinate",
-          "text": "Coordinate",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "coordinate_house",
-              "text": "House using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "coordinate_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 3,
-              "id": "coordinate_shift",
-              "text": "Using Shift Towards Active Opposition"
-            }
-          ],
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
-        },
-        {
-          "letter": "B",
-          "id": "redistribute",
-          "text": "Redistribute using Redistribute",
-          "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
-        }
-      ]
-    },
-    "G": {
-      "faction": "corporations",
-      "flip": "GG",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any non-Terraforming CORP Bases in Deserts?",
-          "cond": "non_terraforming_corp_base_in_desert",
-          "no": "draw"
-        },
-        {
-          "text": "Assault could remove an enemy Base?",
-          "cond": "assault_could_remove_base",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "assault",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "assault_remove_bases",
-              "text": "To Remove Rebel Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "assault_suppress",
-              "text": "Suppress using Remove in one space with Hidden Rebels",
-              "no_an_roll": true,
-              "note": "solo se EarthGov Controller"
-            },
-            {
-              "n": 3,
-              "id": "assault_remove",
-              "text": "Using Remove",
-              "no_an_roll": true,
-              "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "H": {
-      "faction": "corporations",
-      "flip": "HH",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [
-        {
-          "text": "At least two Populated spaces with CORP Base, CORP forces > MG forces, and no Damage?",
-          "cond": "two_populated_corp_bases_corp_gt_mg_no_damage",
-          "no": "draw"
-        },
-        {
-          "text": "Assault could remove an enemy Base or 2+ Rebels in one space?",
-          "cond": "assault_could_remove_base_or_two_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "assault",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "assault_remove_bases",
-              "text": "To Remove Rebel Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "assault_suppress",
-              "text": "Suppress using Remove in one space with Hidden Rebels",
-              "no_an_roll": true,
-              "note": "solo se EarthGov Controller"
-            },
-            {
-              "n": 3,
-              "id": "assault_remove",
-              "text": "Using Remove",
-              "no_an_roll": true,
-              "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "J": {
-      "faction": "corporations",
-      "flip": "JJ",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any Population markers in Displaced Population?",
-          "cond": "displaced_population_any",
-          "no": "draw"
-        },
-        {
-          "text": "Any space with COIN Control, Security, and Damage, and may perform Special Activity?",
-          "cond": "space_coin_control_security_damage",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "public_relations",
-              "text": "Public Relations",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "pr_repair",
-                  "text": "Repair using Place Population"
-                },
-                {
-                  "n": 2,
-                  "id": "pr_house",
-                  "text": "House in one space with a CORP Base using Place Population"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "operation": "logistics",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "logistics_upgrade_base",
-              "text": "Upgrade one Base using Place or Upgrade Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "logistics_upgrade_more",
-              "text": "Upgrade additional Bases using Place or Upgrade Bases",
-              "no_an_roll": true,
-              "note": "solo con 2+ Dust Storm Rounds rimanenti"
-            },
-            {
-              "n": 3,
-              "id": "logistics_buy_earth",
-              "text": "Place 4 CORP units on Earth",
-              "no_an_roll": true
-            },
-            {
-              "n": 4,
-              "id": "logistics_aldrin",
-              "text": "Resolve Aldrin Cycler (no Population to Transit)",
-              "no_an_roll": true
-            },
-            {
-              "n": 5,
-              "id": "logistics_place_security",
-              "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        }
-      ]
-    },
-    "K": {
-      "faction": "corporations",
-      "flip": "KK",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any Available CORP Bases?",
-          "cond": "available_bases",
-          "no": "draw"
-        },
-        {
-          "text": "Assault could remove an enemy Base or 2+ Rebels in one space?",
-          "cond": "assault_could_remove_base_or_two_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "assault",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "assault_remove_bases",
-              "text": "To Remove Rebel Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "assault_suppress",
-              "text": "Suppress using Remove in one space with Hidden Rebels",
-              "no_an_roll": true,
-              "note": "solo se EarthGov Controller"
-            },
-            {
-              "n": 3,
-              "id": "assault_remove",
-              "text": "Using Remove",
-              "no_an_roll": true,
-              "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "L": {
-      "faction": "corporations",
-      "flip": "LL",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [
-        {
-          "text": "2d6 ≤ Available Security?",
-          "cond": "2d6_le_available_security",
-          "no": "draw"
-        },
-        {
-          "text": "Assault could remove an enemy Base or 2+ Rebels in one space?",
-          "cond": "assault_could_remove_base_or_two_rebels",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "assault",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "assault_remove_bases",
-              "text": "To Remove Rebel Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "assault_suppress",
-              "text": "Suppress using Remove in one space with Hidden Rebels",
-              "no_an_roll": true,
-              "note": "solo se EarthGov Controller"
-            },
-            {
-              "n": 3,
-              "id": "assault_remove",
-              "text": "Using Remove",
-              "no_an_roll": true,
-              "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "M": {
-      "faction": "corporations",
-      "flip": "MM",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [
-        {
-          "text": "EG Confidence > 4?",
-          "cond": "eg_confidence_above_4",
-          "no": "draw"
-        },
-        {
-          "text": "Any non-Terraforming CORP Bases in Deserts?",
-          "cond": "non_terraforming_corp_base_in_desert",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "public_relations",
-              "text": "Public Relations",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "pr_repair",
-                  "text": "Repair using Place Population"
-                },
-                {
-                  "n": 2,
-                  "id": "pr_house",
-                  "text": "House in one space with a CORP Base using Place Population"
-                }
-              ]
-            },
-            {
-              "letter": "B",
-              "id": "exploit",
-              "text": "Exploit using Exploit"
-            }
-          ]
-        },
-        {
-          "operation": "logistics",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "logistics_upgrade_base",
-              "text": "Upgrade one Base using Place or Upgrade Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "logistics_upgrade_more",
-              "text": "Upgrade additional Bases using Place or Upgrade Bases",
-              "no_an_roll": true,
-              "note": "solo con 2+ Dust Storm Rounds rimanenti"
-            },
-            {
-              "n": 3,
-              "id": "logistics_buy_earth",
-              "text": "Place 4 CORP units on Earth",
-              "no_an_roll": true
-            },
-            {
-              "n": 4,
-              "id": "logistics_aldrin",
-              "text": "Resolve Aldrin Cycler (no Population to Transit)",
-              "no_an_roll": true
-            },
-            {
-              "n": 5,
-              "id": "logistics_place_security",
-              "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        }
-      ]
-    },
-    "GG": {
-      "faction": "corporations",
-      "flip": "G",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "public_relations",
-              "text": "Public Relations",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "pr_repair",
-                  "text": "Repair using Place Population"
-                },
-                {
-                  "n": 2,
-                  "id": "pr_house",
-                  "text": "House in one space with a CORP Base using Place Population"
-                }
-              ]
-            },
-            {
-              "letter": "B",
-              "id": "exploit",
-              "text": "Exploit using Exploit"
-            }
-          ]
-        },
-        {
-          "operation": "logistics",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "logistics_upgrade_base",
-              "text": "Upgrade one Base using Place or Upgrade Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "logistics_upgrade_more",
-              "text": "Upgrade additional Bases using Place or Upgrade Bases",
-              "no_an_roll": true,
-              "note": "solo con 2+ Dust Storm Rounds rimanenti"
-            },
-            {
-              "n": 3,
-              "id": "logistics_buy_earth",
-              "text": "Place 4 CORP units on Earth",
-              "no_an_roll": true
-            },
-            {
-              "n": 4,
-              "id": "logistics_aldrin",
-              "text": "Resolve Aldrin Cycler (no Population to Transit)",
-              "no_an_roll": true
-            },
-            {
-              "n": 5,
-              "id": "logistics_place_security",
-              "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        }
-      ]
-    },
-    "HH": {
-      "faction": "corporations",
-      "flip": "H",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "exploit",
-              "text": "Exploit using Exploit"
-            },
-            {
-              "letter": "B",
-              "id": "public_relations",
-              "text": "Public Relations",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "pr_repair",
-                  "text": "Repair using Place Population"
-                },
-                {
-                  "n": 2,
-                  "id": "pr_house",
-                  "text": "House in one space with a CORP Base using Place Population"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "operation": "logistics",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "logistics_upgrade_base",
-              "text": "Upgrade one Base using Place or Upgrade Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "logistics_upgrade_more",
-              "text": "Upgrade additional Bases using Place or Upgrade Bases",
-              "no_an_roll": true,
-              "note": "solo con 2+ Dust Storm Rounds rimanenti"
-            },
-            {
-              "n": 3,
-              "id": "logistics_buy_earth",
-              "text": "Place 4 CORP units on Earth",
-              "no_an_roll": true
-            },
-            {
-              "n": 4,
-              "id": "logistics_aldrin",
-              "text": "Resolve Aldrin Cycler (no Population to Transit)",
-              "no_an_roll": true
-            },
-            {
-              "n": 5,
-              "id": "logistics_place_security",
-              "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        },
-        {
-          "letter": "B",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        }
-      ]
-    },
-    "JJ": {
-      "faction": "corporations",
-      "flip": "J",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "labyrinth_without_coin_control_reachable_by_mg",
-            "yes": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "no_an_roll": true,
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · Place Base in tutte le destinazioni con 3+ cubi e senza Base CORP · House in una destinazione con Base CORP usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "no_an_roll": true,
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Base in tutte le destinazioni senza Base CORP · House in una destinazione con Base CORP usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "KK": {
-      "faction": "corporations",
-      "flip": "K",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "desert_without_corp_base_reachable_by_corp",
-            "yes": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "no_an_roll": true,
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Base in tutte le destinazioni senza Base CORP · House in una destinazione con Base CORP usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "no_an_roll": true,
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · Place Base in tutte le destinazioni con 3+ cubi e senza Base CORP · House in una destinazione con Base CORP usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "LL": {
-      "faction": "corporations",
-      "flip": "L",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "special_activity_first": true,
-          "only": [
-            {
-              "letter": "A",
-              "id": "exploit",
-              "text": "Exploit using Exploit"
-            },
-            {
-              "letter": "B",
-              "id": "public_relations",
-              "text": "Public Relations",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "pr_repair",
-                  "text": "Repair using Place Population"
-                },
-                {
-                  "n": 2,
-                  "id": "pr_house",
-                  "text": "House in one space with a CORP Base using Place Population"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "operation": "logistics",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "logistics_upgrade_base",
-              "text": "Upgrade one Base using Place or Upgrade Bases",
-              "no_an_roll": true
-            },
-            {
-              "n": 2,
-              "id": "logistics_upgrade_more",
-              "text": "Upgrade additional Bases using Place or Upgrade Bases",
-              "no_an_roll": true,
-              "note": "solo con 2+ Dust Storm Rounds rimanenti"
-            },
-            {
-              "n": 3,
-              "id": "logistics_buy_earth",
-              "text": "Place 4 CORP units on Earth",
-              "no_an_roll": true
-            },
-            {
-              "n": 4,
-              "id": "logistics_aldrin",
-              "text": "Resolve Aldrin Cycler (no Population to Transit)",
-              "no_an_roll": true
-            },
-            {
-              "n": 5,
-              "id": "logistics_place_security",
-              "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
-              "no_an_roll": true
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "exploit",
-          "text": "Exploit using Exploit"
-        },
-        {
-          "letter": "B",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        }
-      ]
-    },
-    "MM": {
-      "faction": "corporations",
-      "flip": "M",
-      "activation_number": 0,
-      "pass_if": "no_an_for_corp_ops",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "desert_without_corp_base_reachable_by_corp",
-            "yes": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "no_an_roll": true,
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Base in tutte le destinazioni senza Base CORP · House in una destinazione con Base CORP usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "no_an_roll": true,
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · Place Base in tutte le destinazioni con 3+ cubi e senza Base CORP · House in una destinazione con Base CORP usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "public_relations",
-          "text": "Public Relations",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "pr_repair",
-              "text": "Repair using Place Population"
-            },
-            {
-              "n": 2,
-              "id": "pr_house",
-              "text": "House in one space with a CORP Base using Place Population"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "raid",
-          "text": "Raid using Remove to remove Rebel forces"
-        }
-      ]
-    },
-    "A": {
-      "faction": "marsgov",
-      "flip": "AA",
-      "activation_number": 3,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any Population markers in Displaced Population?",
-          "cond": "displaced_population_any",
-          "no": "draw"
-        },
-        {
-          "text": "2d6 ≤ Available MG Troops?",
-          "cond": "2d6_le_available_troops",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "train",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "train_place_troops",
-              "text": "Place Troops using Place Cubes"
-            },
-            {
-              "n": 2,
-              "id": "train_pacify",
-              "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
-              "no_an_roll": true,
-              "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "B": {
-      "faction": "marsgov",
-      "flip": "BB",
-      "activation_number": 3,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any Labyrinth with Support and any Rebel?",
-          "cond": "labyrinth_support_with_rebel",
-          "no": "draw"
-        },
-        {
-          "text": "2d6 ≤ Available MG Troops?",
-          "cond": "2d6_le_available_troops",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "train",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "train_place_troops",
-              "text": "Place Troops using Place Cubes"
-            },
-            {
-              "n": 2,
-              "id": "train_pacify",
-              "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
-              "no_an_roll": true,
-              "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "C": {
-      "faction": "marsgov",
-      "flip": "CC",
-      "activation_number": 3,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any Desert with Support and any Rebel?",
-          "cond": "desert_support_with_rebel",
-          "no": "draw"
-        },
-        {
-          "text": "2d6 ≤ Available MG Troops?",
-          "cond": "2d6_le_available_troops",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "train",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "train_place_troops",
-              "text": "Place Troops using Place Cubes"
-            },
-            {
-              "n": 2,
-              "id": "train_pacify",
-              "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
-              "no_an_roll": true,
-              "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "D": {
-      "faction": "marsgov",
-      "flip": "DD",
-      "activation_number": 3,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any space without COIN Control?",
-          "cond": "space_without_coin_control",
-          "no": "draw"
-        },
-        {
-          "text": "Assault could remove a Rebel Base, 3+ Rebels in one space, or any Rebels at Support?",
-          "cond": "assault_could_remove_base_three_rebels_or_at_support",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "assault",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "assault_remove_bases",
-              "text": "To Remove Rebel Bases"
-            },
-            {
-              "n": 2,
-              "id": "assault_suppress",
-              "text": "Suppress using Remove in one space with Hidden Rebels",
-              "note": "solo se EarthGov Controller"
-            },
-            {
-              "n": 3,
-              "id": "assault_remove",
-              "text": "Using Remove",
-              "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to set EG+",
-          "when": "eg_minus"
-        },
-        {
-          "letter": "B",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "E": {
-      "faction": "marsgov",
-      "flip": "EE",
-      "activation_number": 3,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "Any space with COIN Control not at Active Support?",
-          "cond": "coin_control_not_active_support",
-          "no": "draw"
-        },
-        {
-          "text": "1d6 ≤ Available MG Troops?",
-          "cond": "1d6_le_available_troops",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "train",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "train_place_troops",
-              "text": "Place Troops using Place Cubes"
-            },
-            {
-              "n": 2,
-              "id": "train_pacify",
-              "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
-              "no_an_roll": true,
-              "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "B",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "F": {
-      "faction": "marsgov",
-      "flip": "FF",
-      "activation_number": 3,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [
-        {
-          "text": "EG−?",
-          "cond": "eg_minus",
-          "no": "draw"
-        },
-        {
-          "text": "Assault could remove a Rebel Base, 3+ Rebels in one space, or any Rebels at Support?",
-          "cond": "assault_could_remove_base_three_rebels_or_at_support",
-          "no": "flip"
-        }
-      ],
-      "blocks": [
-        {
-          "operation": "assault",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "assault_remove_bases",
-              "text": "To Remove Rebel Bases"
-            },
-            {
-              "n": 2,
-              "id": "assault_suppress",
-              "text": "Suppress using Remove in one space with Hidden Rebels",
-              "note": "solo se EarthGov Controller"
-            },
-            {
-              "n": 3,
-              "id": "assault_remove",
-              "text": "Using Remove",
-              "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
-            }
-          ]
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to set EG+"
-        },
-        {
-          "letter": "B",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "AA": {
-      "faction": "marsgov",
-      "flip": "A",
-      "activation_number": 4,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "labyrinth_support_hidden_rebels",
-            "yes": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to place Supply",
-          "when": "three_rebels_activated"
-        },
-        {
-          "letter": "B",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "C",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "BB": {
-      "faction": "marsgov",
-      "flip": "B",
-      "activation_number": 4,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "assault_could_remove_base_or_rebel_at_support",
-            "yes": {
-              "operation": "assault",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "assault_remove_bases",
-                  "text": "To Remove Rebel Bases"
-                },
-                {
-                  "n": 2,
-                  "id": "assault_suppress",
-                  "text": "Suppress using Remove in one space with Hidden Rebels",
-                  "note": "solo se EarthGov Controller"
-                },
-                {
-                  "n": 3,
-                  "id": "assault_remove",
-                  "text": "Using Remove",
-                  "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
-                }
-              ]
-            },
-            "no": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to set EG+",
-          "when": "eg_minus"
-        },
-        {
-          "letter": "B",
-          "id": "petition",
-          "text": "Petition to place Supply",
-          "when": "three_rebels_activated"
-        },
-        {
-          "letter": "C",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ],
-          "when": "secure_performed"
-        },
-        {
-          "letter": "D",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "CC": {
-      "faction": "marsgov",
-      "flip": "C",
-      "activation_number": 4,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "assault_could_remove_base_or_rebel_at_support",
-            "yes": {
-              "operation": "assault",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "assault_remove_bases",
-                  "text": "To Remove Rebel Bases"
-                },
-                {
-                  "n": 2,
-                  "id": "assault_suppress",
-                  "text": "Suppress using Remove in one space with Hidden Rebels",
-                  "note": "solo se EarthGov Controller"
-                },
-                {
-                  "n": 3,
-                  "id": "assault_remove",
-                  "text": "Using Remove",
-                  "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
-                }
-              ]
-            },
-            "no": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to set EG+",
-          "when": "eg_minus"
-        },
-        {
-          "letter": "B",
-          "id": "petition",
-          "text": "Petition to place Supply",
-          "when": "three_rebels_activated"
-        },
-        {
-          "letter": "C",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ],
-          "when": "recon_performed"
-        },
-        {
-          "letter": "D",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "DD": {
-      "faction": "marsgov",
-      "flip": "D",
-      "activation_number": 4,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "labyrinth_without_coin_control_reachable_by_mg",
-            "yes": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to place Supply",
-          "when": "three_rebels_activated"
-        },
-        {
-          "letter": "B",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "C",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "EE": {
-      "faction": "marsgov",
-      "flip": "E",
-      "activation_number": 4,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "labyrinth_support_hidden_rebels",
-            "yes": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to place Supply",
-          "when": "three_rebels_activated"
-        },
-        {
-          "letter": "B",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "C",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
-    },
-    "FF": {
-      "faction": "marsgov",
-      "flip": "F",
-      "activation_number": 4,
-      "pass_if": "fail_le_supply_total",
-      "limits": {},
-      "checks": [],
-      "blocks": [
-        {
-          "branch": {
-            "cond": "labyrinth_without_coin_control_reachable_by_mg",
-            "yes": {
-              "operation": "secure",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "secure",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            },
-            "no": {
-              "operation": "recon",
-              "instructions": [
-                {
-                  "n": 1,
-                  "id": "recon",
-                  "text": "Using Move Priorities",
-                  "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
-                }
-              ]
-            }
-          }
-        }
-      ],
-      "special_activities": [
-        {
-          "letter": "A",
-          "id": "petition",
-          "text": "Petition to place Supply",
-          "when": "three_rebels_activated"
-        },
-        {
-          "letter": "B",
-          "id": "entrench",
-          "text": "Entrench in up to 2 spaces",
-          "instructions": [
-            {
-              "n": 1,
-              "id": "entrench_place_bases",
-              "text": "Place Bases only in Deserts without MG Base"
-            },
-            {
-              "n": 2,
-              "id": "entrench_fortify",
-              "text": "Fortify only at Support"
-            }
-          ]
-        },
-        {
-          "letter": "C",
-          "id": "transport",
-          "text": "Transport using Move Priorities"
-        }
-      ]
+    {
+     "text": "2d6 ≤ Available CR forces?",
+     "cond": "2d6_le_available_forces",
+     "no": "flip",
+     "faq": "FAQ 15/05/2025: il riquadro stampato dice «Rebels», va letto «forces»."
     }
+   ],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "rally_upgrade_bases_deserts",
+       "text": "Upgrade Bases in Deserts",
+       "no_an_roll": true,
+       "only_if_player": "corporations"
+      },
+      {
+       "n": 3,
+       "id": "rally_alternate_place_upgrade",
+       "text": "Alternate Placing Rebels and Upgrading Bases",
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 4,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "V": {
+   "faction": "reclaimer",
+   "flip": "VV",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "2d6 ≤ Available CR forces?",
+     "cond": "2d6_le_available_forces",
+     "no": "draw",
+     "faq": "FAQ 15/05/2025: il riquadro stampato dice «Rebels», va letto «forces»."
+    },
+    {
+     "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and perform Special Activity?",
+     "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support or Opposition"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ CR Rebels"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all CR Rebels already Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "ambush",
+     "text": "Ambush in up to 2 spaces using Attack",
+     "note": "Set both dice to 1"
+    }
+   ]
+  },
+  "W": {
+   "faction": "reclaimer",
+   "flip": "WW",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "Any CR Base in a space with no Hidden CR Rebel?",
+     "cond": "base_without_hidden_rebel",
+     "no": "draw"
+    },
+    {
+     "text": "1d6 ≤ Available CR Rebels?",
+     "cond": "1d6_le_available_rebels",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "rally_upgrade_bases_deserts",
+       "text": "Upgrade Bases in Deserts",
+       "no_an_roll": true,
+       "only_if_player": "corporations"
+      },
+      {
+       "n": 3,
+       "id": "rally_alternate_place_upgrade",
+       "text": "Alternate Placing Rebels and Upgrading Bases",
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 4,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "X": {
+   "faction": "reclaimer",
+   "flip": "XX",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "CR Rebel in any space not at Neutral?",
+     "cond": "rebel_in_non_neutral_space",
+     "no": "draw"
+    },
+    {
+     "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and may perform Special Activity?",
+     "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support or Opposition"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ CR Rebels"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all CR Rebels already Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "ambush",
+     "text": "Ambush in up to 2 spaces using Attack",
+     "note": "Set both dice to 1"
+    }
+   ]
+  },
+  "Y": {
+   "faction": "reclaimer",
+   "flip": "YY",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "10+ CR Rebels on map?",
+     "cond": "ten_rebels_on_map",
+     "no": "draw"
+    },
+    {
+     "text": "Hidden CR Rebel in any space with a Vulnerable enemy Base or no CR Control, and may perform Special Activity?",
+     "cond": "hidden_rebel_at_vulnerable_or_uncontrolled",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support or Opposition"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ CR Rebels"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all CR Rebels already Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "ambush",
+     "text": "Ambush in up to 2 spaces using Attack",
+     "note": "Set both dice to 1"
+    }
+   ]
+  },
+  "Z": {
+   "faction": "reclaimer",
+   "flip": "ZZ",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "3+ CR Rebels in any space?",
+     "cond": "three_rebels_in_a_space",
+     "no": "draw"
+    },
+    {
+     "text": "3+ CR Rebels in any space with an enemy Base or no CR Control?",
+     "cond": "three_rebels_at_enemy_base_or_uncontrolled",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support or Opposition"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ CR Rebels"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all CR Rebels already Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ambush",
+     "text": "Ambush in up to 2 spaces using Attack",
+     "note": "Set both dice to 1"
+    },
+    {
+     "letter": "C",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "UU": {
+   "faction": "reclaimer",
+   "flip": "U",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "ransack",
+       "text": "Ransack using Ransack",
+       "note": "solo se Asset Total < 3"
+      }
+     ]
+    },
+    {
+     "branch": {
+      "cond": "rebel_with_support_opposition_or_population",
+      "yes": {
+       "operation": "preach",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "preach",
+         "text": "Using Place Damage",
+         "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
+        }
+       ]
+      },
+      "no": {
+       "operation": "travel",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "travel",
+         "text": "Using Move Priorities",
+         "note": "No AN roll after selecting Wilderness"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "VV": {
+   "faction": "reclaimer",
+   "flip": "V",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "rally_upgrade_bases_deserts",
+       "text": "Upgrade Bases in Deserts",
+       "no_an_roll": true,
+       "only_if_player": "corporations"
+      },
+      {
+       "n": 3,
+       "id": "rally_alternate_place_upgrade",
+       "text": "Alternate Placing Rebels and Upgrading Bases",
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 4,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "WW": {
+   "faction": "reclaimer",
+   "flip": "W",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [
+    {
+     "text": "3+ CR Rebels in any space with an enemy Base or no CR Control?",
+     "cond": "three_rebels_at_enemy_base_or_uncontrolled",
+     "no": "branch_travel"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "ambush",
+       "text": "Ambush in up to 2 spaces using Attack",
+       "note": "Set both dice to 1"
+      }
+     ]
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support or Opposition"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ CR Rebels"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all CR Rebels already Active"
+      }
+     ]
+    },
+    {
+     "alternative": {
+      "operation": "travel",
+      "instructions": [
+       {
+        "n": 1,
+        "id": "travel",
+        "text": "Using Move Priorities",
+        "note": "No AN roll after selecting Wilderness"
+       }
+      ]
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "XX": {
+   "faction": "reclaimer",
+   "flip": "X",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [],
+   "blocks": [
+    {
+     "operation": "preach",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "preach",
+       "text": "Using Place Damage",
+       "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "YY": {
+   "faction": "reclaimer",
+   "flip": "Y",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "rebel_with_support_opposition_or_population",
+      "yes": {
+       "operation": "preach",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "preach",
+         "text": "Using Place Damage",
+         "note": "CR Base with Hidden Rebels: only where 1+ CR Rebel would remain Hidden"
+        }
+       ]
+      },
+      "no": {
+       "operation": "travel",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "travel",
+         "text": "Using Move Priorities",
+         "note": "No AN roll after selecting Wilderness"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "ZZ": {
+   "faction": "reclaimer",
+   "flip": "Z",
+   "activation_number": 3,
+   "pass_if": "fail_le_asset_total",
+   "limits": {
+    "min_spaces": 2,
+    "limop_max": 5
+   },
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "2d6_le_available_forces",
+      "yes": {
+       "operation": "rally",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "rally_place_bases",
+         "text": "Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel",
+         "no_an_roll": true
+        },
+        {
+         "n": 2,
+         "id": "rally_upgrade_bases_deserts",
+         "text": "Upgrade Bases in Deserts",
+         "no_an_roll": true,
+         "only_if_player": "corporations"
+        },
+        {
+         "n": 3,
+         "id": "rally_alternate_place_upgrade",
+         "text": "Alternate Placing Rebels and Upgrading Bases",
+         "note": "Only make AN rolls after placing Rebels"
+        },
+        {
+         "n": 4,
+         "id": "rally_flip_hidden",
+         "text": "Flip most Rebels where all Active"
+        }
+       ]
+      },
+      "no": {
+       "operation": "travel",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "travel",
+         "text": "Using Move Priorities",
+         "note": "No AN roll after selecting Wilderness"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "purify",
+     "text": "Purify",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "purify_replace_bases",
+       "text": "Replace Bases"
+      },
+      {
+       "n": 2,
+       "id": "purify_replace_units",
+       "text": "Replace Units"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "ransack",
+     "text": "Ransack using Ransack",
+     "note": "CR Base: only where 2+ Hidden CR Rebels · Increase Asset Total by 1 for every Damage"
+    }
+   ]
+  },
+  "N": {
+   "faction": "red_dust",
+   "flip": "NN",
+   "activation_number": 2,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any Population markers in Displaced Population?",
+     "cond": "displaced_population_any",
+     "no": "draw"
+    },
+    {
+     "text": "2d6 ≤ Available RD forces?",
+     "cond": "2d6_le_available_forces",
+     "no": "flip",
+     "faq": "FAQ 15/05/2025: il riquadro stampato dice «Rebels», va letto «forces»."
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
+       "no_an_roll": true,
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 2,
+       "id": "rally_place_rebels",
+       "text": "Select spaces using Place Rebels"
+      },
+      {
+       "n": 3,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      },
+      {
+       "n": 4,
+       "id": "rally_dig_in",
+       "text": "Dig In 1 Base in a Desert",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "P": {
+   "faction": "red_dust",
+   "flip": "PP",
+   "activation_number": 2,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "1d6 ≤ Available RD Bases?",
+     "cond": "1d6_le_available_bases",
+     "no": "draw"
+    },
+    {
+     "text": "2d6 ≤ Available RD forces?",
+     "cond": "2d6_le_available_forces",
+     "no": "flip",
+     "faq": "FAQ 15/05/2025: il riquadro stampato dice «Rebels», va letto «forces»."
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
+       "no_an_roll": true,
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 2,
+       "id": "rally_place_rebels",
+       "text": "Select spaces using Place Rebels"
+      },
+      {
+       "n": 3,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      },
+      {
+       "n": 4,
+       "id": "rally_dig_in",
+       "text": "Dig In 1 Base in a Desert",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "Q": {
+   "faction": "red_dust",
+   "flip": "QQ",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "15+ RD Rebels on the map?",
+     "cond": "fifteen_rebels_on_map",
+     "no": "draw"
+    },
+    {
+     "text": "3+ RD Rebels in any space with an enemy Base?",
+     "cond": "three_rebels_at_enemy_base",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "ambush",
+       "text": "Ambush in up to 2 spaces using Ambush",
+       "note": "Set dice to remove enemy Bases, then to place Damage if the selected space is at Support, otherwise avoid placing Damage if possible"
+      }
+     ]
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ RD Rebels and no Opposition"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all RD Rebels already Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "R": {
+   "faction": "red_dust",
+   "flip": "RR",
+   "activation_number": 2,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "3+ RD Rebels in any space?",
+     "cond": "three_rebels_in_a_space",
+     "no": "draw"
+    },
+    {
+     "text": "3+ RD Rebels in a Populated space with room for an Available Base and no Support?",
+     "cond": "three_rebels_populated_base_room_no_support",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
+       "no_an_roll": true,
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 2,
+       "id": "rally_place_rebels",
+       "text": "Select spaces using Place Rebels"
+      },
+      {
+       "n": 3,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      },
+      {
+       "n": 4,
+       "id": "rally_dig_in",
+       "text": "Dig In 1 Base in a Desert",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "S": {
+   "faction": "red_dust",
+   "flip": "SS",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "RD Rebels in two or more Populated spaces not at Active Opposition?",
+     "cond": "rebels_in_two_populated_not_active_opposition",
+     "no": "draw"
+    },
+    {
+     "text": "Hidden RD Rebel in any space with a Vulnerable enemy Base, and may perform Special Activity?",
+     "cond": "hidden_rebel_at_vulnerable_base",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "ambush",
+       "text": "Ambush in up to 2 spaces using Ambush",
+       "note": "Set dice to remove enemy Bases, then to place Damage if the selected space is at Support, otherwise avoid placing Damage if possible"
+      }
+     ]
+    },
+    {
+     "operation": "attack",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "attack_support",
+       "text": "At Support"
+      },
+      {
+       "n": 2,
+       "id": "attack_three_rebels",
+       "text": "With 3+ RD Rebels and no Opposition"
+      },
+      {
+       "n": 3,
+       "id": "attack_all_active",
+       "text": "Where all RD Rebels already Active"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "ambush",
+     "text": "Ambush in up to 2 spaces using Ambush",
+     "note": "Set dice to remove enemy Bases, then to place Damage if the selected space is at Support, otherwise avoid placing Damage if possible"
+    }
+   ]
+  },
+  "T": {
+   "faction": "red_dust",
+   "flip": "TT",
+   "activation_number": 2,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "2d6 ≤ Available RD forces?",
+     "cond": "2d6_le_available_forces",
+     "no": "draw",
+     "faq": "FAQ 15/05/2025: il riquadro stampato dice «Rebels», va letto «forces»."
+    },
+    {
+     "text": "RD Rebel in any 2+ Pop space not at Active Opposition?",
+     "cond": "rebel_in_pop2_not_active_opposition",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "campaign",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "campaign",
+       "text": "Using Shift Towards Active Opposition",
+       "note": "RD Base with Hidden Rebels: only where 1+ RD Rebel would remain Hidden · Select first drawn Campaign card"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "NN": {
+   "faction": "red_dust",
+   "flip": "N",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "operation": "march",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "march",
+       "text": "Using Move Priorities"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "PP": {
+   "faction": "red_dust",
+   "flip": "P",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "operation": "march",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "march",
+       "text": "Using Move Priorities"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "QQ": {
+   "faction": "red_dust",
+   "flip": "Q",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "rebels_in_two_populated_not_active_opposition",
+      "yes": {
+       "operation": "campaign",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "campaign",
+         "text": "Using Shift Towards Active Opposition",
+         "note": "RD Base with Hidden Rebels: only where 1+ RD Rebel would remain Hidden · Select first drawn Campaign card"
+        }
+       ]
+      },
+      "no": {
+       "operation": "march",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "march",
+         "text": "Using Move Priorities"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "RR": {
+   "faction": "red_dust",
+   "flip": "R",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "three_rebels_with_enemy_forces",
+      "yes": {
+       "operation": "attack",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "attack_support",
+         "text": "At Support"
+        },
+        {
+         "n": 2,
+         "id": "attack_three_rebels",
+         "text": "With 3+ RD Rebels and no Opposition"
+        },
+        {
+         "n": 3,
+         "id": "attack_all_active",
+         "text": "Where all RD Rebels already Active"
+        }
+       ]
+      },
+      "no": {
+       "operation": "march",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "march",
+         "text": "Using Move Priorities"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "SS": {
+   "faction": "red_dust",
+   "flip": "S",
+   "activation_number": 3,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "operation": "campaign",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "campaign",
+       "text": "Using Shift Towards Active Opposition",
+       "note": "RD Base with Hidden Rebels: only where 1+ RD Rebel would remain Hidden · Select first drawn Campaign card"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "TT": {
+   "faction": "red_dust",
+   "flip": "T",
+   "activation_number": 2,
+   "pass_if": "fail_le_agitate_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "operation": "rally",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "rally_place_bases",
+       "text": "Place Bases where 3+ RD Rebels and 1+ Hidden RD Rebel",
+       "no_an_roll": true,
+       "note": "Only make AN rolls after placing Rebels"
+      },
+      {
+       "n": 2,
+       "id": "rally_place_rebels",
+       "text": "Select spaces using Place Rebels"
+      },
+      {
+       "n": 3,
+       "id": "rally_flip_hidden",
+       "text": "Flip most Rebels where all Active"
+      },
+      {
+       "n": 4,
+       "id": "rally_dig_in",
+       "text": "Dig In 1 Base in a Desert",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "coordinate",
+     "text": "Coordinate",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "coordinate_house",
+       "text": "House using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "coordinate_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 3,
+       "id": "coordinate_shift",
+       "text": "Using Shift Towards Active Opposition"
+      }
+     ],
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Reduce Agitate Total by 1 for each Repair · Remove 2 cubes before replacing 1"
+    },
+    {
+     "letter": "B",
+     "id": "redistribute",
+     "text": "Redistribute using Redistribute",
+     "note": "RD Base: only where 2+ Hidden RD Rebels · Increase Agitate Total by 1 for every 2 Resources that would be gained"
+    }
+   ]
+  },
+  "G": {
+   "faction": "corporations",
+   "flip": "GG",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any non-Terraforming CORP Bases in Deserts?",
+     "cond": "non_terraforming_corp_base_in_desert",
+     "no": "draw"
+    },
+    {
+     "text": "Assault could remove an enemy Base?",
+     "cond": "assault_could_remove_base",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "assault",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "assault_remove_bases",
+       "text": "To Remove Rebel Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "assault_suppress",
+       "text": "Suppress using Remove in one space with Hidden Rebels",
+       "no_an_roll": true,
+       "note": "solo se EarthGov Controller"
+      },
+      {
+       "n": 3,
+       "id": "assault_remove",
+       "text": "Using Remove",
+       "no_an_roll": true,
+       "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "H": {
+   "faction": "corporations",
+   "flip": "HH",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [
+    {
+     "text": "At least two Populated spaces with CORP Base, CORP forces > MG forces, and no Damage?",
+     "cond": "two_populated_corp_bases_corp_gt_mg_no_damage",
+     "no": "draw"
+    },
+    {
+     "text": "Assault could remove an enemy Base or 2+ Rebels in one space?",
+     "cond": "assault_could_remove_base_or_two_rebels",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "assault",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "assault_remove_bases",
+       "text": "To Remove Rebel Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "assault_suppress",
+       "text": "Suppress using Remove in one space with Hidden Rebels",
+       "no_an_roll": true,
+       "note": "solo se EarthGov Controller"
+      },
+      {
+       "n": 3,
+       "id": "assault_remove",
+       "text": "Using Remove",
+       "no_an_roll": true,
+       "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "J": {
+   "faction": "corporations",
+   "flip": "JJ",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any Population markers in Displaced Population?",
+     "cond": "displaced_population_any",
+     "no": "draw"
+    },
+    {
+     "text": "Any space with COIN Control, Security, and Damage, and may perform Special Activity?",
+     "cond": "space_coin_control_security_damage",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "public_relations",
+       "text": "Public Relations",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "pr_repair",
+         "text": "Repair using Place Population"
+        },
+        {
+         "n": 2,
+         "id": "pr_house",
+         "text": "House in one space with a CORP Base using Place Population"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "operation": "logistics",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "logistics_upgrade_base",
+       "text": "Upgrade one Base using Place or Upgrade Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "logistics_upgrade_more",
+       "text": "Upgrade additional Bases using Place or Upgrade Bases",
+       "no_an_roll": true,
+       "note": "solo con 2+ Dust Storm Rounds rimanenti"
+      },
+      {
+       "n": 3,
+       "id": "logistics_buy_earth",
+       "text": "Place 4 CORP units on Earth",
+       "no_an_roll": true
+      },
+      {
+       "n": 4,
+       "id": "logistics_aldrin",
+       "text": "Resolve Aldrin Cycler (no Population to Transit)",
+       "no_an_roll": true
+      },
+      {
+       "n": 5,
+       "id": "logistics_place_security",
+       "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    }
+   ]
+  },
+  "K": {
+   "faction": "corporations",
+   "flip": "KK",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any Available CORP Bases?",
+     "cond": "available_bases",
+     "no": "draw"
+    },
+    {
+     "text": "Assault could remove an enemy Base or 2+ Rebels in one space?",
+     "cond": "assault_could_remove_base_or_two_rebels",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "assault",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "assault_remove_bases",
+       "text": "To Remove Rebel Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "assault_suppress",
+       "text": "Suppress using Remove in one space with Hidden Rebels",
+       "no_an_roll": true,
+       "note": "solo se EarthGov Controller"
+      },
+      {
+       "n": 3,
+       "id": "assault_remove",
+       "text": "Using Remove",
+       "no_an_roll": true,
+       "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "L": {
+   "faction": "corporations",
+   "flip": "LL",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [
+    {
+     "text": "2d6 ≤ Available Security?",
+     "cond": "2d6_le_available_security",
+     "no": "draw"
+    },
+    {
+     "text": "Assault could remove an enemy Base or 2+ Rebels in one space?",
+     "cond": "assault_could_remove_base_or_two_rebels",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "assault",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "assault_remove_bases",
+       "text": "To Remove Rebel Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "assault_suppress",
+       "text": "Suppress using Remove in one space with Hidden Rebels",
+       "no_an_roll": true,
+       "note": "solo se EarthGov Controller"
+      },
+      {
+       "n": 3,
+       "id": "assault_remove",
+       "text": "Using Remove",
+       "no_an_roll": true,
+       "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più · Attiva gli SpecOps per rimuovere forze in più"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "M": {
+   "faction": "corporations",
+   "flip": "MM",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [
+    {
+     "text": "EG Confidence > 4?",
+     "cond": "eg_confidence_above_4",
+     "no": "draw"
+    },
+    {
+     "text": "Any non-Terraforming CORP Bases in Deserts?",
+     "cond": "non_terraforming_corp_base_in_desert",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "public_relations",
+       "text": "Public Relations",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "pr_repair",
+         "text": "Repair using Place Population"
+        },
+        {
+         "n": 2,
+         "id": "pr_house",
+         "text": "House in one space with a CORP Base using Place Population"
+        }
+       ]
+      },
+      {
+       "letter": "B",
+       "id": "exploit",
+       "text": "Exploit using Exploit"
+      }
+     ]
+    },
+    {
+     "operation": "logistics",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "logistics_upgrade_base",
+       "text": "Upgrade one Base using Place or Upgrade Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "logistics_upgrade_more",
+       "text": "Upgrade additional Bases using Place or Upgrade Bases",
+       "no_an_roll": true,
+       "note": "solo con 2+ Dust Storm Rounds rimanenti"
+      },
+      {
+       "n": 3,
+       "id": "logistics_buy_earth",
+       "text": "Place 4 CORP units on Earth",
+       "no_an_roll": true
+      },
+      {
+       "n": 4,
+       "id": "logistics_aldrin",
+       "text": "Resolve Aldrin Cycler (no Population to Transit)",
+       "no_an_roll": true
+      },
+      {
+       "n": 5,
+       "id": "logistics_place_security",
+       "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    }
+   ]
+  },
+  "GG": {
+   "faction": "corporations",
+   "flip": "G",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "public_relations",
+       "text": "Public Relations",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "pr_repair",
+         "text": "Repair using Place Population"
+        },
+        {
+         "n": 2,
+         "id": "pr_house",
+         "text": "House in one space with a CORP Base using Place Population"
+        }
+       ]
+      },
+      {
+       "letter": "B",
+       "id": "exploit",
+       "text": "Exploit using Exploit"
+      }
+     ]
+    },
+    {
+     "operation": "logistics",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "logistics_upgrade_base",
+       "text": "Upgrade one Base using Place or Upgrade Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "logistics_upgrade_more",
+       "text": "Upgrade additional Bases using Place or Upgrade Bases",
+       "no_an_roll": true,
+       "note": "solo con 2+ Dust Storm Rounds rimanenti"
+      },
+      {
+       "n": 3,
+       "id": "logistics_buy_earth",
+       "text": "Place 4 CORP units on Earth",
+       "no_an_roll": true
+      },
+      {
+       "n": 4,
+       "id": "logistics_aldrin",
+       "text": "Resolve Aldrin Cycler (no Population to Transit)",
+       "no_an_roll": true
+      },
+      {
+       "n": 5,
+       "id": "logistics_place_security",
+       "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    }
+   ]
+  },
+  "HH": {
+   "faction": "corporations",
+   "flip": "H",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "exploit",
+       "text": "Exploit using Exploit"
+      },
+      {
+       "letter": "B",
+       "id": "public_relations",
+       "text": "Public Relations",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "pr_repair",
+         "text": "Repair using Place Population"
+        },
+        {
+         "n": 2,
+         "id": "pr_house",
+         "text": "House in one space with a CORP Base using Place Population"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "operation": "logistics",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "logistics_upgrade_base",
+       "text": "Upgrade one Base using Place or Upgrade Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "logistics_upgrade_more",
+       "text": "Upgrade additional Bases using Place or Upgrade Bases",
+       "no_an_roll": true,
+       "note": "solo con 2+ Dust Storm Rounds rimanenti"
+      },
+      {
+       "n": 3,
+       "id": "logistics_buy_earth",
+       "text": "Place 4 CORP units on Earth",
+       "no_an_roll": true
+      },
+      {
+       "n": 4,
+       "id": "logistics_aldrin",
+       "text": "Resolve Aldrin Cycler (no Population to Transit)",
+       "no_an_roll": true
+      },
+      {
+       "n": 5,
+       "id": "logistics_place_security",
+       "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    },
+    {
+     "letter": "B",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    }
+   ]
+  },
+  "JJ": {
+   "faction": "corporations",
+   "flip": "J",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "labyrinth_without_coin_control_reachable_by_corp",
+      "yes": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "no_an_roll": true,
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · Place Base in tutte le destinazioni con 3+ cubi e senza Base CORP · House in una destinazione con Base CORP usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "no_an_roll": true,
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Base in tutte le destinazioni senza Base CORP · House in una destinazione con Base CORP usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "KK": {
+   "faction": "corporations",
+   "flip": "K",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "desert_without_corp_base_reachable_by_corp",
+      "yes": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "no_an_roll": true,
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Base in tutte le destinazioni senza Base CORP · House in una destinazione con Base CORP usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "no_an_roll": true,
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · Place Base in tutte le destinazioni con 3+ cubi e senza Base CORP · House in una destinazione con Base CORP usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "LL": {
+   "faction": "corporations",
+   "flip": "L",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "special_activity_first": true,
+     "only": [
+      {
+       "letter": "A",
+       "id": "exploit",
+       "text": "Exploit using Exploit"
+      },
+      {
+       "letter": "B",
+       "id": "public_relations",
+       "text": "Public Relations",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "pr_repair",
+         "text": "Repair using Place Population"
+        },
+        {
+         "n": 2,
+         "id": "pr_house",
+         "text": "House in one space with a CORP Base using Place Population"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "operation": "logistics",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "logistics_upgrade_base",
+       "text": "Upgrade one Base using Place or Upgrade Bases",
+       "no_an_roll": true
+      },
+      {
+       "n": 2,
+       "id": "logistics_upgrade_more",
+       "text": "Upgrade additional Bases using Place or Upgrade Bases",
+       "no_an_roll": true,
+       "note": "solo con 2+ Dust Storm Rounds rimanenti"
+      },
+      {
+       "n": 3,
+       "id": "logistics_buy_earth",
+       "text": "Place 4 CORP units on Earth",
+       "no_an_roll": true
+      },
+      {
+       "n": 4,
+       "id": "logistics_aldrin",
+       "text": "Resolve Aldrin Cycler (no Population to Transit)",
+       "no_an_roll": true
+      },
+      {
+       "n": 5,
+       "id": "logistics_place_security",
+       "text": "Place Security using Place Cubes at CORP Bases with 0-3 cubes",
+       "no_an_roll": true
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "exploit",
+     "text": "Exploit using Exploit"
+    },
+    {
+     "letter": "B",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    }
+   ]
+  },
+  "MM": {
+   "faction": "corporations",
+   "flip": "M",
+   "activation_number": 0,
+   "pass_if": "no_an_for_corp_ops",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "desert_without_corp_base_reachable_by_corp",
+      "yes": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "no_an_roll": true,
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Base in tutte le destinazioni senza Base CORP · House in una destinazione con Base CORP usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "no_an_roll": true,
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · Place Base in tutte le destinazioni con 3+ cubi e senza Base CORP · House in una destinazione con Base CORP usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "public_relations",
+     "text": "Public Relations",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "pr_repair",
+       "text": "Repair using Place Population"
+      },
+      {
+       "n": 2,
+       "id": "pr_house",
+       "text": "House in one space with a CORP Base using Place Population"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "raid",
+     "text": "Raid using Remove to remove Rebel forces"
+    }
+   ]
+  },
+  "A": {
+   "faction": "marsgov",
+   "flip": "AA",
+   "activation_number": 3,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any Population markers in Displaced Population?",
+     "cond": "displaced_population_any",
+     "no": "draw"
+    },
+    {
+     "text": "2d6 ≤ Available MG Troops?",
+     "cond": "2d6_le_available_troops",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "train",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "train_place_troops",
+       "text": "Place Troops using Place Cubes"
+      },
+      {
+       "n": 2,
+       "id": "train_pacify",
+       "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
+       "no_an_roll": true,
+       "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "B": {
+   "faction": "marsgov",
+   "flip": "BB",
+   "activation_number": 3,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any Labyrinth with Support and any Rebel?",
+     "cond": "labyrinth_support_with_rebel",
+     "no": "draw"
+    },
+    {
+     "text": "2d6 ≤ Available MG Troops?",
+     "cond": "2d6_le_available_troops",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "train",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "train_place_troops",
+       "text": "Place Troops using Place Cubes"
+      },
+      {
+       "n": 2,
+       "id": "train_pacify",
+       "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
+       "no_an_roll": true,
+       "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "C": {
+   "faction": "marsgov",
+   "flip": "CC",
+   "activation_number": 3,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any Desert with Support and any Rebel?",
+     "cond": "desert_support_with_rebel",
+     "no": "draw"
+    },
+    {
+     "text": "2d6 ≤ Available MG Troops?",
+     "cond": "2d6_le_available_troops",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "train",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "train_place_troops",
+       "text": "Place Troops using Place Cubes"
+      },
+      {
+       "n": 2,
+       "id": "train_pacify",
+       "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
+       "no_an_roll": true,
+       "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "D": {
+   "faction": "marsgov",
+   "flip": "DD",
+   "activation_number": 3,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any space without COIN Control?",
+     "cond": "space_without_coin_control",
+     "no": "draw"
+    },
+    {
+     "text": "Assault could remove a Rebel Base, 3+ Rebels in one space, or any Rebels at Support?",
+     "cond": "assault_could_remove_base_three_rebels_or_at_support",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "assault",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "assault_remove_bases",
+       "text": "To Remove Rebel Bases"
+      },
+      {
+       "n": 2,
+       "id": "assault_suppress",
+       "text": "Suppress using Remove in one space with Hidden Rebels",
+       "note": "solo se EarthGov Controller"
+      },
+      {
+       "n": 3,
+       "id": "assault_remove",
+       "text": "Using Remove",
+       "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to set EG+",
+     "when": "eg_minus"
+    },
+    {
+     "letter": "B",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "E": {
+   "faction": "marsgov",
+   "flip": "EE",
+   "activation_number": 3,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "Any space with COIN Control not at Active Support?",
+     "cond": "coin_control_not_active_support",
+     "no": "draw"
+    },
+    {
+     "text": "1d6 ≤ Available MG Troops?",
+     "cond": "1d6_le_available_troops",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "train",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "train_place_troops",
+       "text": "Place Troops using Place Cubes"
+      },
+      {
+       "n": 2,
+       "id": "train_pacify",
+       "text": "Pacify up to twice in one space: House at Support, Repair, Shift Towards Active Support",
+       "no_an_roll": true,
+       "note": "Unless Operation is Limited, Pacify may target an additional space not yet selected for Train"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "B",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "F": {
+   "faction": "marsgov",
+   "flip": "FF",
+   "activation_number": 3,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [
+    {
+     "text": "EG−?",
+     "cond": "eg_minus",
+     "no": "draw"
+    },
+    {
+     "text": "Assault could remove a Rebel Base, 3+ Rebels in one space, or any Rebels at Support?",
+     "cond": "assault_could_remove_base_three_rebels_or_at_support",
+     "no": "flip"
+    }
+   ],
+   "blocks": [
+    {
+     "operation": "assault",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "assault_remove_bases",
+       "text": "To Remove Rebel Bases"
+      },
+      {
+       "n": 2,
+       "id": "assault_suppress",
+       "text": "Suppress using Remove in one space with Hidden Rebels",
+       "note": "solo se EarthGov Controller"
+      },
+      {
+       "n": 3,
+       "id": "assault_remove",
+       "text": "Using Remove",
+       "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
+      }
+     ]
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to set EG+"
+    },
+    {
+     "letter": "B",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "AA": {
+   "faction": "marsgov",
+   "flip": "A",
+   "activation_number": 4,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "labyrinth_support_hidden_rebels",
+      "yes": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to place Supply",
+     "when": "three_rebels_activated"
+    },
+    {
+     "letter": "B",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "C",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "BB": {
+   "faction": "marsgov",
+   "flip": "B",
+   "activation_number": 4,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "assault_could_remove_base_or_rebel_at_support",
+      "yes": {
+       "operation": "assault",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "assault_remove_bases",
+         "text": "To Remove Rebel Bases"
+        },
+        {
+         "n": 2,
+         "id": "assault_suppress",
+         "text": "Suppress using Remove in one space with Hidden Rebels",
+         "note": "solo se EarthGov Controller"
+        },
+        {
+         "n": 3,
+         "id": "assault_remove",
+         "text": "Using Remove",
+         "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
+        }
+       ]
+      },
+      "no": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to set EG+",
+     "when": "eg_minus"
+    },
+    {
+     "letter": "B",
+     "id": "petition",
+     "text": "Petition to place Supply",
+     "when": "three_rebels_activated"
+    },
+    {
+     "letter": "C",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ],
+     "when": "secure_performed"
+    },
+    {
+     "letter": "D",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "CC": {
+   "faction": "marsgov",
+   "flip": "C",
+   "activation_number": 4,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "assault_could_remove_base_or_rebel_at_support",
+      "yes": {
+       "operation": "assault",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "assault_remove_bases",
+         "text": "To Remove Rebel Bases"
+        },
+        {
+         "n": 2,
+         "id": "assault_suppress",
+         "text": "Suppress using Remove in one space with Hidden Rebels",
+         "note": "solo se EarthGov Controller"
+        },
+        {
+         "n": 3,
+         "id": "assault_remove",
+         "text": "Using Remove",
+         "note": "EarthGov Controller: usa le Truppe EG e poi Bombard per rimuovere forze in più"
+        }
+       ]
+      },
+      "no": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to set EG+",
+     "when": "eg_minus"
+    },
+    {
+     "letter": "B",
+     "id": "petition",
+     "text": "Petition to place Supply",
+     "when": "three_rebels_activated"
+    },
+    {
+     "letter": "C",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ],
+     "when": "recon_performed"
+    },
+    {
+     "letter": "D",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "DD": {
+   "faction": "marsgov",
+   "flip": "D",
+   "activation_number": 4,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "labyrinth_without_coin_control_reachable_by_mg",
+      "yes": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to place Supply",
+     "when": "three_rebels_activated"
+    },
+    {
+     "letter": "B",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "C",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "EE": {
+   "faction": "marsgov",
+   "flip": "E",
+   "activation_number": 4,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "labyrinth_support_hidden_rebels",
+      "yes": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to place Supply",
+     "when": "three_rebels_activated"
+    },
+    {
+     "letter": "B",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "C",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
+  },
+  "FF": {
+   "faction": "marsgov",
+   "flip": "F",
+   "activation_number": 4,
+   "pass_if": "fail_le_supply_total",
+   "limits": {},
+   "checks": [],
+   "blocks": [
+    {
+     "branch": {
+      "cond": "labyrinth_without_coin_control_reachable_by_mg",
+      "yes": {
+       "operation": "secure",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "secure",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Drop Pods · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      },
+      "no": {
+       "operation": "recon",
+       "instructions": [
+        {
+         "n": 1,
+         "id": "recon",
+         "text": "Using Move Priorities",
+         "note": "EarthGov Controller: muove le Truppe EG e usa i Navigation Beacons · Place Bases solo nei Deserti senza Base MG · House o Repair in una destinazione senza Opposizione usando Place Population"
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "special_activities": [
+    {
+     "letter": "A",
+     "id": "petition",
+     "text": "Petition to place Supply",
+     "when": "three_rebels_activated"
+    },
+    {
+     "letter": "B",
+     "id": "entrench",
+     "text": "Entrench in up to 2 spaces",
+     "instructions": [
+      {
+       "n": 1,
+       "id": "entrench_place_bases",
+       "text": "Place Bases only in Deserts without MG Base"
+      },
+      {
+       "n": 2,
+       "id": "entrench_fortify",
+       "text": "Fortify only at Support"
+      }
+     ]
+    },
+    {
+     "letter": "C",
+     "id": "transport",
+     "text": "Transport using Move Priorities"
+    }
+   ]
   }
+ }
 }
