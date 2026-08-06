@@ -251,7 +251,17 @@ fatto su Cuba Libre e All Bridges Burning.
 
 ## Fase 7 — Rifiniture
 
-- [ ] Integrazione della FAQ ufficiale
+- [x] **Animazione dei movimenti** come in Cuba Libre (`scenes/MapAnimator.gd`):
+      i pezzi che cambiano posto volano da uno spazio all'altro con una scia, e
+      gli spazi il cui stato è cambiato lampeggiano. Funziona per differenza fra
+      un aggiornamento e il precedente, quindi non ha bisogno che le regole gli
+      dicano niente: si anima allo stesso modo un click del giocatore e mezza
+      carta risolta dal bot. Fra un turno di bot e il successivo c'è una pausa,
+      altrimenti i voli si accavallano
+- [x] Copia e salvataggio del Log (menu «Partita…»), per rileggere una partita
+      o mandarla a qualcuno
+- [ ] Integrazione della FAQ ufficiale (errata delle carte Curiosity e Asset
+      Event già applicate)
 - [ ] Simulazioni di bilanciamento (come `sim_runner.gd` di ABB)
 - [ ] Salvataggio/ripresa partita
 - [ ] GitHub Actions: build desktop + export Web su GitHub Pages

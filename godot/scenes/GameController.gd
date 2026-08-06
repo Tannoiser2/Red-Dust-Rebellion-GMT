@@ -729,18 +729,33 @@ func np_take_turn() -> Dictionary:
 			if not note.is_empty():
 				emit_signal("log_line", "  · Istruzione di carta: %s" % note.get("text", ""))
 
-	# Si registra l'azione nella sequenza, come farebbe un giocatore.
-	match String(res.get("action", "")):
-		"pass":
-			sequence.act_pass()
-		"lim_op":
-			sequence.act(CoinEnums.ActionType.LIMITED_OPERATION)
-		"op_only":
-			sequence.act(CoinEnums.ActionType.OPERATION)
-		"event", "asset_event":
-			sequence.act(CoinEnums.ActionType.EVENT)
-		_:
-			sequence.act(CoinEnums.ActionType.OPERATION_WITH_SPECIAL)
+	# Si registra l'azione nella sequenza, come farebbe un giocatore. Se la
+	# tabella ha scelto una casella che in questo slot non è legale — capita
+	# quando la 1ª Disponibile ha fatto qualcosa che restringe le opzioni della
+	# 2ª — si ripiega sulla prima legale invece di lasciar cadere la richiesta:
+	# senza registrare niente la Fazione di turno non cambierebbe mai, e il bot
+	# rigiocherebbe all'infinito la stessa carta.
+	var token := String(res.get("action", ""))
+	if token == "pass":
+		sequence.act_pass()
+	else:
+		var want: int = int(NP_TOKEN_ACTION.get(token, CoinEnums.ActionType.OPERATION_WITH_SPECIAL))
+		if not sequence.act(want):
+			var fallback := -1
+			for a in sequence.legal_actions():
+				fallback = int(a)
+				break
+			if fallback < 0 or not sequence.act(fallback):
+				emit_signal("log_line",
+					"%s (bot): nessuna casella legale, Passa." %
+					game_def.faction(fid).short_name)
+				sequence.act_pass()
+			else:
+				emit_signal("log_line",
+					"%s (bot): la casella «%s» non è legale in questo slot, ripiega su «%s»." % [
+					game_def.faction(fid).short_name, token,
+					String(NP_ACTION_TOKEN.get(fallback, "?"))])
+				res["action"] = String(NP_ACTION_TOKEN.get(fallback, token))
 	emit_signal("log_line", "%s (bot): %s." % [
 		game_def.faction(fid).short_name, res.get("operation", res.get("action", ""))])
 	_after_action()
@@ -753,7 +768,7 @@ func np_take_turn() -> Dictionary:
 func _np_context() -> Dictionary:
 	var ctx := {}
 	if sequence != null and not sequence.is_first_slot():
-		ctx["first_chose"] = _np_first_choice
+		ctx["first_chose"] = String(NP_ACTION_TOKEN.get(sequence.first_action(), ""))
 	if rounds != null:
 		ctx["next_is_dust_storm"] = int(rdr().card_flashpoint.get(rounds.next_card(), -1)) < 0
 	# §8.5.5: l'efficacia dell'Evento si calcola dagli effetti già scomposti in
@@ -791,7 +806,25 @@ func _np_event_option(fid: String, card: int) -> int:
 	return -1
 
 
-var _np_first_choice := ""
+## §8.5.2: cosa ha fatto la 1ª Disponibile, nel vocabolario della tabella di
+## Eligibility. Si legge dalla sequenza, così vale anche quando la prima a
+## muoversi è stata una Fazione di un giocatore.
+const NP_ACTION_TOKEN := {
+	CoinEnums.ActionType.EVENT: "event",
+	CoinEnums.ActionType.OPERATION_WITH_SPECIAL: "op_sa",
+	CoinEnums.ActionType.OPERATION: "op_only",
+	CoinEnums.ActionType.LIMITED_OPERATION: "lim_op",
+}
+
+## Azione della tabella NP → casella della Sequenza di Gioco.
+const NP_TOKEN_ACTION := {
+	"event": CoinEnums.ActionType.EVENT,
+	"asset_event": CoinEnums.ActionType.EVENT,
+	"op_sa": CoinEnums.ActionType.OPERATION_WITH_SPECIAL,
+	"op_only": CoinEnums.ActionType.OPERATION,
+	"lim_op": CoinEnums.ActionType.LIMITED_OPERATION,
+}
+
 var _np_rng_instance: RandomNumberGenerator = null
 
 

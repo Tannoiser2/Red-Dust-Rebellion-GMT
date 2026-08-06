@@ -30,6 +30,11 @@ var _panning := false
 var _map_tex: TextureRect
 var _instr: RichTextLabel     ## riga che dice sempre cosa si può fare adesso
 var _regions_layer: Control
+var _anim: MapAnimator        ## pezzi che volano e spazi che lampeggiano
+## Pausa fra un turno di bot e il successivo: quanto basta perché l'animazione
+## del volo (MapAnimator.DURATION) finisca prima che parta la prossima.
+const NP_TURN_PAUSE := 1.1
+var _np_running := false
 var _tracks: TrackOverlay
 var _moves: MovesOverlay    ## frecce degli spostamenti dichiarati
 var _side: VBoxContainer
@@ -138,6 +143,12 @@ func _build_ui() -> void:
 	_tracks.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_tracks)
 
+	# I pezzi che volano da uno spazio all'altro e il lampeggio degli spazi
+	# cambiati: puramente decorativo, sopra la mappa e trasparente al mouse.
+	_anim = MapAnimator.new()
+	_anim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_map_root.add_child(_anim)
+
 	# Sopra a tutto: le frecce degli spostamenti ancora da eseguire.
 	_moves = MovesOverlay.new()
 	_moves.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -221,6 +232,9 @@ func _build_ui() -> void:
 	pm.add_item("Riprendi l'ultima salvata", 2)
 	pm.add_item("Riprendi il salvataggio automatico", 3)
 	pm.add_separator()
+	pm.add_item("Copia il Log negli appunti", 5)
+	pm.add_item("Salva il Log sulla Scrivania", 6)
+	pm.add_separator()
 	pm.add_item("Torna al menu", 4)
 	pm.id_pressed.connect(_on_game_menu)
 	buttons.add_child(game_menu)
@@ -228,6 +242,8 @@ func _build_ui() -> void:
 	_btn_undo = Button.new()
 	_btn_undo.text = "Annulla"
 	_btn_undo.pressed.connect(func():
+		if _anim != null:
+			_anim.reset()
 		GameController.undo()
 		_cancel_op())
 	buttons.add_child(_btn_undo)
@@ -390,6 +406,9 @@ func _build_regions() -> void:
 		rv.space_clicked.connect(_on_space_clicked)
 		rv.piece_dropped.connect(_on_piece_dropped)
 		_views[sid] = rv
+	if _anim != null:
+		_anim.setup(_views, GameController.game_def)
+		_anim.reset()
 	_relayout_map()
 
 
@@ -503,6 +522,10 @@ func _input(event: InputEvent) -> void:
 func _on_state_changed() -> void:
 	if _views.is_empty():
 		_build_regions()
+	# Prima l'animazione, che confronta la plancia con com'era all'aggiornamento
+	# precedente; poi le viste, che ridisegnano lo stato definitivo.
+	if _anim != null:
+		_anim.update(GameController.state)
 	var m: RDRModule = GameController.rdr()
 	for sid in _views.keys():
 		(_views[sid] as RegionView).refresh(GameController.state, m)
@@ -570,9 +593,15 @@ func _refresh_undo_btn() -> void:
 
 
 func _on_game_menu(id: int) -> void:
+	# Nuova partita e caricamenti cambiano tutta la plancia in un colpo: senza
+	# azzerare l'animatore si vedrebbero decine di pezzi volare all'indietro.
+	if _anim != null and id in [0, 2, 3]:
+		_anim.reset()
 	match id:
 		0:
-			GameController.new_game()
+			# Le Fazioni al bot restano quelle scelte nel menu iniziale: senza
+			# questo, «Nuova partita» le rimetteva tutte in mano ai giocatori.
+			GameController.new_game("standard", 0, Array(GameController.np.np_factions))
 			_cancel_op()
 		1:
 			GameController.save_game(GameController.SAVE_PATH)
@@ -584,6 +613,12 @@ func _on_game_menu(id: int) -> void:
 			_cancel_op()
 		4:
 			get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+		5:
+			DisplayServer.clipboard_set(_log_plain())
+			_append_log("[i]Log copiato negli appunti (%d righe).[/i]" %
+				_log_plain().split("\n").size())
+		6:
+			_save_log()
 
 
 ## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
@@ -861,16 +896,26 @@ func _run_np_turn() -> void:
 
 ## Fa giocare di seguito tutte le Fazioni Non-Player, fino al turno di un
 ## giocatore o alla fine della carta.
+##
+## Un turno alla volta, con una pausa in mezzo: risolverli tutti nello stesso
+## frame farebbe accavallare le animazioni e cambierebbe mezza plancia in un
+## lampo, che è poi il modo migliore per non capire cosa ha fatto il bot.
 func _run_np_until_player() -> void:
+	if _np_running:
+		return
+	_np_running = true
 	var gc := GameController
 	for guard in range(8):
 		if gc.sequence == null:
-			return
+			break
 		var fid := gc.sequence.pending_faction()
 		if fid == "" or not gc.np.is_np(fid):
-			return
-		if not GameController.np_take_turn().get("ok", false):
-			return
+			break
+		if not gc.np_take_turn().get("ok", false):
+			break
+		await get_tree().create_timer(NP_TURN_PAUSE).timeout
+	_np_running = false
+	_refresh_op_bar()
 
 
 ## Esegue una delle Operazioni gratuite concesse dagli Eventi (§7.0).
@@ -1008,6 +1053,7 @@ func _refresh_op_bar() -> void:
 		var b_all := Button.new()
 		b_all.text = "…e i successivi"
 		b_all.tooltip_text = "Fa giocare di seguito tutte le Fazioni Non-Player fino al tuo turno."
+		b_all.disabled = _np_running
 		b_all.pressed.connect(_run_np_until_player)
 		_ops_box.add_child(b_all)
 		_refresh_move_box()
@@ -1331,6 +1377,38 @@ func _support_name(level: int) -> String:
 		CoinEnums.Support.PASSIVE_OPPOSITION: return "Opposizione Passiva"
 		CoinEnums.Support.ACTIVE_OPPOSITION: return "Opposizione Attiva"
 		_: return "Neutrale"
+
+
+## Il Log senza i tag BBCode dei colori: è quel che serve per incollarlo altrove.
+func _log_plain() -> String:
+	return _log.get_parsed_text() if _log != null else ""
+
+
+## Salva il Log sulla Scrivania, con la partita e la data nel nome. Una partita
+## COIN produce centinaia di righe: gli appunti bastano per un pezzo, un file
+## serve per mandarlo tutto.
+func _save_log() -> void:
+	var dir := OS.get_system_dir(OS.SYSTEM_DIR_DESKTOP)
+	if dir == "":
+		dir = OS.get_user_data_dir()
+	var stamp := Time.get_datetime_string_from_system().replace(":", "-")
+	var path := "%s/red-dust-log-%s.txt" % [dir, stamp]
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		_append_log("[color=#e05a4b]Non sono riuscito a scrivere %s.[/color]" % path)
+		return
+	var gc := GameController
+	f.store_line("Red Dust Rebellion — Log della partita")
+	f.store_line("Salvato il %s" % Time.get_datetime_string_from_system())
+	f.store_line("Seme: %s · Fazioni al bot: %s" % [
+		gc.state.tracks.get("seed", 0),
+		", ".join(gc.np.np_factions) if gc.np.np_factions.size() > 0 else "nessuna"])
+	f.store_line("Carta in corso: #%d · Dust Storm Round %s/3" % [
+		gc.state.current_card, gc.state.tracks.get("dust_storm_rounds", 0)])
+	f.store_line("")
+	f.store_string(_log_plain())
+	f.close()
+	_append_log("[i]Log salvato in %s[/i]" % path)
 
 
 func _append_log(text: String) -> void:

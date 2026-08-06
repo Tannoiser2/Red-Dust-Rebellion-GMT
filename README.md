@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**1010 test del modulo + 111 controlli di smoke test della scena, 0 falliti.**
+**1010 test del modulo + 113 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |

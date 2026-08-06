@@ -450,6 +450,41 @@ func _initialize() -> void:
 			break
 	_ok(errors.is_empty(), "sei turni di bot senza errori (%s)" % ", ".join(errors))
 	_ok(turns >= 6, "il bot ha giocato %d turni" % turns)
+
+	# REGRESSIONE: una partita di soli bot dev'essere capace di ARRIVARE IN FONDO.
+	# Registrare un'azione che in quello slot non è legale non fa avanzare la
+	# sequenza, e la stessa Fazione rigioca all'infinito: il Log continua a
+	# scorrere ma sulla plancia non cambia più niente. Sei turni non bastavano a
+	# scoprirlo, perché il blocco scattava solo dopo il primo Evento.
+	var gc2 = root.get_node("GameController")
+	gc2.new_game("standard", 20240424, ["marsgov", "corporations", "red_dust", "reclaimer"])
+	await process_frame
+	var last_fid := ""
+	var repeats := 0
+	var worst := 0
+	var cards_seen: Array = []
+	var bot_turns := 0
+	var guard2 := 0
+	while gc2.sequence != null and not gc2.rounds.is_game_over() and guard2 < 120:
+		guard2 += 1
+		var f: String = gc2.sequence.pending_faction()
+		if f == "":
+			gc2.end_card()
+			await process_frame
+			continue
+		if not cards_seen.has(gc2.state.current_card):
+			cards_seen.append(gc2.state.current_card)
+		repeats = repeats + 1 if f == last_fid else 1
+		worst = maxi(worst, repeats)
+		last_fid = f
+		if not gc2.np_take_turn().get("ok", false):
+			break
+		bot_turns += 1
+		await process_frame
+	_ok(worst <= 2, "nessuna Fazione agisce più di due volte di fila (massimo %d)" % worst)
+	_ok(cards_seen.size() >= 5,
+		"la partita di soli bot scorre fra le carte (%d carte in %d turni)" % [
+			cards_seen.size(), bot_turns])
 	# Nessuna istruzione deve restare non eseguibile: se ne aggiungo una nelle
 	# carte e scordo il codice, il bot passerebbe il turno a vuoto senza dirlo.
 	var stubs: Array = []
