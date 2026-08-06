@@ -134,12 +134,7 @@ func transport(plan: Dictionary) -> Dictionary:
 	var allowed_extra := 2 if module.eg_controller(state) == "marsgov" else 1
 	if extra.size() > allowed_extra:
 		return _fail("Transport: al massimo %d spazi aggiuntivi." % allowed_extra)
-	var pool: Array[String] = ["phobos"]
-	for sid in module.mars_spaces(state):
-		if module.count_in(state, sid, "mg_base") > 0:
-			pool.append(sid)
-	for sid in extra:
-		pool.append(String(sid))
+	var pool := Array(RDROperations.new(state, module).transport_pool(extra))
 	for m in plan.get("moves", []):
 		var from_sid := String(m.get("from", ""))
 		var to_sid := String(m.get("to", ""))

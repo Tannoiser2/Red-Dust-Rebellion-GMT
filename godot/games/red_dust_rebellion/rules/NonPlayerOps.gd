@@ -16,11 +16,18 @@ extends RefCounted
 ## Per questo qui l'Operazione è eseguita uno spazio alla volta: le priorità
 ## rileggono la plancia dopo ogni spazio, come al tavolo.
 ##
-## NON implementate perché serve la tabella Move Priorities, che non è nel
-## libretto: Secure, Recon, March, Travel, Transport, Raid. `can_run()` lo dice.
+## Le Operazioni che spostano pezzi (Secure, Recon, March, Travel, Transport,
+## Raid) le esegue `RDRNonPlayerMove` con la tabella Move Priorities: qui si
+## delega, e senza quel motore collegato `can_run()` lo dichiara.
 
 ## Operazioni che spostano pezzi: servono le Move Priorities (§8.5.7).
 const NEEDS_MOVE_PRIORITIES := ["secure", "recon", "march", "travel", "transport", "raid"]
+
+## §6.9/§6.12: l'Ambush non si esegue dopo l'Attack, lo modifica mentre lo si
+## risolve. `_ambush_pending` dice all'Attack che la carta la offre;
+## `_ambush_done` che è stata consumata, così non la si ripropone in coda.
+var _ambush_pending := false
+var _ambush_done := false
 
 var state: GameState
 var module: RDRModule
@@ -489,9 +496,20 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 		trace.append_array(moved.get("trace", []))
 		return out
 
+	_ambush_done = false
+	_ambush_pending = action == "op_sa" and _offers_ambush(read)
 	out["spaces"] = _run_instructions(faction, op_id, read.get("instructions", []), an, limited)
+	_ambush_pending = false
 	_maybe_special(faction, action, read, out, trace)
 	return out
+
+
+## La carta offre l'Ambush fra le Attività Speciali?
+func _offers_ambush(read: Dictionary) -> bool:
+	for entry in read.get("special_activities", []):
+		if String((entry as Dictionary).get("id", "")) == "ambush":
+			return true
+	return false
 
 
 ## §4.1: l'Attività Speciale accompagna l'Operazione, quindi solo con Op+SA.
@@ -564,11 +582,10 @@ func _run_instructions(faction: String, op_id: String, instructions: Array,
 	return used
 
 
-## Attività Speciali che il bot sa eseguire. Ambush e Transport restano fuori:
-## la prima modifica l'Attack mentre lo si risolve, il secondo è un'Operazione di
-## movimento a sé — vanno intrecciate, non aggiunte.
+## Attività Speciali che il bot sa eseguire. L'Ambush non è in elenco perché non
+## si esegue qui: è l'Attack a inglobarla scegliendo i dadi (vedi `attack()`).
 const RUNNABLE_SPECIALS := ["purify", "ransack", "coordinate", "redistribute",
-	"entrench", "petition", "public_relations", "exploit", "raid"]
+	"entrench", "petition", "public_relations", "exploit", "raid", "transport"]
 
 ## Colonna delle Space Selection Priorities con cui scegliere gli spazi.
 const SPECIAL_COLUMN := {
@@ -576,6 +593,7 @@ const SPECIAL_COLUMN := {
 	"coordinate": "place_population", "redistribute": "redistribute",
 	"entrench": "place_bases", "public_relations": "place_population",
 	"exploit": "exploit", "raid": "remove_or_replace",
+	"transport": "transport_destination",
 }
 
 
@@ -586,6 +604,12 @@ func run_special_activity(faction: String, list: Array) -> Dictionary:
 	for entry in list:
 		var sa: Dictionary = entry
 		var sa_id := String(sa.get("id", ""))
+		if sa_id == "ambush":
+			# Risolta dentro l'Attack, se c'era un Attack da risolvere.
+			if _ambush_done:
+				return {"ok": true, "special": "ambush", "spaces": [], "skipped": skipped}
+			skipped.append(sa_id)
+			continue
 		if not RUNNABLE_SPECIALS.has(sa_id):
 			skipped.append(sa_id)
 			continue
@@ -627,6 +651,18 @@ func _run_special(faction: String, sa_id: String) -> Dictionary:
 	var picks: Array = []
 	if column != "" and not pool.is_empty():
 		picks = np.select_spaces(faction, column, pool, 2)
+	if sa_id == "transport":
+		# §6.3: è un'Attività Speciale che muove pezzi, quindi la risolve il
+		# motore delle Move Priorities come le Operazioni di movimento.
+		if move == null:
+			return {"ok": false, "spaces": []}
+		var moved: Dictionary = move.run_operation(faction, "transport", 0, false)
+		log_lines.append_array(moved.get("trace", []))
+		var pairs: Array = moved.get("pairs", [])
+		var touched: Array = []
+		for pr in pairs:
+			touched.append(String(pr["to"]))
+		return {"ok": not pairs.is_empty(), "spaces": touched}
 	var res: Dictionary = {"ok": false}
 	match sa_id:
 		"petition":
@@ -712,9 +748,9 @@ func _special_candidates(faction: String, sa_id: String) -> Array:
 
 ## Si può eseguire questa Operazione per questa Fazione NP, con i dati che ci sono?
 func can_run(faction: String, op_id: String) -> Dictionary:
-	if NEEDS_MOVE_PRIORITIES.has(op_id):
+	if NEEDS_MOVE_PRIORITIES.has(op_id) and move == null:
 		return {"ok": false, "error":
-			"%s sposta pezzi: serve la tabella Move Priorities (§8.5.7), non riprodotta nel libretto." % op_id}
+			"%s sposta pezzi: serve il motore delle Move Priorities (§8.5.7)." % op_id}
 	if not np.has_table(faction):
 		return {"ok": false, "error":
 			"manca la tabella Space Selection Priorities di NP %s." % faction}
@@ -1010,9 +1046,150 @@ func attack(faction: String, mode: String, activation_number: int,
 						continue
 			out.append(s)
 		return out
+	# §6.9/§6.12 Ambush: non è un'azione a parte, sceglie i dadi di un Attack che
+	# si sta risolvendo. Se la carta la offre, gli spazi che la tabella indica
+	# ricevono dadi scelti invece che tirati.
+	var ambush_spaces: Dictionary = _ambush_dice_plan(faction) if _ambush_pending else {}
 	var body := func(sid: String) -> bool:
-		return bool(ops.attack({"faction": faction, "spaces": [sid]}).get("ok", false))
-	return run_by_space(faction, "attack", candidates, body, activation_number, limited, "attack")
+		var plan := {"faction": faction, "spaces": [sid]}
+		if ambush_spaces.has(sid):
+			plan["ambush_dice"] = {sid: ambush_spaces[sid]}
+			log_lines.append("Ambush in %s: dadi %d e %d." % [
+				_name(sid), int(ambush_spaces[sid][0]), int(ambush_spaces[sid][1])])
+		return bool(ops.attack(plan).get("ok", false))
+	var used := run_by_space(faction, "attack", candidates, body,
+		activation_number, limited, "attack")
+	if not ambush_spaces.is_empty():
+		_ambush_done = true
+	return used
+
+
+# ---------------------------------------------------------------------------
+# §8.7 Ambush
+# ---------------------------------------------------------------------------
+
+## §6.9/§6.12: fino a due spazi fra quelli scelti per l'Attack, con un Ribelle
+## Nascosto, in cui si sceglie il risultato dei due dadi invece di tirarli.
+## Restituisce {spazio: [d1, d2]}.
+func _ambush_dice_plan(faction: String) -> Dictionary:
+	var rebel := _rebel(faction)
+	var column := "ambush" if faction == "red_dust" else "attack"
+	var pool: Array = []
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if module.count_in(state, s, rebel, "hidden") == 0:
+			continue
+		if ops._enemy_force_count(s, faction) == 0:
+			continue
+		if not ops.act.selectable(s, ops.act.storm_free(faction)):
+			continue
+		pool.append(s)
+	var out := {}
+	while out.size() < 2 and not pool.is_empty():
+		var pick := String(np.select_space(faction, column, pool).get("space", ""))
+		if pick == "":
+			pick = String(pool[0])
+		pool.erase(pick)
+		out[pick] = _ambush_dice_for(faction, pick)
+	return out
+
+
+## §8.7.6: NP RD sceglie i dadi «as necessary to remove any enemy Bases, then to
+## place Damage if a selected space is at Support, and otherwise avoid placing
+## Damage if possible; within these constraints, remove as many enemy pieces as
+## possible». NP CR invece mette sempre 1 e 1 (§8.7.7).
+func _ambush_dice_for(faction: String, sid: String) -> Array:
+	if faction != "red_dust":
+		return [1, 1]
+	var rebels := module.count_in(state, sid, _rebel(faction))
+	var forces := 0
+	for type_id in RDRModule.PIECE_OWNER.keys():
+		forces += module.count_in(state, sid, String(type_id))
+	var want_damage: bool = state.spaces[sid].support > 0
+	# I 36 esiti possibili, ordinati come vuole la scheda: prima le Basi nemiche
+	# che cadono, poi il Danno (voluto o evitato), poi il numero di pezzi tolti.
+	var best: Array = [1, 1]
+	var best_score: Array = [-1, -1, -1]
+	for d1 in range(1, 7):
+		for d2 in range(1, 7):
+			var sim := _ambush_outcome(faction, sid, rebels, forces, d1, d2)
+			var score: Array = [
+				int(sim["bases"]),
+				1 if bool(sim["damage"]) == want_damage else 0,
+				int(sim["removed"]),
+			]
+			if _score_gt(score, best_score):
+				best_score = score
+				best = [d1, d2]
+	return best
+
+
+## Quanto renderebbe questa coppia di dadi, senza toccare la plancia.
+func _ambush_outcome(faction: String, sid: String, rebels: int, forces: int,
+		d1: int, d2: int) -> Dictionary:
+	var budget := 0
+	var hits := 0
+	if d1 <= rebels:
+		budget += 2
+		hits += 1
+	if d2 <= rebels:
+		budget += 2
+		hits += 1
+	# Capability #1 "Subdermal Weaponry": ogni dado riuscito toglie una forza in più.
+	if faction == "reclaimer" and module.capability_active(state, 1):
+		budget += hits
+	var removed := 0
+	var bases := 0
+	var spent := 0
+	var order: Array = ops._attack_removal_order(sid, faction)
+	var left := {}
+	for token in order:
+		var t := String(token)
+		if RDRModule.PIECE_OWNER[t] != faction:
+			left[t] = module.count_in(state, sid, t)
+	# Come il motore vero: a ogni colpo si riscorre la lista dall'alto. Serve,
+	# perché una Base è in cima alle priorità ma diventa colpibile solo dopo che
+	# sono cadute le forze che la proteggono.
+	while spent < budget:
+		var hit := ""
+		for token in order:
+			var t := String(token)
+			if not left.has(t) or int(left[t]) <= 0:
+				continue
+			# §5.9: le Basi cadono solo quando non restano altre forze amiche.
+			if t.ends_with("_base") and _guards_left(faction, sid, left, t) > 0:
+				continue
+			hit = t
+			break
+		if hit == "":
+			break
+		left[hit] = int(left[hit]) - 1
+		spent += 2 if hit == "eg_troop" else 1
+		removed += 1
+		if hit.ends_with("_base"):
+			bases += 1
+	return {"removed": removed, "bases": bases, "damage": d1 + d2 <= forces}
+
+
+## Forze che ancora proteggono una Base nemica in questa simulazione.
+func _guards_left(faction: String, sid: String, left: Dictionary, base_id: String) -> int:
+	var owner: String = RDRModule.PIECE_OWNER[base_id]
+	var n := 0
+	for t in left.keys():
+		var tt := String(t)
+		if tt.ends_with("_base"):
+			continue
+		if RDRModule.PIECE_OWNER[tt] == owner:
+			n += int(left[tt])
+	return n
+
+
+## Confronto lessicografico fra due punteggi.
+func _score_gt(a: Array, b: Array) -> bool:
+	for i in range(a.size()):
+		if int(a[i]) != int(b[i]):
+			return int(a[i]) > int(b[i])
+	return false
 
 
 ## §8.6.6 Campaign — Red Dust. Se lo spazio ha una Base RD e Ribelli Nascosti,

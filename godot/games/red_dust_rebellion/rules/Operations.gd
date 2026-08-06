@@ -322,6 +322,19 @@ func reachable_deserts(origin: String, control: String) -> PackedStringArray:
 
 ## Spazi da cui `type_id` può raggiungere `dest` con quell'Operazione. Stava solo
 ## nella scena; serve anche al sistema Non-Player, quindi vive qui.
+## §6.3: gli spazi che il Transport collega senza attivarne altri — Phobos e
+## ogni spazio con una Base MarsGov. `extra` aggiunge quelli attivati apposta.
+func transport_pool(extra: Array = []) -> PackedStringArray:
+	var out := PackedStringArray(["phobos"])
+	for sid in module.mars_spaces(state):
+		if module.count_in(state, String(sid), "mg_base") > 0:
+			out.append(String(sid))
+	for sid in extra:
+		if not Array(out).has(String(sid)):
+			out.append(String(sid))
+	return out
+
+
 func legal_origins(op_id: String, faction: String, dest: String,
 		type_id: String) -> PackedStringArray:
 	var out := PackedStringArray()
@@ -329,6 +342,14 @@ func legal_origins(op_id: String, faction: String, dest: String,
 		else ("red_dust" if op_id == "march" else "reclaimer")
 	var dest_def: SpaceDef = state.game_def.space(dest)
 	if dest_def == null:
+		return out
+	# §6.3 Transport: non si va per adiacenza ma per rete — Phobos, gli spazi con
+	# una Base MG e quelli attivati in più sono tutti collegati fra loro.
+	if op_id == "transport":
+		for sid in transport_pool():
+			var s2 := String(sid)
+			if s2 != dest and module.count_in(state, s2, type_id) > 0:
+				out.append(s2)
 		return out
 	for s in state.game_def.spaces:
 		if s.id == dest or module.count_in(state, s.id, type_id) == 0:
@@ -932,7 +953,7 @@ func _attack_removal_order(sid: String, faction: String) -> Array:
 		"rd_rebel", "cr_rebel", "specops", "mg_base", "corp_base", "rd_base", "cr_base"]
 	if np_piece_order.is_null() or not module.is_np(state, faction):
 		return DEFAULT_ORDER
-	var order: Array = np_piece_order.call(faction, sid, "remove")
+	var order: Array = np_piece_order.call(faction, sid, "enemy")
 	if order.is_empty():
 		return DEFAULT_ORDER
 	# La tabella non nomina per forza tutti i tipi: quel che manca resta in coda

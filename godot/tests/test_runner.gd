@@ -85,6 +85,7 @@ func _init() -> void:
 	test_np_event_symbols()
 	test_np_event_instructions()
 	test_np_capability_campaign_effects()
+	test_np_ambush_transport()
 	test_np_dust_storm_round()
 	test_np_example_of_play()
 	test_np_cards()
@@ -2419,6 +2420,140 @@ func _minus(pool, used: Array) -> Array:
 ## Coronae Montes, per dire, perde il Controllo COIN proprio perché i Reclaimer
 ## ci hanno appena messo un Ribelle, ed è quello a renderla l'unica scelta per il
 ## Train di MarsGov.
+## §8.7.6 e §8.7.7: l'Ambush non è un'Attività Speciale a parte, sceglie i dadi
+## di un Attack che si sta risolvendo. §8.7.4: il Transport passa dal motore
+## delle Move Priorities come le Operazioni di movimento.
+func test_np_ambush_transport() -> void:
+	print("Non-Player — Ambush e Transport (§8.7)")
+
+	# --- Ambush di NP CR: sempre 1 e 1 --------------------------------------
+	var sc := fresh()
+	var npc := np_for(sc, ["reclaimer"])
+	var oc := ops_for(sc)
+	var npoc := RDRNonPlayerOps.new(npc, oc)
+	var cr_space := ""
+	for sid in module.mars_spaces(sc):
+		if module.count_in(sc, String(sid), "cr_rebel", "hidden") > 0 \
+				and oc._enemy_force_count(String(sid), "reclaimer") > 0:
+			cr_space = String(sid)
+			break
+	ok(cr_space != "", "trovato uno spazio da Ambush per i Reclaimer (%s)" % cr_space)
+	eq(npoc._ambush_dice_for("reclaimer", cr_space), [1, 1],
+		"§8.7.7: NP CR mette sempre entrambi i dadi a 1")
+
+	# --- Ambush di NP RD: prima le Basi nemiche -----------------------------
+	# Uno spazio Neutrale con una Base MG protetta da tre Truppe e quattro
+	# Ribelli RD: per arrivare alla Base bisogna prima sfondare le Truppe, e
+	# quindi servono entrambi i dadi buoni. Con un dado solo (2 colpi) si tolgono
+	# due Truppe e la Base resta in piedi.
+	var s := fresh()
+	var np := np_for(s, ["red_dust"])
+	var o := ops_for(s)
+	var npo := RDRNonPlayerOps.new(np, o)
+	var target := "radau"
+	eq(s.spaces[target].support, CoinEnums.Support.NEUTRAL, "Radau è Neutrale")
+	for t0 in RDRModule.PIECE_OWNER.keys():
+		var n0 := module.count_in(s, target, String(t0))
+		if n0 > 0:
+			module.remove_pieces(s, target, String(t0), n0, "available")
+	module.place_from_available(s, target, "rd_rebel", 4, "hidden")
+	module.place_from_available(s, target, "mg_troop", 3)
+	module.place_from_available(s, target, "mg_base", 1)
+	var rebels := module.count_in(s, target, "rd_rebel")
+	var dice: Array = npo._ambush_dice_for("red_dust", target)
+	# Con quei dadi la Base cade davvero: è il primo criterio della scheda.
+	var forces0 := 0
+	for t1 in RDRModule.PIECE_OWNER.keys():
+		forces0 += module.count_in(s, target, String(t1))
+	var sim: Dictionary = npo._ambush_outcome("red_dust", target, rebels, forces0,
+		int(dice[0]), int(dice[1]))
+	eq(int(sim["bases"]), 1, "§8.7.6: i dadi scelti fanno cadere la Base MG")
+	ok(int(dice[0]) <= rebels and int(dice[1]) <= rebels,
+		"…e per riuscirci passano entrambi (%d/%d su %d Ribelli)"
+			% [int(dice[0]), int(dice[1]), rebels])
+	# Un dado solo non basterebbe: due colpi tolgono Truppe, non la Base.
+	var weak: Dictionary = npo._ambush_outcome("red_dust", target, rebels, forces0, 1, 6)
+	eq(int(weak["bases"]), 0, "…con un dado solo la Base resterebbe in piedi")
+
+	# Il Danno: si cerca in uno spazio a Supporto, si evita altrove.
+	# In uno spazio a Supporto con poche forze, la somma deve restare bassa.
+	var s2 := fresh()
+	var np2 := np_for(s2, ["red_dust"])
+	var o2 := ops_for(s2)
+	var npo2 := RDRNonPlayerOps.new(np2, o2)
+	var sup_space := "tenzing"
+	ok(s2.spaces[sup_space].support > 0, "%s è a Supporto" % sup_space)
+	module.place_from_available(s2, sup_space, "rd_rebel", 4, "hidden")
+	var forces := 0
+	for t in RDRModule.PIECE_OWNER.keys():
+		forces += module.count_in(s2, sup_space, String(t))
+	var d_sup: Array = npo2._ambush_dice_for("red_dust", sup_space)
+	ok(int(d_sup[0]) + int(d_sup[1]) <= forces,
+		"§8.7.6: a Supporto NP RD sceglie i dadi per PIAZZARE il Danno (%d+%d ≤ %d)"
+			% [int(d_sup[0]), int(d_sup[1]), forces])
+
+	# Fuori dal Supporto il Danno si evita, quando si può: pochi difensori e
+	# tanti Ribelli permettono una somma alta con entrambi i dadi ancora buoni.
+	var s3 := fresh()
+	var np3 := np_for(s3, ["red_dust"])
+	var o3 := ops_for(s3)
+	var npo3 := RDRNonPlayerOps.new(np3, o3)
+	var neu := "radau"
+	eq(s3.spaces[neu].support, CoinEnums.Support.NEUTRAL, "Radau è Neutrale")
+	for t2 in RDRModule.PIECE_OWNER.keys():
+		var n := module.count_in(s3, neu, String(t2))
+		if n > 0:
+			module.remove_pieces(s3, neu, String(t2), n, "available")
+	module.place_from_available(s3, neu, "rd_rebel", 6, "hidden")
+	module.place_from_available(s3, neu, "mg_troop", 1)
+	var forces3 := module.count_in(s3, neu, "rd_rebel") + module.count_in(s3, neu, "mg_troop")
+	var d_neu: Array = npo3._ambush_dice_for("red_dust", neu)
+	ok(int(d_neu[0]) + int(d_neu[1]) > forces3,
+		"§8.7.6: fuori dal Supporto NP RD EVITA il Danno (%d+%d > %d)"
+			% [int(d_neu[0]), int(d_neu[1]), forces3])
+	ok(int(d_neu[0]) <= 6 and int(d_neu[1]) <= 6, "…con dadi legali")
+
+	# --- Transport: la rete e il motore di movimento ------------------------
+	var s4 := fresh()
+	var o4 := ops_for(s4)
+	var pool := Array(o4.transport_pool())
+	ok(pool.has("phobos"), "§6.3: la rete del Transport comprende Phobos")
+	var mg_bases := 0
+	for sid in module.mars_spaces(s4):
+		if module.count_in(s4, String(sid), "mg_base") > 0:
+			mg_bases += 1
+			ok(pool.has(String(sid)), "…e %s, che ha una Base MG" % sid)
+	eq(pool.size(), mg_bases + 1, "la rete è Phobos più le Basi MG, niente altro")
+	# Uno spazio attivato in più entra nella rete.
+	ok(Array(o4.transport_pool(["radau"])).has("radau"),
+		"uno spazio attivato in più entra nella rete")
+	# Le origini del Transport sono quelle della rete, non le adiacenze.
+	var dest := ""
+	for sid in module.mars_spaces(s4):
+		if module.count_in(s4, String(sid), "mg_base") > 0:
+			dest = String(sid)
+			break
+	var origins := Array(o4.legal_origins_for("transport", "marsgov", dest, ["mg_troop"]))
+	for org in origins:
+		ok(pool.has(String(org)), "l'origine %s del Transport è nella rete" % org)
+
+	# Il bot esegue davvero il Transport, senza perdere Truppe per strada.
+	var s5 := fresh()
+	var np5 := np_for(s5, ["marsgov"])
+	var o5 := ops_for(s5)
+	var npo5 := RDRNonPlayerOps.new(np5, o5)
+	npo5.move = RDRNonPlayerMove.new(np5, o5)
+	var before := 0
+	for sid in s5.spaces.keys():
+		before += module.count_in(s5, String(sid), "mg_troop")
+	var res: Dictionary = npo5.run_special_activity("marsgov", [{"id": "transport"}])
+	ok(res.has("ok"), "il Transport NP restituisce un esito")
+	var after := 0
+	for sid in s5.spaces.keys():
+		after += module.count_in(s5, String(sid), "mg_troop")
+	eq(after, before, "il Transport sposta le Truppe MG, non le crea né le perde")
+
+
 ## La scheda «NP Dust Storm Round Instructions» (§8.5.9): Victory, Resources,
 ## Support, Redeploy, Reset per le Fazioni gestite dal bot.
 func test_np_dust_storm_round() -> void:
@@ -2966,11 +3101,17 @@ func test_np_operations() -> void:
 	var o := ops_for(s)
 	var npo := RDRNonPlayerOps.new(np, o)
 
-	# Le Operazioni che spostano pezzi restano fuori: manca la Move Priorities.
-	for op_id in ["secure", "recon", "march", "travel"]:
+	# Senza il motore di movimento collegato, le Operazioni che spostano pezzi
+	# si dichiarano non eseguibili invece di fallire a metà.
+	for op_id in ["secure", "recon", "march", "travel", "transport", "raid"]:
 		var gate: Dictionary = npo.can_run("red_dust", op_id)
-		eq(gate["ok"], false, "%s è bloccata: serve la Move Priorities" % op_id)
+		eq(gate["ok"], false, "%s senza motore di movimento è bloccata" % op_id)
 		ok(String(gate["error"]).contains("Move Priorities"), "…e il motivo è dichiarato")
+	# Collegandolo diventano eseguibili.
+	npo.move = RDRNonPlayerMove.new(np, o)
+	for op_id2 in ["secure", "recon", "march", "travel", "transport", "raid"]:
+		eq(npo.can_run("red_dust", op_id2)["ok"], true,
+			"%s si esegue col motore delle Move Priorities" % op_id2)
 	eq(npo.can_run("red_dust", "rally")["ok"], true, "il Rally invece si può eseguire")
 	eq(npo.can_run("marsgov", "train")["ok"], true, "il Train di NP MarsGov ora è eseguibile")
 

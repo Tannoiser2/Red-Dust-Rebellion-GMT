@@ -198,8 +198,13 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Attività Speciali delle Fazioni NP: «Select 1 Special Activity» prende la
       prima dell'elenco che abbia effetto — Purify, Ransack, Coordinate,
       Redistribute, Entrench, Petition, Public Relations, Exploit, Raid
-- [ ] Ambush e Transport: vanno intrecciate, non aggiunte — la prima modifica
-      l'Attack mentre lo si risolve, il secondo è un'Operazione di movimento
+- [x] **Ambush e Transport**, intrecciate e non aggiunte: l'Ambush non è
+      un'Attività Speciale a sé ma sceglie i dadi di un Attack che si sta
+      risolvendo — NP CR li mette sempre a 1, NP RD li sceglie fra tutti e 36
+      gli esiti col criterio della scheda (prima le Basi nemiche, poi il Danno
+      voluto o evitato, poi il numero di pezzi tolti). Il Transport passa dal
+      motore delle Move Priorities, e la sua rete — Phobos più le Basi MG — è
+      salita nelle regole perché la usano sia l'Attività Speciale sia il bot
 - [x] Interprete delle carte *Curiosity* (§8.5.3) e **tutte e 48 le facce**
       delle 24 carte in `data/np_cards.json`: riquadri in cima con sì/no verso
       «pesca» o «gira», bivi, blocchi di istruzioni e Attività Speciali. Gli `id`
@@ -221,14 +226,22 @@ fatto su Cuba Libre e All Bridges Burning.
       calcolabili (`critical_if`, `performed_if`, `perform`) le applica il motore
 - [x] Scelta dei ruoli nella schermata iniziale e turno del bot in interfaccia:
       la partita in solitario si apre e si gioca dall'app
-- [ ] Da trascrivere: Capability & Campaign Effects, istruzioni NP di Flashpoint
-      e Dust Storm Round
+- [x] **Capability & Campaign Effects**: le sei voci della scheda, e sotto di
+      esse i contatori surrogati che ora salgono e non solo scendono — ogni
+      pescata o scarto di Asset card dei Reclaimer NP muove l'Asset Total, e a
+      deviarlo è `RDRCards`, così Ransack, Rally, Passo, Eventi e Dust Storm
+      Round seguono senza saperne niente
+- [x] **Istruzioni NP del Flashpoint Round** (§8.5.9): le tre scelte della
+      scheda passano dai ganci Piece Priorities / Space Selection Priorities
+- [x] **Istruzioni NP del Dust Storm Round** (§8.5.9) in
+      `rules/NonPlayerRound.gd` e `data/np_dust_storm.json`: Victory, Resources,
+      Support (che era saltata per intero), Redeploy con le istruzioni numerate
+      delle tre Fazioni, Reset
 - [x] Libreria delle istruzioni §8.6 (`rules/NonPlayerOps.gd`): Rally (piazza
       Basi, piazza Ribelli, rimetti Nascosti, Dig-In), Attack nelle sue tre
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il
       tiro di Activation Number fra uno e l'altro, così le priorità rileggono la
       plancia come al tavolo
-- [ ] Round di Flashpoint e Dust Storm per le Fazioni NP (§8.5.9)
 - [x] **L'esempio di gioco del libretto** (§8.9) come test di regressione: la
       Carta 1 rigiocata mossa per mossa — la scelta degli spazi del Rally CR
       (Base, Ribelli, Dig-In, uno spazio alla volta e senza ripetizioni) e il

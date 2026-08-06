@@ -239,7 +239,7 @@ func _ship_from_earth(controller: String, budget: int) -> int:
 	# proprio quelle che gli servono, visto che il Supply Total sostituisce le
 	# sue Risorse.
 	if not np_piece_order.is_null() and module.is_np(state, controller):
-		var np_order: Array = np_piece_order.call(controller, "", "place")
+		var np_order: Array = np_piece_order.call(controller, "", "friendly_place")
 		var out: Array[String] = []
 		for token in np_order:
 			var t := String(token).split(":")[0]

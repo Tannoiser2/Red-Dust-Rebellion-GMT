@@ -490,6 +490,17 @@ func _execute(faction: String, op_id: String, dest: String, origin: String,
 			return ops.march({"dest": [dest], "moves": moves})
 		"travel":
 			return ops.travel({"origins": [origin], "moves": moves})
+		"transport":
+			# §6.3: il Transport non è un'Operazione ma un'Attività Speciale, e
+			# muove sulla rete Phobos + Basi MG. Se la destinazione non è già
+			# nella rete la si attiva come spazio aggiuntivo.
+			var sp := RDRSpecials.new(state, module)
+			var extra: Array = []
+			if not Array(ops.transport_pool()).has(dest):
+				extra.append(dest)
+			var res: Dictionary = sp.transport({"extra": extra, "moves": moves})
+			log_lines.append_array(sp.log_lines)
+			return res
 	return {"ok": false, "error": "Operazione '%s' non gestita." % op_id}
 
 
