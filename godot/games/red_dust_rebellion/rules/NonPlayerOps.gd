@@ -665,8 +665,11 @@ func _special_candidates(faction: String, sa_id: String) -> Array:
 		var okk := false
 		match sa_id:
 			"purify":
+				# §6.10: il Purify SOSTITUISCE forze nemiche, quindi senza nemici
+				# nello spazio non c'è niente da convertire.
 				okk = st.control == "reclaimer" \
-					and module.count_in(state, s, "cr_rebel", "hidden") > 0
+					and module.count_in(state, s, "cr_rebel", "hidden") > 0 \
+					and ops._enemy_force_count(s, "reclaimer") > 0
 			"ransack":
 				okk = module.marker(state, s, "damage") > 0 \
 					and module.count_in(state, s, "cr_rebel", "hidden") > 0

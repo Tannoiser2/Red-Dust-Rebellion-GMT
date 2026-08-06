@@ -151,7 +151,7 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] **Eventi delle 10 Asset card** in `data/asset_effects.json`, scritti con la
       stessa grammatica delle carte Evento e risolti dalla stessa macchina
 - [x] Mano dei Reclaimer giocabile dal pannello
-- [ ] Simboli Non-Player ★/⊘ sulle carte (sottolineato/riquadrato nel Playbook)
+- [x] Simboli Non-Player ★/⊘ sulle carte, in `data/np_event_symbols.json`
 - [ ] Scelte fini dentro le Operazioni gratuite: l'Evento le mette in coda con
       gli spazi già fissati, ma bersagli, dadi dell'Ambush e modalità del Rally
       usano ancora i piani minimi della UI
@@ -200,7 +200,6 @@ fatto su Cuba Libre e All Bridges Burning.
       Redistribute, Entrench, Petition, Public Relations, Exploit, Raid
 - [ ] Ambush e Transport: vanno intrecciate, non aggiunte — la prima modifica
       l'Attack mentre lo si risolve, il secondo è un'Operazione di movimento
-- [ ] Transport e Raid (Attività Speciali di movimento)
 - [x] Interprete delle carte *Curiosity* (§8.5.3) e **tutte e 48 le facce**
       delle 24 carte in `data/np_cards.json`: riquadri in cima con sì/no verso
       «pesca» o «gira», bivi, blocchi di istruzioni e Attività Speciali. Gli `id`
@@ -229,13 +228,13 @@ fatto su Cuba Libre e All Bridges Burning.
       varianti, Campaign e Preach — eseguite **uno spazio alla volta**, con il
       tiro di Activation Number fra uno e l'altro, così le priorità rileggono la
       plancia come al tavolo
-- [ ] Operazioni di movimento NP (Secure, Recon, March, Travel, Transport,
-      Raid): bloccate, serve la tabella Move Priorities
-- [ ] Attività Speciali §8.7 senza movimento (Redistribute, Coordinate, Purify,
-      Ransack, Exploit, Public Relations, Entrench, Petition)
 - [ ] Round di Flashpoint e Dust Storm per le Fazioni NP (§8.5.9)
-- [ ] L'esempio di gioco del libretto (§8.9, 12 pagine, setup e tiri noti) come
-      test di regressione del sistema
+- [x] **L'esempio di gioco del libretto** (§8.9) come test di regressione: la
+      Carta 1 rigiocata mossa per mossa — la scelta degli spazi del Rally CR
+      (Base, Ribelli, Dig-In, uno spazio alla volta e senza ripetizioni) e il
+      Train MG che ne consegue. Ha già ripagato il costo scovando due bug veri:
+      il Purify che convertiva un solo pezzo per Conversion Center e le Fazioni
+      NP che pagavano le Risorse
 
 ## Fase 7 — Rifiniture
 

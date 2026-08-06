@@ -88,6 +88,8 @@ func new_game(scenario: String = "standard", seed_value: int = 0,
 
 	np = RDRNonPlayer.new(state, rdr(), rng)
 	np.setup(np_factions)
+	# §8.5.4: le Fazioni NP non spendono Risorse né Asset card.
+	ops.non_player = np_factions.duplicate()
 	np_ops = RDRNonPlayerOps.new(np, ops)
 	np_move = RDRNonPlayerMove.new(np, ops)
 	np_ops.move = np_move

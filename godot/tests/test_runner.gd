@@ -84,6 +84,7 @@ func _init() -> void:
 	test_np_effective_events()
 	test_np_event_symbols()
 	test_np_event_instructions()
+	test_np_example_of_play()
 	test_np_cards()
 	test_campaign_effects()
 
@@ -2396,6 +2397,126 @@ func test_np_event_instructions() -> void:
 	var note28: Dictionary = np.event_instruction("red_dust", 28)
 	eq(String(note28.get("performed_if", "")), "four_in_displaced_population",
 		"#28 porta la sua condizione")
+
+
+## Candidati meno quelli già scelti per l'Operazione in corso.
+func _minus(pool, used: Array) -> Array:
+	var out: Array = []
+	for sid in pool:
+		if not used.has(String(sid)):
+			out.append(String(sid))
+	return out
+
+
+## §8.9: l'esempio di gioco del libretto, ripercorso passo per passo sullo
+## schieramento standard. Le Fazioni Non-Player sono MarsGov, Corporations e
+## Reclaimer; il Red Dust è il giocatore.
+##
+## NB: va REPLICATO IN SEQUENZA, non campionato sullo schieramento iniziale. Le
+## scelte del bot dipendono da come la plancia è cambiata un istante prima —
+## Coronae Montes, per dire, perde il Controllo COIN proprio perché i Reclaimer
+## ci hanno appena messo un Ribelle, ed è quello a renderla l'unica scelta per il
+## Train di MarsGov.
+func test_np_example_of_play() -> void:
+	print("Non-Player — esempio di gioco del libretto (§8.9)")
+	var s := fresh()
+	var np := np_for(s, ["marsgov", "corporations", "reclaimer"])
+	var o := ops_for(s)
+	o.cards = cards_for(s)
+	# §8.5.4: le Fazioni NP non pagano — i Reclaimer NP non hanno una mano di
+	# Asset card ma un Asset Total.
+	o.non_player = ["marsgov", "corporations", "reclaimer"]
+	var npo := RDRNonPlayerOps.new(np, o)
+
+	# --- CARTA 1, turno dei Reclaimer: Rally (carta CR–U) -------------------
+	# ① «Place Bases where 3+ CR Rebels and 1+ Hidden CR Rebel»: il libretto dice
+	# che c'è un solo spazio così, la Wilderness.
+	var base_spots: Array = []
+	for sid in o.rally_candidates("reclaimer"):
+		var sp := String(sid)
+		if module.count_in(s, sp, "cr_rebel") >= 3 \
+				and module.count_in(s, sp, "cr_rebel", "hidden") >= 1 \
+				and o.act.can_place_base(sp):
+			base_spots.append(sp)
+	eq(base_spots.size(), 1, "un solo spazio per le Basi CR (%s)" % ", ".join(base_spots))
+	eq(String(base_spots[0]), "wilderness", "…ed è la Wilderness, come nell'esempio")
+	o.rally({"faction": "reclaimer", "spaces": [{"id": "wilderness", "mode": "base"}]})
+
+	# ③ Si alternano Ribelli e potenziamenti, cominciando dai Ribelli.
+	# «fewest enemy forces» lascia solo Radau.
+	# §8.5.6: gli spazi si scelgono uno alla volta e non si ripetono.
+	var used: Array[String] = []
+	var pick := np.select_space("reclaimer", "place_rebels", _minus(o.rally_candidates("reclaimer"), used))
+	eq(String(pick["space"]), "radau", "il primo Ribelle va a Radau (scelto: %s — %s)" % [
+		pick["space"], ", ".join(PackedStringArray(pick["trace"]))])
+	o.rally({"faction": "reclaimer", "spaces": [{"id": "radau", "mode": "place"}]})
+	used.append("radau")
+
+	# Poi si potenzia una Base: Ascraeus Mons ha più Ribelli CR e meno forze
+	# nemiche di New Córdoba. La Wilderness ne ha persi due per la Base.
+	var upgrade_pool: Array = []
+	for sid3 in module.mars_spaces(s):
+		var sp3 := String(sid3)
+		if module.count_in(s, sp3, "cr_base", "basic") > 0:
+			upgrade_pool.append(sp3)
+	var up := np.select_space("reclaimer", "place_or_upgrade_bases", upgrade_pool)
+	eq(String(up["space"]), "ascraeus_mons", "si potenzia Ascraeus Mons (scelto: %s — %s)" % [
+		up["space"], ", ".join(PackedStringArray(up["trace"]))])
+	o.rally({"faction": "reclaimer", "spaces": [{"id": "ascraeus_mons", "mode": "upgrade"}]})
+
+	# Poi di nuovo Ribelli: Noctis Labyrinthus (Base nemica vulnerabile, forze
+	# nemiche a pari merito e più Popolazione).
+	var pick2 := np.select_space("reclaimer", "place_rebels", _minus(o.rally_candidates("reclaimer"), used))
+	eq(String(pick2["space"]), "noctis_labyrinthus",
+		"il Ribelle dopo va a Noctis Labyrinthus (scelto: %s — %s)" % [
+			pick2["space"], ", ".join(PackedStringArray(pick2["trace"]))])
+	o.rally({"faction": "reclaimer", "spaces": [{"id": "noctis_labyrinthus", "mode": "place"}]})
+	used.append("noctis_labyrinthus")
+
+	# Poi si potenzia New Córdoba, che ora ha più Ribelli.
+	upgrade_pool.clear()
+	for sid4 in module.mars_spaces(s):
+		var sp4 := String(sid4)
+		if module.count_in(s, sp4, "cr_base", "basic") > 0:
+			upgrade_pool.append(sp4)
+	var up2 := np.select_space("reclaimer", "place_or_upgrade_bases", upgrade_pool)
+	eq(String(up2["space"]), "new_cordoba", "si potenzia New Córdoba (scelto: %s — %s)" % [
+		up2["space"], ", ".join(PackedStringArray(up2["trace"]))])
+	o.rally({"faction": "reclaimer", "spaces": [{"id": "new_cordoba", "mode": "upgrade"}]})
+
+	# E infine un Ribelle a Coronae Montes.
+	var pick3 := np.select_space("reclaimer", "place_rebels", _minus(o.rally_candidates("reclaimer"), used))
+	eq(String(pick3["space"]), "coronae_montes",
+		"l'ultimo Ribelle va a Coronae Montes (scelto: %s — %s)" % [
+			pick3["space"], ", ".join(PackedStringArray(pick3["trace"]))])
+	o.rally({"faction": "reclaimer", "spaces": [{"id": "coronae_montes", "mode": "place"}]})
+
+	# Attività Speciale: niente Purify possibile, quindi Ransack — e la tabella
+	# porta a Coronae Montes e Ascraeus Mons.
+	eq(npo._special_candidates("reclaimer", "purify").is_empty(), true,
+		"nessuno spazio per il Purify, come dice l'esempio")
+	var ransack := np.select_spaces("reclaimer", "ransack",
+		npo._special_candidates("reclaimer", "ransack"), 2)
+	eq(ransack.size(), 2, "il Ransack prende due spazi")
+	ok(ransack.has("coronae_montes") and ransack.has("ascraeus_mons"),
+		"…Coronae Montes e Ascraeus Mons (%s)" % ", ".join(PackedStringArray(ransack)))
+
+	# --- CARTA 1, turno di MarsGov: Train Limitato (carta MG–A) -------------
+	# Ora Coronae Montes ha tre Ribelli CR contro tre forze COIN: il Controllo
+	# COIN è caduto, ed è per questo che diventa l'unica scelta.
+	module.recompute_all_control(s)
+	eq(s.spaces["coronae_montes"].control, "",
+		"dopo il turno CR, Coronae Montes non è più sotto Controllo COIN")
+	var troops := np.select_space("marsgov", "place_cubes", Array(o.train_candidates()))
+	eq(String(troops["space"]), "coronae_montes",
+		"le Truppe MG vanno a Coronae Montes (scelto: %s — %s)" % [
+			troops["space"], ", ".join(PackedStringArray(troops["trace"]))])
+
+	# Pacify: House impossibile perché lo spazio ha Danno, quindi Repair.
+	eq(o.act.can_house("coronae_montes"), false,
+		"House impossibile a Coronae Montes: lo spazio ha Danno")
+	var actions := npo._pacify_actions("coronae_montes")
+	ok(actions.has("repair"), "…quindi si ripara (%s)" % ", ".join(PackedStringArray(actions)))
 
 
 func test_np_cards() -> void:

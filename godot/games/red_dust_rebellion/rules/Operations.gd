@@ -32,6 +32,10 @@ var _cr_metabolism_spaces: Array[String] = []
 ## §7.0: le Operazioni gratuite concesse dagli Eventi non costano Risorse (né
 ## Asset card per i Reclaimer).
 var free := false
+## §8.5.4: «NP Factions do not track or spend Resources». Le Fazioni gestite dal
+## sistema Non-Player non pagano: i Reclaimer NP, in particolare, non hanno una
+## mano di Asset card da scartare ma un Asset Total sull'edge track.
+var non_player: Array = []
 
 
 func _init(p_state: GameState, p_module: RDRModule, p_rng: RandomNumberGenerator = null) -> void:
@@ -60,7 +64,7 @@ func _done(spent: int) -> Dictionary:
 ## §5.0: il costo si paga dopo aver risolto tutti gli spazi, e non si possono
 ## scegliere più spazi di quanti se ne possano pagare.
 func _can_pay(faction: String, cost: int) -> bool:
-	if free:
+	if free or non_player.has(faction):
 		return true
 	if faction == "corporations":
 		return true  # le Corporations non spendono Risorse per le Operazioni
@@ -78,6 +82,8 @@ func _can_pay(faction: String, cost: int) -> bool:
 func _pay(faction: String, cost: int) -> void:
 	if cost <= 0:
 		return
+	if non_player.has(faction):
+		return   # §8.5.4: le Fazioni NP non spendono Risorse
 	if free:
 		log_lines.append("Operazione gratuita: %d Risorse non pagate." % cost)
 		return
