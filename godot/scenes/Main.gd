@@ -1158,6 +1158,7 @@ func _refresh_op_bar() -> void:
 			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
 			b.tooltip_text = String(OPERATION_TIPS.get(op_id, ""))
 			b.pressed.connect(_start_op.bind(String(op_id)))
+			RDRTheme.faction_button(b, fid)
 			_ops_box.add_child(b)
 		# §7.0: l'Evento, nelle sue due opzioni, quando è consentito.
 		if gc.sequence.is_legal(CoinEnums.ActionType.EVENT):
@@ -1168,9 +1169,10 @@ func _refresh_op_bar() -> void:
 					if opt.is_empty():
 						continue
 					var e := Button.new()
-					e.text = "Ev. ombr." if shaded else "Evento"
+					e.text = "Evento ombreggiato" if shaded else "Evento"
 					e.tooltip_text = String(opt.get("text", ""))
 					e.pressed.connect(_start_event.bind(shaded))
+					RDRTheme.accent_button(e, RDRTheme.BTN_HOVER_BG, RDRTheme.ACCENT)
 					_ops_box.add_child(e)
 		# §7.0: Operazioni gratuite concesse da un Evento e non ancora eseguite.
 		var queue: Array = gc.pending_free_ops()
@@ -1185,12 +1187,14 @@ func _refresh_op_bar() -> void:
 				gc.game_def.faction(String(entry.get("faction", ""))).short_name]
 			fb.tooltip_text = String(entry.get("note", ""))
 			fb.pressed.connect(_run_free_op.bind(i))
+			RDRTheme.accent_button(fb, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
 			_ops_box.add_child(fb)
 		for sa_id in gc.UI_SPECIALS.get(fid, {}).keys():
 			var sb := Button.new()
-			sb.text = "· %s" % gc.SPECIAL_NAMES.get(sa_id, sa_id)
+			sb.text = "%s" % gc.SPECIAL_NAMES.get(sa_id, sa_id)
 			sb.tooltip_text = "Attività Speciale (§6.0)"
 			sb.pressed.connect(_start_sa.bind(String(sa_id)))
+			RDRTheme.style_button(sb)
 			_ops_box.add_child(sb)
 		_refresh_move_box()
 		return

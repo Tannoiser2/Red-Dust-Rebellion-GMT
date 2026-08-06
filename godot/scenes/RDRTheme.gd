@@ -27,20 +27,31 @@ const BTN_PRESSED_BG := Color("241c16")
 const BTN_DISABLED_BG := Color("241f1b")
 const BTN_DISABLED_BORDER := Color("352e28")
 const BTN_DISABLED_TEXT := Color("6b6058")
-const FONT_SIZE := 12
+const FONT_SIZE := 13
+## Angolo e respiro dei tasti: con 6 px di raggio e 3 di margine verticale
+## sembravano etichette, non comandi da premere.
+const BTN_RADIUS := 10
+const BTN_PAD_X := 13.0
+const BTN_PAD_Y := 7.0
 
 
 ## Riquadro arrotondato con bordo, usato per tutti gli stati dei tasti.
-static func box(bg: Color, border: Color) -> StyleBoxFlat:
+## `border_w` a 2 per gli stati che devono staccarsi (hover, tasto in evidenza).
+static func box(bg: Color, border: Color, border_w: int = 1) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
-	s.set_corner_radius_all(6)
-	s.set_border_width_all(1)
+	s.set_corner_radius_all(BTN_RADIUS)
+	s.set_border_width_all(border_w)
 	s.border_color = border
-	s.content_margin_left = 8.0
-	s.content_margin_right = 8.0
-	s.content_margin_top = 3.0
-	s.content_margin_bottom = 3.0
+	s.content_margin_left = BTN_PAD_X
+	s.content_margin_right = BTN_PAD_X
+	s.content_margin_top = BTN_PAD_Y
+	s.content_margin_bottom = BTN_PAD_Y
+	# Un'ombra breve stacca il tasto dal fondo scuro del pannello: è quel che
+	# distingue a colpo d'occhio un comando da un'etichetta.
+	s.shadow_color = Color(0, 0, 0, 0.45)
+	s.shadow_size = 3
+	s.shadow_offset = Vector2(0, 2)
 	return s
 
 
@@ -50,9 +61,15 @@ static func box(bg: Color, border: Color) -> StyleBoxFlat:
 static func make_theme() -> Theme:
 	var t := Theme.new()
 	t.set_stylebox("normal", "Button", box(BTN_BG, BTN_BORDER))
-	t.set_stylebox("hover", "Button", box(BTN_HOVER_BG, BTN_HOVER_BORDER))
-	t.set_stylebox("pressed", "Button", box(BTN_PRESSED_BG, BTN_BORDER))
+	t.set_stylebox("hover", "Button", box(BTN_HOVER_BG, BTN_HOVER_BORDER, 2))
+	t.set_stylebox("pressed", "Button", box(BTN_PRESSED_BG, BTN_HOVER_BORDER, 2))
 	t.set_stylebox("disabled", "Button", box(BTN_DISABLED_BG, BTN_DISABLED_BORDER))
+	for cb in ["CheckButton", "CheckBox", "MenuButton", "OptionButton"]:
+		t.set_stylebox("normal", cb, box(BTN_BG, BTN_BORDER))
+		t.set_stylebox("hover", cb, box(BTN_HOVER_BG, BTN_HOVER_BORDER, 2))
+		t.set_stylebox("pressed", cb, box(BTN_PRESSED_BG, BTN_HOVER_BORDER, 2))
+		t.set_color("font_color", cb, TEXT)
+		t.set_font_size("font_size", cb, FONT_SIZE)
 	t.set_color("font_color", "Button", TEXT)
 	t.set_color("font_hover_color", "Button", Color.WHITE)
 	t.set_color("font_disabled_color", "Button", BTN_DISABLED_TEXT)
@@ -89,10 +106,30 @@ static func style_button(b: Button) -> void:
 
 ## Tasto in evidenza, con sfondo pieno (per «Esegui» e simili).
 static func accent_button(b: Button, bg: Color, border: Color) -> void:
-	b.add_theme_stylebox_override("normal", box(bg, border))
-	b.add_theme_stylebox_override("hover", box(bg.lightened(0.12), border))
-	b.add_theme_stylebox_override("pressed", box(bg.darkened(0.18), border))
+	b.add_theme_stylebox_override("normal", box(bg, border, 2))
+	b.add_theme_stylebox_override("hover", box(bg.lightened(0.14), border.lightened(0.2), 2))
+	b.add_theme_stylebox_override("pressed", box(bg.darkened(0.2), border, 2))
 	b.add_theme_color_override("font_color", Color.WHITE)
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+
+
+## Tasto di un'Operazione: bordo e sfumatura del colore della Fazione che agisce,
+## così la barra dice a colpo d'occhio chi sta muovendo senza doverlo leggere.
+static func faction_button(b: Button, faction: String) -> void:
+	var col: Color = RDRAssets.FACTION_COLORS.get(faction, BTN_BORDER)
+	# Il nero delle Corporations, scurito, sparirebbe sul fondo del pannello:
+	# sotto una certa luminosità si schiarisce invece di scurire.
+	if col.get_luminance() < 0.18:
+		col = col.lightened(0.45)
+	var bg := col.darkened(0.72)
+	bg.a = 1.0
+	b.add_theme_stylebox_override("normal", box(bg, col.darkened(0.35)))
+	b.add_theme_stylebox_override("hover", box(bg.lightened(0.18), col, 2))
+	b.add_theme_stylebox_override("pressed", box(bg.darkened(0.25), col, 2))
+	b.add_theme_color_override("font_color", col.lightened(0.55))
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_font_size_override("font_size", FONT_SIZE)
+	b.focus_mode = Control.FOCUS_NONE
 
 
 ## Testo su fondino del colore della Fazione (log e pannelli). Il nero delle
