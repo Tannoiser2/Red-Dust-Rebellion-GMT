@@ -421,7 +421,8 @@ func run_operation(faction: String, op_id: String, activation_number: int,
 		if not _step_c_new_destination(faction, dest, origin):
 			used_dest.erase(dest)   # si riprova la stessa destinazione da un'altra origine
 		if activation_number > 0:
-			var check := np.activation_check(faction, activation_number, limited)
+			var check := np.activation_check(
+				faction, activation_number, limited, dest, op_id)
 			if not bool(check["ok"]):
 				break
 	return {"ok": true, "pairs": pairs, "trace": trace}

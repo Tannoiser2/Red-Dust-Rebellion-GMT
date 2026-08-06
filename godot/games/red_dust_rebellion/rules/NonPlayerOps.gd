@@ -35,6 +35,11 @@ func _init(p_np: RDRNonPlayer, p_ops: RDROperations) -> void:
 	ops = p_ops
 	state = p_np.state
 	module = p_np.module
+	# Le Operazioni chiamano queste due dove al tavolo sceglierebbe il giocatore.
+	ops.np_piece_order = func(acting: String, sid: String, purpose: String) -> Array:
+		return np.piece_order(acting, sid, purpose)
+	ops.np_space_order = func(acting: String, column: String, candidates: Array) -> String:
+		return String(np.select_space(acting, column, candidates).get("space", ""))
 	var path := RDRModule.DATA_DIR + "np_cards.json"
 	if FileAccess.file_exists(path):
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
@@ -623,7 +628,14 @@ func _run_special(faction: String, sa_id: String) -> Dictionary:
 		"exploit":
 			res = sp.exploit({"spaces": picks})
 		"ransack":
-			res = sp.ransack({"spaces": picks})
+			# Capability #24 "AI Unleashed": il Ransack toglie 3 Risorse MarsGov
+			# oppure 1 Profit. La scheda dice che NP CR colpisce prima una Fazione
+			# di un giocatore, e ripiega sui Profits — che sono di tutti — solo se
+			# MarsGov è a sua volta un bot.
+			res = sp.ransack({
+				"spaces": picks,
+				"ai_target": "resources" if np.is_player("marsgov") else "profits",
+			})
 		"redistribute":
 			res = sp.redistribute({"spaces": picks})
 		"purify":
@@ -710,8 +722,10 @@ func can_run(faction: String, op_id: String) -> Dictionary:
 ## Esegue `body` in uno spazio alla volta: sceglie con le priorità, esegue, tira
 ## l'Activation Number e continua finché il tiro passa. `candidates` è chiamata a
 ## ogni giro perché la plancia cambia. Restituisce gli spazi usati davvero.
+## `op_id` serve solo alle Campaign card che rincarano una singola Operazione
+## (§Capability & Campaign Effects); le altre guardano solo lo spazio.
 func run_by_space(faction: String, column: String, candidates: Callable, body: Callable,
-		activation_number: int, limited: bool = false) -> Array:
+		activation_number: int, limited: bool = false, op_id: String = "") -> Array:
 	var used: Array = []
 	var cap: int = np.limited_space_cap(faction) if limited else 99
 	while used.size() < cap:
@@ -732,7 +746,8 @@ func run_by_space(faction: String, column: String, candidates: Callable, body: C
 		# §8.5.4: l'Activation Number decide se si continua.
 		if activation_number <= 0:
 			continue
-		var check: Dictionary = np.activation_check(faction, activation_number, limited)
+		var check: Dictionary = np.activation_check(
+			faction, activation_number, limited, sid2, op_id)
 		if not bool(check["ok"]):
 			break
 	return used
@@ -752,7 +767,7 @@ func train(activation_number: int, limited: bool = false) -> Array:
 	var body := func(sid: String) -> bool:
 		return bool(ops.train({"spaces": [{"id": sid, "troops": 4}]}).get("ok", false))
 	var used := run_by_space("marsgov", "place_cubes", candidates, body,
-		activation_number, limited)
+		activation_number, limited, "train")
 
 	var pool: Array = []
 	for sid in used:
@@ -817,7 +832,7 @@ func assault(faction: String, mode: String, activation_number: int,
 			plan["bombard"] = [sid]
 		return bool(ops.assault(plan).get("ok", false))
 	return run_by_space(faction, "remove_or_replace", candidates, body,
-		activation_number, limited)
+		activation_number, limited, "assault")
 
 
 ## Le due azioni di Pacify, nell'ordine della carta e solo se hanno effetto.
@@ -911,7 +926,8 @@ func rally_place_rebels(faction: String, activation_number: int,
 	var body := func(sid: String) -> bool:
 		return bool(ops.rally({"faction": faction,
 			"spaces": [{"id": sid, "mode": "place"}]}).get("ok", false))
-	return run_by_space(faction, "place_rebels", candidates, body, activation_number, limited)
+	return run_by_space(faction, "place_rebels", candidates, body, activation_number,
+		limited, "rally")
 
 
 ## "Flip most Rebels where all Active": fra gli spazi con una Base propria e soli
@@ -990,7 +1006,7 @@ func attack(faction: String, mode: String, activation_number: int,
 		return out
 	var body := func(sid: String) -> bool:
 		return bool(ops.attack({"faction": faction, "spaces": [sid]}).get("ok", false))
-	return run_by_space(faction, "attack", candidates, body, activation_number, limited)
+	return run_by_space(faction, "attack", candidates, body, activation_number, limited, "attack")
 
 
 ## §8.6.6 Campaign — Red Dust. Se lo spazio ha una Base RD e Ribelli Nascosti,

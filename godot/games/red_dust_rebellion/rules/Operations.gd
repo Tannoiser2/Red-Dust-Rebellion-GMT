@@ -32,10 +32,14 @@ var _cr_metabolism_spaces: Array[String] = []
 ## §7.0: le Operazioni gratuite concesse dagli Eventi non costano Risorse (né
 ## Asset card per i Reclaimer).
 var free := false
-## §8.5.4: «NP Factions do not track or spend Resources». Le Fazioni gestite dal
-## sistema Non-Player non pagano: i Reclaimer NP, in particolare, non hanno una
-## mano di Asset card da scartare ma un Asset Total sull'edge track.
-var non_player: Array = []
+
+## Ganci del sistema Non-Player, riempiti da `RDRNonPlayerOps`. Servono dove
+## un'Operazione fa una scelta che al tavolo spetterebbe al giocatore e che per
+## un bot va invece letta dalle tabelle §8.5.6 e §8.5.8.
+## `np_piece_order.call(acting, sid, purpose) -> Array[String]` (Piece Priorities)
+## `np_space_order.call(acting, column, candidates) -> String` (Space Selection)
+var np_piece_order: Callable = Callable()
+var np_space_order: Callable = Callable()
 
 
 func _init(p_state: GameState, p_module: RDRModule, p_rng: RandomNumberGenerator = null) -> void:
@@ -64,7 +68,9 @@ func _done(spent: int) -> Dictionary:
 ## §5.0: il costo si paga dopo aver risolto tutti gli spazi, e non si possono
 ## scegliere più spazi di quanti se ne possano pagare.
 func _can_pay(faction: String, cost: int) -> bool:
-	if free or non_player.has(faction):
+	# §8.5.4: «NP Factions do not track or spend Resources». I Reclaimer NP, in
+	# particolare, non hanno una mano di Asset card ma un Asset Total.
+	if free or module.is_np(state, faction):
 		return true
 	if faction == "corporations":
 		return true  # le Corporations non spendono Risorse per le Operazioni
@@ -82,7 +88,7 @@ func _can_pay(faction: String, cost: int) -> bool:
 func _pay(faction: String, cost: int) -> void:
 	if cost <= 0:
 		return
-	if non_player.has(faction):
+	if module.is_np(state, faction):
 		return   # §8.5.4: le Fazioni NP non spendono Risorse
 	if free:
 		log_lines.append("Operazione gratuita: %d Risorse non pagate." % cost)
@@ -598,9 +604,16 @@ func assault(plan: Dictionary) -> Dictionary:
 		_resolve_attack_space(String(fa["space"]), String(fa["faction"]), [])
 
 	# Capability #3 "Enhanced Metabolism": dopo un Assault che ha tolto forze
-	# Reclaimer, i Reclaimer rimettono un Ribelle in uno di quegli spazi.
+	# Reclaimer, i Reclaimer rimettono un Ribelle in uno di quegli spazi. La
+	# scelta spetterebbe a loro, ma cade nel mezzo dell'Assault di qualcun altro
+	# e l'interfaccia non la sa ancora chiedere: si prende il primo spazio, che
+	# è anche esattamente quel che prescrive la scheda per i Reclaimer NP
+	# («place a Rebel into the first Assault space where any CR forces are
+	# moved»). `cr_metabolism` nel piano permette di indicarne un altro.
 	if module.capability_active(state, 3) and not _cr_metabolism_spaces.is_empty():
-		var back := String(_cr_metabolism_spaces[0])
+		var wanted := String(plan.get("cr_metabolism", ""))
+		var back: String = wanted if _cr_metabolism_spaces.has(wanted) \
+			else String(_cr_metabolism_spaces[0])
 		if module.place_from_available(state, back, "cr_rebel", 1, "hidden") > 0:
 			log_lines.append("Enhanced Metabolism: 1 Ribelle Reclaimer torna in %s." %
 				state.game_def.space(back).name)
@@ -882,11 +895,10 @@ func _resolve_attack_space(sid: String, faction: String, ambush_dice: Array) -> 
 	# §5.9: gli SpecOps Nascosti non si possono colpire (e non proteggono le Basi);
 	# i Ribelli Nascosti dell'altra Fazione sì. Le Basi per ultime.
 	var priority: Array[String] = []
-	for type_id in ["mg_troop", "security", "eg_troop", "satellite",
-			"rd_rebel", "cr_rebel", "specops", "mg_base", "corp_base", "rd_base", "cr_base"]:
-		if RDRModule.PIECE_OWNER[type_id] == faction:
+	for type_id in _attack_removal_order(sid, faction):
+		if RDRModule.PIECE_OWNER[String(type_id)] == faction:
 			continue
-		priority.append(type_id)
+		priority.append(String(type_id))
 	var spent := 0
 	while spent < budget:
 		var removed := _remove_one_for_attack(sid, priority)
@@ -897,18 +909,58 @@ func _resolve_attack_space(sid: String, faction: String, ambush_dice: Array) -> 
 	# Capability #26 "Ares Rockets": quel che avanza può colpire i Satelliti
 	# ovunque su Mars, non solo nello spazio dell'Attack.
 	if faction == "reclaimer" and module.capability_active(state, 26):
-		for other in module.mars_spaces(state):
-			if spent >= budget:
+		while spent < budget:
+			var o := _ares_target(sid, faction)
+			if o == "":
 				break
-			var o := String(other)
-			if o == sid or module.count_in(state, o, "satellite") == 0:
-				continue
-			if module.remove_pieces(state, o, "satellite", 1, "casualties") > 0:
-				log_lines.append("Ares Rockets: Satellite abbattuto in %s." %
-					state.game_def.space(o).name)
-				spent += 1
+			if module.remove_pieces(state, o, "satellite", 1, "casualties") == 0:
+				break
+			log_lines.append("Ares Rockets: Satellite abbattuto in %s." %
+				state.game_def.space(o).name)
+			spent += 1
 	log_lines.append("%s: Attack %s — dadi %d/%d su %d Ribelli e %d forze." % [
 		state.game_def.space(sid).name, faction, d1, d2, rebels, total_forces])
+
+
+## §5.9: gli SpecOps Nascosti non si possono colpire (e non proteggono le Basi);
+## i Ribelli Nascosti dell'altra Fazione sì. Le Basi per ultime.
+## Per una Fazione NP l'ordine lo detta la tabella Piece Priorities (§8.5.8), che
+## fra l'altro decide se un Attack riuscito con "Ares Rockets" spende un colpo
+## su un Satellite invece che sulle forze a terra.
+func _attack_removal_order(sid: String, faction: String) -> Array:
+	const DEFAULT_ORDER := ["mg_troop", "security", "eg_troop", "satellite",
+		"rd_rebel", "cr_rebel", "specops", "mg_base", "corp_base", "rd_base", "cr_base"]
+	if np_piece_order.is_null() or not module.is_np(state, faction):
+		return DEFAULT_ORDER
+	var order: Array = np_piece_order.call(faction, sid, "remove")
+	if order.is_empty():
+		return DEFAULT_ORDER
+	# La tabella non nomina per forza tutti i tipi: quel che manca resta in coda
+	# nell'ordine di default, così non si smette mai di poter colpire.
+	var out: Array = []
+	for t in order:
+		if RDRModule.PIECE_OWNER.has(String(t)) and not out.has(String(t)):
+			out.append(String(t))
+	for t in DEFAULT_ORDER:
+		if not out.has(t):
+			out.append(t)
+	return out
+
+
+## Dove "Ares Rockets" abbatte il prossimo Satellite. Per una Fazione NP la
+## scheda manda alla colonna Remove or Replace delle Space Selection Priorities.
+func _ares_target(sid: String, faction: String) -> String:
+	var pool: Array = []
+	for other in module.mars_spaces(state):
+		var o := String(other)
+		if o != sid and module.count_in(state, o, "satellite") > 0:
+			pool.append(o)
+	if pool.is_empty():
+		return ""
+	if np_space_order.is_null() or not module.is_np(state, faction):
+		return String(pool[0])
+	var pick := String(np_space_order.call(faction, "remove_or_replace", pool))
+	return pick if pick != "" else String(pool[0])
 
 
 func _remove_one_for_attack(sid: String, priority: Array[String]) -> String:

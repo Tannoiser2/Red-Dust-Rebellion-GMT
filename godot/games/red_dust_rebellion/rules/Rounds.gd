@@ -163,14 +163,29 @@ func aldrin_cycler() -> void:
 			log_line("Campaign «Dock Workers Lockout»: %d Supply scartate." % lost)
 		# Campaign #8 "Earth-Based Endorsements": ogni Supply vale 2 Risorse
 		# MarsGov e 1 Red Dust invece di 3 MarsGov.
-		if module.campaign_active(state, 8):
+		var endorsements := module.campaign_active(state, 8)
+		# §8.5.4: le Supply che arriverebbero a Risorse MarsGov alzano invece il
+		# Supply Total di 1 ciascuna, quante che siano le Risorse che avrebbero
+		# fruttato — così la Campaign non cambia niente per NP MG.
+		if module.is_np(state, "marsgov"):
+			module.add_supply(state, supply)
+			log_line("Aldrin Cycler: %d Supply su Phobos → Supply Total %d." % [
+				supply, module.supply_total(state)])
+		elif endorsements:
 			state.add_resources("marsgov", supply * 2, 50)
-			state.add_resources("red_dust", supply, 50)
-			log_line("Aldrin Cycler: %d Supply → +%d MarsGov, +%d Red Dust." % [
-				supply, supply * 2, supply])
+			log_line("Aldrin Cycler: %d Supply → +%d Risorse MarsGov." % [supply, supply * 2])
 		else:
 			state.add_resources("marsgov", supply * 3, 50)
 			log_line("Aldrin Cycler: %d Supply su Phobos → +%d Risorse MarsGov." % [supply, supply * 3])
+		# La quota Red Dust della Campaign: per NP RD diventa Agitate Total.
+		if endorsements:
+			if module.is_np(state, "red_dust"):
+				module.add_agitate(state, supply)
+				log_line("Earth-Based Endorsements: Agitate Total +%d (ora %d)." % [
+					supply, module.agitate_total(state)])
+			else:
+				state.add_resources("red_dust", supply, 50)
+				log_line("Earth-Based Endorsements: +%d Risorse Red Dust." % supply)
 
 	# Una Popolazione da Earth a Transit (al massimo una alla volta in Transit).
 	if module.marker(state, "earth", "population") > 0 and module.marker(state, "transit", "population") == 0:

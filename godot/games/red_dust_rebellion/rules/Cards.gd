@@ -49,8 +49,14 @@ func setup() -> void:
 	state.tracks["asset_hand"] = []
 	state.tracks["asset_discard"] = []
 	state.tracks["capabilities"] = []
-	for i in range(3):
-		draw_asset()
+	if _cr_is_np():
+		# §8.4.1: l'Asset Total parte da 3, cioè le tre carte iniziali. Si assegna
+		# invece di sommare, perché `RDRNonPlayer.setup()` può averlo già scritto
+		# e le due preparazioni non devono raddoppiarsi.
+		state.tracks["asset_total"] = 3
+	else:
+		for i in range(3):
+			draw_asset()
 	state.tracks["campaign_deck"] = _shuffled(campaigns.keys())
 	state.tracks["campaign_in_play"] = -1
 	draw_campaign_into_play()
@@ -87,9 +93,27 @@ func active_capabilities() -> Array:
 	return state.tracks.get("capabilities", [])
 
 
+## §8.2: i Reclaimer gestiti dal sistema Non-Player non hanno una mano — al suo
+## posto tengono l'Asset Total sull'edge track. Qui passa ogni pescata e ogni
+## scarto del gioco, quindi basta deviare da qui perché tutto il resto (Ransack,
+## Rally, Passo, Eventi, Dust Storm Round) segua senza saperne niente.
+func _cr_is_np() -> bool:
+	return module.is_np(state, "reclaimer")
+
+
 ## §1.5: se il mazzo è esaurito non si pesca più fino al Reset del prossimo
 ## Dust Storm Round, quando gli scarti vengono rimescolati.
 func draw_asset(n: int = 1) -> int:
+	if _cr_is_np():
+		# §8.2: l'Asset Total si ferma a 6, e le pescate oltre il limite sono
+		# perse esattamente come le carte scartate per il limite di mano.
+		var before := module.asset_total(state)
+		module.add_asset(state, n)
+		var gained := module.asset_total(state) - before
+		if gained > 0:
+			log_lines.append("NP Reclaimer: Asset Total +%d (ora %d)." % [
+				gained, module.asset_total(state)])
+		return gained
 	var drawn := 0
 	for i in range(n):
 		var d: Array = deck()
@@ -126,6 +150,10 @@ func value_of(number: int, operation: String = "") -> int:
 ## al costo; l'eccedenza è persa. Restituisce false se la mano non basta.
 func pay(amount: int, operation: String = "") -> bool:
 	if amount <= 0:
+		return true
+	if _cr_is_np():
+		# §8.5.4: le Fazioni NP non spendono Risorse. L'Asset Total cala solo
+		# quando converte un tiro di Activation Number fallito.
 		return true
 	var h: Array = hand()
 	# Politica automatica: si spendono prima le carte di solo valore (le più
@@ -173,6 +201,12 @@ func _cheapest_index(h: Array) -> int:
 ## §4.1: scarta `n` carte per avanzare di `n` posizioni nell'ordine stampato.
 ## Le carte #19 e #22 fanno pescare una carta se scartate per diventare 1ª.
 func discard_for_eligibility(n: int) -> int:
+	if _cr_is_np():
+		var done_np: int = mini(n, module.asset_total(state))
+		module.add_asset(state, -done_np)
+		if done_np > 0:
+			log_lines.append("NP Reclaimer: Asset Total −%d per anticipare il turno." % done_np)
+		return done_np
 	var h: Array = hand()
 	var done := 0
 	var bonus_draws := 0

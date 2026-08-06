@@ -84,6 +84,7 @@ func _init() -> void:
 	test_np_effective_events()
 	test_np_event_symbols()
 	test_np_event_instructions()
+	test_np_capability_campaign_effects()
 	test_np_example_of_play()
 	test_np_cards()
 	test_campaign_effects()
@@ -2417,15 +2418,159 @@ func _minus(pool, used: Array) -> Array:
 ## Coronae Montes, per dire, perde il Controllo COIN proprio perché i Reclaimer
 ## ci hanno appena messo un Ribelle, ed è quello a renderla l'unica scelta per il
 ## Train di MarsGov.
+## Le sei voci della tabella «Capability & Campaign Effects» della scheda
+## Curiosity: tre Capability dei Reclaimer e tre Campaign del Red Dust, che
+## cambiano comportamento quando la Fazione è gestita dal bot.
+func test_np_capability_campaign_effects() -> void:
+	print("Non-Player — Capability & Campaign Effects")
+
+	# --- Contatori surrogati al posto della mano di carte (§8.2) ------------
+	# Con NP CR ogni pescata alza l'Asset Total invece di muovere carte vere.
+	var s0 := fresh()
+	var np0 := np_for(s0, ["reclaimer"])
+	var c0 := cards_for(s0)
+	eq(c0.hand().size(), 0, "NP CR non tiene una mano di Asset card")
+	eq(np0.asset_total(), 3, "…ma un Asset Total, che parte da 3")
+	c0.draw_asset(2)
+	eq(np0.asset_total(), 5, "una pescata alza l'Asset Total")
+	eq(c0.hand().size(), 0, "…e non entra nessuna carta in mano")
+	c0.draw_asset(4)
+	eq(np0.asset_total(), 6, "l'Asset Total si ferma a 6 come la mano")
+	eq(c0.discard_for_eligibility(2), 2, "scartare per anticipare il turno vale 2")
+	eq(np0.asset_total(), 4, "…e toglie 2 dall'Asset Total")
+	# Con un Reclaimer in carne e ossa nulla cambia rispetto a prima.
+	var s0b := fresh()
+	var c0b := cards_for(s0b)
+	eq(c0b.hand().size(), 3, "il Reclaimer giocatore tiene le sue 3 carte")
+
+	# --- #8 Earth-Based Endorsements ---------------------------------------
+	# Base: 3 Supply valgono 6 Risorse MarsGov e 3 Red Dust.
+	var s8 := with_campaign(8)
+	var r8 := rounds_for(s8)
+	var mg8 := s8.get_resources("marsgov")
+	r8.aldrin_cycler()
+	eq(s8.get_resources("marsgov"), mg8 + 6, "#8 fra giocatori: 3 Supply × 2 a MarsGov")
+
+	# Con MarsGov e Red Dust gestiti dal bot le stesse 3 Supply diventano
+	# 3 di Supply Total e 3 di Agitate Total: è l'esempio del libretto, dove
+	# Supply Total sale a 3 e Agitate Total da 2 a 5.
+	var s8np := with_campaign(8)
+	var np8 := np_for(s8np, ["marsgov", "red_dust"])
+	s8np.tracks["agitate_total"] = 2
+	var r8np := rounds_for(s8np)
+	r8np.aldrin_cycler()
+	eq(np8.supply_total(), 3, "#8: NP MG converte 3 Supply in 3 di Supply Total")
+	eq(s8np.get_resources("marsgov"), mg8,
+		"…senza toccare le Risorse MarsGov, che il bot non traccia")
+	eq(np8.agitate_total(), 5, "#8: NP RD alza l'Agitate Total di 3 (da 2 a 5)")
+
+	# Senza la Campaign le Supply valgono comunque 1 di Supply Total ciascuna:
+	# è la regola base delle Fazioni NP, non un effetto della carta.
+	var s8b := fresh()
+	var np8b := np_for(s8b, ["marsgov"])
+	rounds_for(s8b).aldrin_cycler()
+	eq(np8b.supply_total(), 3, "senza Campaign NP MG converte comunque 3 Supply")
+
+	# --- #9 Legal Injunctions / #10 General Strike -------------------------
+	# Per NP MG il rincaro in Risorse diventa un Activation Number più alto.
+	var s9 := with_campaign(9)
+	var np9 := np_for(s9, ["marsgov"])
+	eq(np9.campaign_activation_bonus("marsgov", "sharma", "secure"), 2,
+		"#9: +2 all'AN su uno spazio in Opposizione preso per Secure")
+	eq(np9.campaign_activation_bonus("marsgov", "sharma", "train"), 0,
+		"#9: fuori dal Secure non cambia niente")
+	eq(np9.campaign_activation_bonus("reclaimer", "sharma", "secure"), 0,
+		"#9: riguarda solo MarsGov")
+
+	var s10 := with_campaign(10)
+	var np10 := np_for(s10, ["marsgov"])
+	eq(np10.campaign_activation_bonus("marsgov", "tharsis_tholus", "train"), 1,
+		"#10: +1 all'AN su uno spazio senza Supporto")
+	eq(np10.campaign_activation_bonus("marsgov", "tenzing", "train"), 0,
+		"#10: uno spazio a Supporto non è toccato")
+	# Un AN gonfiato fa fallire un tiro che sarebbe passato.
+	var np10b := np_for(with_campaign(10), ["marsgov"], 4711)
+	np10b.state.tracks["supply_total"] = 0
+	var fails := 0
+	for i in range(20):
+		if not bool(np10b.activation_check("marsgov", 5, false, "tharsis_tholus", "train")["ok"]):
+			fails += 1
+	eq(fails, 20, "#10: con AN 5 e il +1 della Campaign nessun tiro passa")
+
+	# --- #24 AI Unleashed: NP CR colpisce prima un giocatore ----------------
+	# MarsGov giocatore → il Ransack gli toglie 3 Risorse.
+	var s24 := fresh()
+	np_for(s24, ["reclaimer"])
+	var o24 := ops_for(s24)
+	o24.cards = cards_for(s24)
+	var npo24 := RDRNonPlayerOps.new(np_for(s24, ["reclaimer"]), o24)
+	s24.tracks["capabilities"] = [24]
+	s24.tracks["profits"] = 5
+	_ransack_ready(s24)
+	var mg24 := s24.get_resources("marsgov")
+	var pr24 := int(s24.tracks.get("profits", 0))
+	npo24.run_special_activity("reclaimer", [{"id": "ransack"}])
+	eq(s24.get_resources("marsgov"), mg24 - 3,
+		"#24: con MarsGov giocatore NP CR gli toglie 3 Risorse")
+	eq(int(s24.tracks.get("profits", 0)), pr24, "…e lascia stare i Profits")
+
+	# MarsGov anche lui bot → non resta che ridurre i Profits.
+	var s24b := fresh()
+	var o24b := ops_for(s24b)
+	o24b.cards = cards_for(s24b)
+	var npo24b := RDRNonPlayerOps.new(np_for(s24b, ["reclaimer", "marsgov"]), o24b)
+	s24b.tracks["capabilities"] = [24]
+	s24b.tracks["profits"] = 5
+	_ransack_ready(s24b)
+	var pr24b := int(s24b.tracks.get("profits", 0))
+	npo24b.run_special_activity("reclaimer", [{"id": "ransack"}])
+	eq(int(s24b.tracks.get("profits", 0)), pr24b - 1,
+		"#24: con MarsGov bot NP CR ripiega sui Profits")
+
+	# --- #26 Ares Rockets: dove cade il Satellite ---------------------------
+	# I colpi che avanzano da un Attack riuscito abbattono un Satellite altrove,
+	# e per NP CR lo spazio lo sceglie la colonna Remove or Replace.
+	var s26 := fresh()
+	var np26 := np_for(s26, ["reclaimer"])
+	var o26 := ops_for(s26)
+	o26.cards = cards_for(s26)
+	RDRNonPlayerOps.new(np26, o26)      # aggancia i ganci sulle Operazioni
+	s26.tracks["capabilities"] = [26]
+	# §1.2: i Satelliti vivono in Orbit e scendono su Mars solo quando
+	# l'EarthGov Controller li usa (Spaceport, Navigation Beacon, Bombard).
+	# Restano lì fino al Flashpoint Round, e lì l'Attack CR li può raggiungere.
+	# Tutti e quattro i Satelliti partono già schierati (Earth 2, Transit 1,
+	# Orbit 1): non ce n'è nessuno fra i disponibili, vanno spostati da lì.
+	var sat_spaces: Array = ["sharma", "tenzing", "coronae_montes"]
+	module.move_pieces(s26, "orbit", "sharma", "satellite", 1)
+	module.move_pieces(s26, "earth", "tenzing", "satellite", 1)
+	module.move_pieces(s26, "earth", "coronae_montes", "satellite", 1)
+	for sid in sat_spaces:
+		eq(module.count_in(s26, String(sid), "satellite"), 1,
+			"%s ha un Satellite da abbattere" % sid)
+	var chosen := String(np26.select_space("reclaimer", "remove_or_replace", sat_spaces)["space"])
+	ok(chosen != "", "la colonna Remove or Replace sceglie dove abbattere il Satellite")
+	eq(o26._ares_target("", "reclaimer"), chosen,
+		"#26: NP CR abbatte il Satellite dove dice la tabella, non nel primo spazio utile")
+
+
+## Prepara uno spazio Danneggiato con due Ribelli CR Nascosti, così il Ransack
+## ha di che lavorare.
+func _ransack_ready(s: GameState) -> void:
+	for sid in module.mars_spaces(s):
+		var sid2 := String(sid)
+		if module.count_in(s, sid2, "cr_rebel", "hidden") > 0:
+			module.set_marker(s, sid2, "damage", 2)
+			module.place_from_available(s, sid2, "cr_rebel", 1, "hidden")
+			return
+
+
 func test_np_example_of_play() -> void:
 	print("Non-Player — esempio di gioco del libretto (§8.9)")
 	var s := fresh()
 	var np := np_for(s, ["marsgov", "corporations", "reclaimer"])
 	var o := ops_for(s)
 	o.cards = cards_for(s)
-	# §8.5.4: le Fazioni NP non pagano — i Reclaimer NP non hanno una mano di
-	# Asset card ma un Asset Total.
-	o.non_player = ["marsgov", "corporations", "reclaimer"]
 	var npo := RDRNonPlayerOps.new(np, o)
 
 	# --- CARTA 1, turno dei Reclaimer: Rally (carta CR–U) -------------------

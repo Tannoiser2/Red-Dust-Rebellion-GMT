@@ -58,11 +58,11 @@ func get_resources(faction: String) -> int:
 ## Ruolo delle Fazioni ("player"/"bot"), impostato da GameController.
 var roles: Dictionary = {}
 
-## Le Fazioni NP (bot) GOV/DR/26J non tracciano Risorse (Calixto C8.5.9): niente
-## entrate e pagamenti sempre possibili. Il Sindacato traccia sempre le Risorse.
-func tracks_resources(faction: String) -> bool:
-	if faction == "syndicate":
-		return true
+## La Fazione è di un giocatore in carne e ossa? In caso contrario la muove il
+## sistema Non-Player del gioco, che di norma non traccia né spende Risorse.
+## In assenza di un ruolo esplicito si assume un giocatore: una partita fra soli
+## umani non deve dipendere da questa tabella.
+func is_player(faction: String) -> bool:
 	return String(roles.get(faction, "player")) != "bot"
 
 

@@ -97,6 +97,10 @@ func is_player(faction: String) -> bool:
 func setup(p_np_factions: Array) -> void:
 	np_factions = PackedStringArray(p_np_factions)
 	state.tracks["np_factions"] = Array(np_factions)
+	# `state.roles` è quel che leggono le classi di regole che il sistema NP non
+	# lo conoscono (mazzi, Operazioni, Round): va tenuto allineato.
+	for fid in state.game_def.faction_ids():
+		state.roles[String(fid)] = "bot" if is_np(String(fid)) else "player"
 	if is_np("marsgov"):
 		state.tracks["supply_total"] = START_SUPPLY
 	if is_np("red_dust"):
@@ -107,30 +111,33 @@ func setup(p_np_factions: Array) -> void:
 	log_lines.append("Non-Player: %s." % ", ".join(np_factions))
 
 
+## I contatori vivono su RDRModule perché a muoverli sono anche mazzi, Operazioni
+## e Round periodici; qui restano le scorciatoie che il sistema NP usa ovunque.
+
 func supply_total() -> int:
-	return int(state.tracks.get("supply_total", 0))
+	return module.supply_total(state)
 
 
 func agitate_total() -> int:
-	return int(state.tracks.get("agitate_total", 0))
+	return module.agitate_total(state)
 
 
 func asset_total() -> int:
-	return int(state.tracks.get("asset_total", 0))
+	return module.asset_total(state)
 
 
 func add_supply(delta: int) -> void:
-	state.tracks["supply_total"] = maxi(0, supply_total() + delta)
+	module.add_supply(state, delta)
 
 
 func add_agitate(delta: int) -> void:
-	state.tracks["agitate_total"] = maxi(0, agitate_total() + delta)
+	module.add_agitate(state, delta)
 
 
 ## §8.2: qualunque effetto che farebbe pescare o scartare Asset card ai Reclaimer
 ## NP muove invece l'Asset Total, che non passa mai 6.
 func add_asset(delta: int) -> void:
-	state.tracks["asset_total"] = clampi(asset_total() + delta, 0, ASSET_MAX)
+	module.add_asset(state, delta)
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +491,12 @@ func _elig_condition(cond: String, faction: String, ctx: Dictionary) -> bool:
 ## modo in cui il sistema simula le Risorse che non traccia.
 ## Restituisce {ok, die, spent}.
 func activation_check(faction: String, activation_number: int,
-		limited: bool = false) -> Dictionary:
+		limited: bool = false, space: String = "", op_id: String = "") -> Dictionary:
+	var bump := campaign_activation_bonus(faction, space, op_id)
+	if bump > 0:
+		log_lines.append("Campaign: Activation Number %d → %d per %s." % [
+			activation_number, activation_number + bump, _space_name(space)])
+		activation_number += bump
 	var die := rng.randi_range(1, 6)
 	var out := {"ok": die > activation_number, "die": die, "spent": false}
 	if out["ok"]:
@@ -505,6 +517,31 @@ func activation_check(faction: String, activation_number: int,
 		log_lines.append("NP %s: tiro %d fallito ma convertito spendendo un contatore." % [
 			faction, die])
 	return out
+
+
+func _space_name(sid: String) -> String:
+	if sid == "":
+		return "lo spazio scelto"
+	var sd: SpaceDef = state.game_def.space(sid)
+	return sd.name if sd != null else sid
+
+
+## Capability & Campaign Effects: due Campaign card rincarano le Operazioni
+## MarsGov, e per NP MG — che le Risorse non le spende — la scheda traduce quel
+## rincaro in un Activation Number più alto, cioè in meno spazi selezionati.
+## #9 "Legal Injunctions": +2 su uno spazio in Opposizione preso come
+## destinazione di un Secure. #10 "General Strike": +1 su uno spazio senza
+## Supporto, quale che sia l'Operazione.
+func campaign_activation_bonus(faction: String, space: String, op_id: String) -> int:
+	if faction != "marsgov" or space == "" or not state.spaces.has(space):
+		return 0
+	var st: SpaceState = state.spaces[space]
+	var bump := 0
+	if module.campaign_active(state, 10) and st.support <= 0:
+		bump += 1
+	if module.campaign_active(state, 9) and op_id == "secure" and st.support < 0:
+		bump += 2
+	return bump
 
 
 ## §8.5.4: le Operazioni Limitate di NP CR si fermano comunque al quinto spazio.

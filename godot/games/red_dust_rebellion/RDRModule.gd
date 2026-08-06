@@ -520,6 +520,49 @@ func campaign_active(state: GameState, n: int) -> bool:
 	return int(state.tracks.get("campaign_in_play", -1)) == n
 
 
+# ---------------------------------------------------------------------------
+# §8.4.1 Contatori surrogati delle Fazioni Non-Player
+# ---------------------------------------------------------------------------
+#
+# Stanno qui, e non solo in RDRNonPlayer, perché a muoverli sono anche le
+# Operazioni, i mazzi e i Round periodici, che il sistema NP non lo conoscono.
+# §8.5.4: le Fazioni NP non tracciano Risorse — al loro posto NP MG ha il Supply
+# Total (ogni Supply che arriva su Phobos vale 1), NP RD l'Agitate Total e NP CR
+# l'Asset Total, che sostituisce la mano di Asset card e non passa mai 6.
+
+## Massimo dell'Asset Total (§8.2): la mano dei Reclaimer è di 6 carte.
+const ASSET_TOTAL_MAX := 6
+
+
+## La Fazione è gestita dal sistema Non-Player?
+func is_np(state: GameState, faction: String) -> bool:
+	return not state.is_player(faction)
+
+
+func supply_total(state: GameState) -> int:
+	return int(state.tracks.get("supply_total", 0))
+
+
+func agitate_total(state: GameState) -> int:
+	return int(state.tracks.get("agitate_total", 0))
+
+
+func asset_total(state: GameState) -> int:
+	return int(state.tracks.get("asset_total", 0))
+
+
+func add_supply(state: GameState, delta: int) -> void:
+	state.tracks["supply_total"] = maxi(0, supply_total(state) + delta)
+
+
+func add_agitate(state: GameState, delta: int) -> void:
+	state.tracks["agitate_total"] = maxi(0, agitate_total(state) + delta)
+
+
+func add_asset(state: GameState, delta: int) -> void:
+	state.tracks["asset_total"] = clampi(asset_total(state) + delta, 0, ASSET_TOTAL_MAX)
+
+
 ## §1.5: è in gioco la Capability della Asset card numero `n` dei Reclaimer?
 ## Il confronto è per valore: dopo un salvataggio i numeri tornano dal JSON come
 ## float e un `has(n)` secco fallirebbe.
