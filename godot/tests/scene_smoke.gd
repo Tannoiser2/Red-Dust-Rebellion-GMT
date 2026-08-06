@@ -482,6 +482,39 @@ func _initialize() -> void:
 		bot_turns += 1
 		await process_frame
 	_ok(worst <= 2, "nessuna Fazione agisce più di due volte di fila (massimo %d)" % worst)
+
+	# REGRESSIONE: una Fazione che NON TROVA NESSUNA OPERAZIONE deve Passare.
+	# Quando la plancia non le offre più niente — niente forze fra le Disponibili,
+	# nessuna Base, nessuna condizione soddisfatta — nessuna carta Curiosity porta
+	# a un'Operazione. Prima `np_take_turn()` restituiva l'errore e basta: la
+	# sequenza restava ferma su quella Fazione, richiamata all'infinito, e il Log
+	# si riempiva di tentativi mentre la plancia non cambiava.
+	gc2.new_game("standard", 20240424, ["marsgov", "corporations", "red_dust", "reclaimer"])
+	await process_frame
+	gc2.np.setup_deck("corporations", [])   # nessuna carta ⇒ nessuna Operazione
+	var last2 := ""
+	var rep2 := 0
+	var worst2 := 0
+	var stuck := ""
+	for i2 in range(40):
+		if gc2.sequence == null or gc2.rounds.is_game_over():
+			break
+		var f2: String = gc2.sequence.pending_faction()
+		if f2 == "":
+			gc2.end_card()
+			await process_frame
+			continue
+		rep2 = rep2 + 1 if f2 == last2 else 1
+		worst2 = maxi(worst2, rep2)
+		last2 = f2
+		var r2: Dictionary = gc2.np_take_turn()
+		if not r2.get("ok", false):
+			stuck = "%s: %s" % [f2, r2.get("error", "")]
+			break
+		await process_frame
+	_ok(stuck == "", "una Fazione senza Operazioni possibili non blocca la partita (%s)" % stuck)
+	_ok(worst2 <= 2,
+		"…e non rigioca all'infinito: al massimo %d turni di fila" % worst2)
 	_ok(cards_seen.size() >= 5,
 		"la partita di soli bot scorre fra le carte (%d carte in %d turni)" % [
 			cards_seen.size(), bot_turns])

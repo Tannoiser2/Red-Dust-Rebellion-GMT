@@ -714,7 +714,33 @@ func np_take_turn() -> Dictionary:
 	for line in res.get("trace", []):
 		emit_signal("log_line", "  · %s" % line)
 	if not res.get("ok", false):
+		# §8.6.1: se nessuna carta Curiosity porta a un'Operazione — capita
+		# quando la plancia non offre più niente a quella Fazione: nessuna forza
+		# fra le Disponibili, nessuna Base, nessuna condizione soddisfatta — non
+		# c'è altro da fare che Passare. Restituire l'errore e basta lasciava la
+		# sequenza ferma sulla stessa Fazione, che veniva richiamata all'infinito
+		# riempiendo il Log senza toccare la plancia.
+		emit_signal("log_line", "%s (bot): %s Passa." % [
+			game_def.faction(fid).short_name, res.get("error", "nessuna azione possibile.")])
+		for line in res.get("trace", []):
+			emit_signal("log_line", "  · %s" % line)
 		_undo.pop_back()
+		# `do_pass()` e non `sequence.act_pass()`: il Passo delle Corporations
+		# attiva l'Aldrin Cycler e quello dei Reclaimer dà una Asset card.
+		if not do_pass():
+			# Nemmeno il Passo è legale (ultima carta Evento): si registra la
+			# casella legale che resta, altrimenti la carta non si chiude più.
+			var fallback := -1
+			for a in sequence.legal_actions():
+				if int(a) != CoinEnums.ActionType.PASS:
+					fallback = int(a)
+					break
+			if fallback >= 0:
+				sequence.act(fallback)
+				_after_action()
+		res["ok"] = true
+		res["action"] = "pass"
+		res["passed"] = true
 		return res
 
 	# §8.5.5: se la tabella ha scelto l'Evento, lo si gioca davvero.
