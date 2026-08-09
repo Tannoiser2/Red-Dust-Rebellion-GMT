@@ -142,6 +142,15 @@ docs/
 Chi subentra parta da [docs/HANDOFF.md](docs/HANDOFF.md): impianto, cosa
 funziona, cosa manca e le trappole già pagate.
 
+## Primo avvio dopo il clone
+
+La cache di import di Godot non è nel repository: va ricostruita una volta, o le
+texture non si caricano e i test non partono.
+
+```bash
+godot --headless --path godot --editor --quit
+```
+
 ## Eseguire i test
 
 ```bash

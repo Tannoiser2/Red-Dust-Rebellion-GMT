@@ -18,6 +18,8 @@ migliore per collaudarla.
 Il progetto vive in `godot/`. Si apre con l'editor Godot 4.7; la scena iniziale
 è `scenes/MainMenu.tscn`.
 
+Repository: <https://github.com/Tannoiser2/Red-Dust-Rebellion-GMT>
+
 ## 2. Impianto
 
 ```
@@ -66,6 +68,18 @@ Aggiungere una carta non richiede codice nuovo — richiede una voce nel JSON e,
 se usa un'operazione mai vista, un `case` in più nell'interprete.
 
 ## 3. Come si lavora
+
+**Appena clonato, prima di ogni altra cosa:** la cache di import di Godot
+(`godot/.godot/`) non sta nel repository, e senza di essa nessuna texture è
+caricabile — le due suite danno *zero* asserzioni e sembra tutto rotto. Un giro
+a vuoto dell'editor la ricostruisce:
+
+```bash
+godot --headless --path godot --editor --quit
+```
+
+Serve anche più tardi, ogni volta che si aggiunge un'immagine in `assets/` o si
+crea una nuova classe con `class_name`: la cache delle classi si aggiorna lì.
 
 ```bash
 godot --headless --path godot -s res://tests/test_runner.gd
