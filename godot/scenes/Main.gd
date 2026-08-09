@@ -1583,7 +1583,7 @@ func _render_log() -> void:
 		if bool(entry.get("header", false)):
 			var fdef: FactionDef = GameController.game_def.faction(fid) if fid != "" else null
 			var name: String = fdef.short_name if fdef != null else fid
-			out.append("[color=#%s]━━ %s ━━[/color]" % [col.to_html(false), name])
+			out.append("[color=#%s]—— %s ——[/color]" % [col.to_html(false), name])
 			continue
 		var line := String(entry["text"])
 		if bool(entry["detail"]):
