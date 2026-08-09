@@ -210,6 +210,21 @@ totali non tornerebbero.
 
 ## Note legali
 
-Red Dust Rebellion © 2024 GMT Games, LLC. Progetto amatoriale a scopo
-personale/educativo. Gli asset grafici e i testi originali sono proprietà di GMT
-Games e dei rispettivi autori e non devono essere ridistribuiti senza autorizzazione.
+**Red Dust Rebellion © 2024 GMT Games, LLC.** Progetto amatoriale e non
+ufficiale, a scopo personale ed educativo, senza alcuna affiliazione con GMT
+Games né scopo di lucro.
+
+Il repository contiene due cose che vanno tenute distinte:
+
+* **Il codice** (`godot/`, `docs/` e gli script di estrazione) è opera
+  dell'autore di questo progetto.
+* **Il materiale del gioco** — regolamento e Playbook in `sources/rules/`,
+  immagini della mappa, delle carte e delle pedine in `godot/…/assets/`,
+  estratte dal modulo Vassal — è **proprietà di GMT Games, LLC e dei rispettivi
+  autori**, incluso qui come riferimento per la trascrizione delle regole. Non
+  è concesso in licenza e non se ne autorizza il riuso.
+
+Questa implementazione **non sostituisce il gioco**: non contiene le componenti
+fisiche e non è pensata per chi non lo possiede. Se il gioco vi interessa,
+compratelo da [GMT Games](https://www.gmtgames.com/). Su richiesta dei titolari
+dei diritti il materiale sarà rimosso.
