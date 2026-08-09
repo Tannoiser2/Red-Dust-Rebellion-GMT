@@ -19,6 +19,19 @@ Il progetto vive in `godot/`. Si apre con l'editor Godot 4.7; la scena iniziale
 è `scenes/MainMenu.tscn`.
 
 Repository: <https://github.com/Tannoiser2/Red-Dust-Rebellion-GMT>
+Build giocabile nel browser: <https://tannoiser2.github.io/Red-Dust-Rebellion-GMT/>
+
+La build Web sta sulla branch **`gh-pages`**, che contiene *solo* l'export e non
+ha in comune la storia con `master`. Si rigenera così, e va poi spinta a mano su
+quella branch:
+
+```bash
+godot --headless --path godot --export-release "Web" "../web/index.html"
+```
+
+Il preset Web è **senza thread** di proposito: GitHub Pages non invia gli header
+COOP/COEP che `SharedArrayBuffer` richiede, e con l'export a thread la pagina
+resta bianca. Non rimetterlo a `true` pensando di guadagnare prestazioni.
 
 ## 2. Impianto
 

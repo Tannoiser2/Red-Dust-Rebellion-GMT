@@ -142,6 +142,14 @@ docs/
 Chi subentra parta da [docs/HANDOFF.md](docs/HANDOFF.md): impianto, cosa
 funziona, cosa manca e le trappole già pagate.
 
+## Provarla nel browser
+
+Non serve installare niente: **<https://tannoiser2.github.io/Red-Dust-Rebellion-GMT/>**
+
+Sono ~65 MB da scaricare al primo accesso, poi resta in cache. L'export è senza
+thread perché GitHub Pages non invia gli header COOP/COEP di
+`SharedArrayBuffer`; la versione desktop resta più fluida.
+
 ## Primo avvio dopo il clone
 
 La cache di import di Godot non è nel repository: va ricostruita una volta, o le
