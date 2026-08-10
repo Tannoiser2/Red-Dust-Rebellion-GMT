@@ -60,6 +60,7 @@ disponibile in UI è il Passo.
 | Marker Supporto/Opposizione e Controllo | ✅ sulle caselle 'Neutral' stampate (coordinate Vassal) |
 | Tracciati: Edge Track, EG Confidence, Flashpoint | ✅ marcatori dentro le caselle stampate |
 | Cilindri della Sequence of Play | ✅ nelle 9 caselle, si muovono durante la carta |
+| Campaign e Capability in gioco, sui riquadri della plancia | ✅ fronti importati dal Vassal |
 | Carte Evento in vista (corrente + prossima) | ✅ anteprime cliccabili, ingrandimento a schermo intero |
 | Spostamenti a trascinamento sulla mappa | ✅ con le frecce di anteprima |
 | Zoom e scorrimento (rotellina, pinch, +/−/0, trascinamento) | ✅ fino a 5× |

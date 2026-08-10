@@ -68,6 +68,7 @@ func _draw() -> void:
 	_draw_eg_confidence(gc)
 	_draw_flashpoint(gc)
 	_draw_sop(gc)
+	_draw_cards_in_play(gc)
 
 
 func _edge_value(gc, key: String) -> int:
@@ -213,6 +214,47 @@ func _draw_sop(gc) -> void:
 			var p := center + Vector2((i - (here.size() - 1) * 0.5) * r * 2.3, 0)
 			_cylinder(p, r, RDRAssets.FACTION_COLORS.get(String(here[i]), Color.WHITE) as Color,
 				String(here[i]))
+
+
+## §1.5: la plancia ha in fondo i riquadri stampati per la Campaign card in
+## gioco e per le Asset card dei Reclaimer che restano in tavola (le
+## Capability). Erano vuoti, e quella fascia sembrava spazio sprecato: sono
+## invece il posto dove il gioco vero tiene le carte che continuano a valere.
+func _draw_cards_in_play(gc) -> void:
+	var slots: Dictionary = gc.layout.get("card_slots", {})
+	if slots.is_empty() or gc.cards == null:
+		return
+	# Larghezza di una carta: i tre riquadri Campaign sono equidistanti, e la
+	# distanza fra due è la misura giusta da cui ricavarla.
+	var w: float = 90.0 * size.x / 1500.0
+	if slots.has("campaign_1") and slots.has("campaign_2"):
+		w = _norm_to_px(slots["campaign_1"]).distance_to(_norm_to_px(slots["campaign_2"])) * 0.92
+	var camp: int = gc.cards.campaign_in_play()
+	if camp > 0 and slots.has("campaign_1"):
+		_card_at(RDRAssets.campaign_tex(camp), _norm_to_px(slots["campaign_1"]), w)
+	# Le Capability restano in gioco per sempre e col tempo diventano tante: si
+	# dispongono a ventaglio verso sinistra a partire dal loro riquadro, con un
+	# passo che si stringe quando aumentano, così non invadono i riquadri delle
+	# Campaign accanto. La più recente resta sopra e leggibile per intero.
+	var caps: Array = gc.state.tracks.get("capabilities", [])
+	if not caps.is_empty() and slots.has("assets_in_play"):
+		var base := _norm_to_px(slots["assets_in_play"])
+		var span := w * 1.6                       # spazio che il ventaglio può occupare
+		var step: float = minf(w * 0.5, span / float(maxi(1, caps.size())))
+		for i in range(caps.size() - 1, -1, -1):
+			_card_at(RDRAssets.asset_tex(int(caps[i])),
+				base - Vector2(float(i) * step, 0.0), w)
+
+
+## Una carta disegnata centrata in `p`, larga `w`, con l'ombra che la stacca.
+func _card_at(tex: Texture2D, p: Vector2, w: float) -> void:
+	if tex == null:
+		return
+	var h := w * float(tex.get_height()) / float(tex.get_width())
+	var r := Rect2(p - Vector2(w, h) * 0.5, Vector2(w, h))
+	draw_rect(Rect2(r.position + Vector2(0, h * 0.02), r.size), Color(0, 0, 0, 0.5))
+	draw_texture_rect(tex, r, false)
+	draw_rect(r, Color(1, 1, 1, 0.25), false, 1.0)
 
 
 ## Il cilindro dell'Eligibility, nella pedina originale della Fazione. Senza

@@ -109,6 +109,16 @@ static func card_tex(number: int) -> Texture2D:
 	return tex("cards/%02d.jpg" % number)
 
 
+## §1.5: fronte di una Campaign card del Red Dust (1-12).
+static func campaign_tex(number: int) -> Texture2D:
+	return tex("cards/campaign_%02d.jpg" % number)
+
+
+## §1.5: fronte di una Asset card dei Reclaimer (1-30).
+static func asset_tex(number: int) -> Texture2D:
+	return tex("cards/asset_%02d.jpg" % number)
+
+
 static func piece_tex(type_id: String, state: String = "") -> Texture2D:
 	var key := "%s:%s" % [type_id, state] if state != "" else type_id
 	if not PIECE_FILES.has(key):

@@ -6,9 +6,9 @@
    "title": "A Green New Deal",
    "flashpoint": 0,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Remove all Damage from spaces with COIN Control. Increase Profits by 1 per Damage removed. Shift up to 2 spaces where any Damage was removed 1 level each towards Active Support.",
@@ -23,9 +23,9 @@
    "title": "EarthGov Declares Emergency",
    "flashpoint": 1,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Place 4 Supply markers or 4 EG Troops on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
@@ -42,9 +42,9 @@
    "title": "Terran Loyalties Tested",
    "flashpoint": 1,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Remove all Rebel Bases from 2 spaces with EG Troops.",
@@ -61,9 +61,9 @@
    "title": "USSS Challenger",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Place up to 8 EG Troops in Labyrinths without Rebel forces.",
@@ -80,9 +80,9 @@
    "title": "Satellite Network Updated",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Shift EG Confidence up one step for each Satellite in Orbit, then move all Satellites to Orbit.",
@@ -97,9 +97,9 @@
    "title": "The Aldrin Cycler",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Place 3 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round).",
@@ -116,9 +116,9 @@
    "title": "Letters From Home",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Place 2 Population markers on Earth, then may House in any 1 space with Support.",
@@ -135,9 +135,9 @@
    "title": "Tenzing",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Shift Tenzing 2 levels towards Active Support. Activate all Rebels in Tenzing, then MG may free Assault there.",
@@ -152,9 +152,9 @@
    "title": "Targeting Cyclists",
    "flashpoint": 3,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Place 1 Supply marker on Earth for each Labyrinth without any Rebel forces.",
@@ -171,9 +171,9 @@
    "title": "Bicentennial Day",
    "flashpoint": 3,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Shift any 2 spaces 1 level each towards Active Support.",
@@ -189,9 +189,9 @@
    "title": "The Security of Mars Act",
    "flashpoint": 3,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Activate all Rebels in 1 Labyrinth. The Rebel Faction with the most forces in that Labyrinth is Ineligible through the next Event Round (executing Faction chooses if tied).",
@@ -206,9 +206,9 @@
    "title": "Red Wednesday Riots",
    "flashpoint": 4,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Activate all SpecOps and Rebels in one space with SpecOps, then CORP may free Assault there.",
@@ -223,9 +223,9 @@
    "title": "The Bombing of Maglev-77",
    "flashpoint": 0,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Move up to 6 Security to a single space adjacent to a Maglev line. Activate all Rebels in that space, then CORP may free Assault there.",
@@ -240,9 +240,9 @@
    "title": "The Rodgers Line",
    "flashpoint": 1,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Place the Rodgers Line marker between Europa and Tereshkova. Shift Europa and Tereshkova 1 level each towards Active Support, increase Profits by 6, and MG or CORP may House once in both Labyrinths.",
@@ -257,9 +257,9 @@
    "title": "The Automation Rebellion",
    "flashpoint": 1,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Shift any 2 Deserts 2 levels each towards Active Opposition. Increase Profits by 1 for each CORP Base in a Desert.",
@@ -274,9 +274,9 @@
    "title": "Shenzhou",
    "flashpoint": 2,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Remove all Rebels from Shenzhou and set it to Neutral, then Activate all Rebels adjacent to it. Increase Profits by 3 or place 3 Supply markers on Earth.",
@@ -291,9 +291,9 @@
    "title": "The Water Crisis",
    "flashpoint": 2,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Shift any 2 Deserts 1 level each towards Neutral. Increase Profits by 3 or place 3 Supply markers on Earth.",
@@ -309,9 +309,9 @@
    "title": "Corporate Militarization",
    "flashpoint": 2,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Place 2 SpecOps, 2 Security, and a CORP Base in 1 Desert. Activate all Rebels there.",
@@ -326,9 +326,9 @@
    "title": "Corporations Quell Dissent",
    "flashpoint": 2,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Shift each space with Damage and Security 1 level towards Active Support. Increase Profits by 3.",
@@ -344,9 +344,9 @@
    "title": "The Spin Zone",
    "flashpoint": 2,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Shift any 2 Labyrinths 1 level each towards Active Support. Increase Profits by 3.",
@@ -362,9 +362,9 @@
    "title": "Future of Law Enforcement",
    "flashpoint": 3,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Place 6 MG Troops or 4 EG Troops in 1 Labyrinth. Increase Profits by 3.",
@@ -379,9 +379,9 @@
    "title": "The One Card",
    "flashpoint": 3,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Activate all Rebels in Labyrinths with COIN Control, then MG or CORP may free Assault in one Labyrinth with COIN Control.",
@@ -396,9 +396,9 @@
    "title": "The Slush Fund Scandal",
    "flashpoint": 3,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Replace up to 4 Rebels with either CORP Security or MG Troops.",
@@ -414,9 +414,9 @@
    "title": "The 24.66 Hour News Cycle",
    "flashpoint": 4,
    "faction_order": [
-    "corporations",
-    "marsgov",
-    "red_dust",
+	"corporations",
+	"marsgov",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Shift up to 3 spaces 1 level each towards Active Support, then increase Profits by 1 for each space now with Active Support.",
@@ -431,9 +431,9 @@
    "title": "Nano Surveillance Drones",
    "flashpoint": 0,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Activate all Rebels in spaces containing CORP Bases, then MG or CORP may free Assault in one space with a CORP Base.",
@@ -448,9 +448,9 @@
    "title": "Emissions Law Reform Passed",
    "flashpoint": 1,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Increase Profits by 1 for each CORP Base in a Desert, then flip up to 2 CORP Bases to their Terraforming side.",
@@ -465,9 +465,9 @@
    "title": "Green Mars Campaign",
    "flashpoint": 1,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Flip up to 1 CORP Base in each Unpopulated Desert to its Terraforming side.",
@@ -482,9 +482,9 @@
    "title": "Refugee Crisis",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "MG or CORP may House in 1 Labyrinth, then add or remove up to 3 Population markers to/from Displaced Population.",
@@ -501,9 +501,9 @@
    "title": "Printing Weapons",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Either reduce RD Resources by 5 or CR must discard 2 Asset cards at random. The targeted Faction is Ineligible through the next Event Round.",
@@ -518,9 +518,9 @@
    "title": "Homesteaders Revolt",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Set any 2 Deserts to Neutral, then remove up to 2 Rebel forces from each of those Deserts (Bases last).",
@@ -536,9 +536,9 @@
    "title": "Martian Nationalism",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Place 4 EG Troops on Phobos, then remove one active RD Campaign card from play.",
@@ -555,9 +555,9 @@
    "title": "Shepard-Tereshkova",
    "flashpoint": 2,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Place 2 Rebels in either Shepard or Tereshkova, then place 2 MG Troops in the other Labyrinth. Shift the Labyrinth where the Rebels were placed 2 levels towards Active Opposition, then shift the other Labyrinth 2 levels towards Active Support. The executing Faction may free Assault (if COIN) or free Attack (if Rebel) in one affected Labyrinth.",
@@ -570,9 +570,9 @@
    "title": "The Red Dahlia",
    "flashpoint": 3,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Activate all RD Rebels.",
@@ -587,9 +587,9 @@
    "title": "Long Range Patrols",
    "flashpoint": 3,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "The executing Faction may move up to 3 of their units from 1 space through a chain of up to 3 contiguous Deserts. Then, they may perform a free Operation other than Recon or March in the final Desert.",
@@ -603,9 +603,9 @@
    "title": "The Tombs of Mars",
    "flashpoint": 3,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "MG or CORP may House in 1 space, then shift up to 2 Deserts with Population markers 1 level each towards Active Support.",
@@ -620,9 +620,9 @@
    "title": "Outpost Discovery",
    "flashpoint": 4,
    "faction_order": [
-    "marsgov",
-    "corporations",
-    "red_dust",
+	"marsgov",
+	"corporations",
+	"red_dust",
     "reclaimer"
    ],
    "unshaded": "Move any number of COIN units on Mars to a Desert with a Rebel Base. MG or CORP may free Recon in that Desert, then free Assault there.",
@@ -637,9 +637,9 @@
    "title": "Bipartisan Resolution",
    "flashpoint": 0,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Remove 6 Rebels total from any spaces. An equal number of RD and CR Rebels must be removed if possible.",
@@ -654,9 +654,9 @@
    "title": "The Arteries of Mars",
    "flashpoint": 1,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Increase Profits by 3, then place 2 Security in each of up to 3 spaces adjacent to Maglev lines.",
@@ -671,9 +671,9 @@
    "title": "Hammer the Machines",
    "flashpoint": 1,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "CORP may Activate all Rebels in one Labyrinth, then Assault there. Increase Profits by 4 if any Rebel Bases are removed by this Assault.",
@@ -688,9 +688,9 @@
    "title": "Spaceport Strikes",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Place 4 Supply markers on Earth, then perform an Aldrin Cycler phase (as during a Flashpoint Round). Increase Profits by 2.",
@@ -707,9 +707,9 @@
    "title": "Gandhi-Sharma",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Shift Sharma and Gandhi 1 level each towards Active Support. RD is Ineligible through next Event Round.",
@@ -724,9 +724,9 @@
    "title": "The Martians",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Shift 2 spaces with EG Troops 1 level each towards Active Support.",
@@ -743,9 +743,9 @@
    "title": "The Tubes",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "corporations",
-    "marsgov",
+	"red_dust",
+	"corporations",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "MG or CORP may move any COIN forces from a Desert to an adjacent Desert, then may free Recon or free Assault in the destination Desert.",
@@ -760,9 +760,9 @@
    "title": "New Córdoba",
    "flashpoint": 2,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Remove up to 6 Rebel forces from New Córdoba (Bases last).",
@@ -777,9 +777,9 @@
    "title": "The Red Desert",
    "flashpoint": 3,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "MG or CORP may move any number of COIN units from adjacent spaces to 1 Desert, then Activate all Rebels in that Desert and free Assault there.",
@@ -794,9 +794,9 @@
    "title": "The Mystery of Outpost 27",
    "flashpoint": 3,
    "faction_order": [
-    "red_dust",
-    "marsgov",
-    "corporations",
+	"red_dust",
+	"marsgov",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Remove a CORP Base and all units from 1 Unpopulated Desert. Increase Profits by 6 and CORP remains Eligible.",
@@ -811,9 +811,9 @@
    "title": "Sudden Storm",
    "flashpoint": 3,
    "faction_order": [
-    "corporations",
-    "red_dust",
-    "marsgov",
+	"corporations",
+	"red_dust",
+	"marsgov",
     "reclaimer"
    ],
    "unshaded": "Place all available Storm markers on their Raging Storm side in any spaces (maximum 1 Storm per space). Executing Faction remains Eligible.",
@@ -827,9 +827,9 @@
    "title": "Europa",
    "flashpoint": 4,
    "faction_order": [
-    "marsgov",
-    "red_dust",
-    "corporations",
+	"marsgov",
+	"red_dust",
+	"corporations",
     "reclaimer"
    ],
    "unshaded": "Shift Europa 2 levels towards Active Support, then place 3 Supply markers on Earth.",

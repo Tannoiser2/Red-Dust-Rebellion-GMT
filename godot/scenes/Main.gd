@@ -207,16 +207,25 @@ func _build_ui() -> void:
 	_turn_line.fit_content = true
 	_turn_line.custom_minimum_size = Vector2(0, 40)
 	_side.add_child(_turn_line)
+	# I comandi del TURNO (che riguardano la carta) stanno separati da quelli
+	# dell'AZIONE (che riguardano quel che si sta pianificando): mescolarli
+	# faceva sembrare «Passa» e «Annulla» due varianti della stessa cosa.
 	var actions := HBoxContainer.new()
+	actions.add_child(_group_label("Turno"))
 	_btn_pass = Button.new()
 	_btn_pass.text = "Passa"
+	_btn_pass.tooltip_text = "Rinuncia ad agire su questa carta e resta Disponibile (§4.1)."
 	_btn_pass.pressed.connect(func(): GameController.do_pass())
 	actions.add_child(_btn_pass)
 	_btn_end = Button.new()
 	_btn_end.text = "Concludi carta"
+	_btn_end.tooltip_text = "Chiude la carta in corso e passa alla successiva."
 	_btn_end.pressed.connect(func(): GameController.end_card())
 	actions.add_child(_btn_end)
 	_side.add_child(actions)
+	var sep := HSeparator.new()
+	sep.add_theme_constant_override("separation", 6)
+	_side.add_child(sep)
 
 	# HFlowContainer: i pulsanti vanno a capo invece di uscire dal pannello.
 	_ops_box = HFlowContainer.new()
@@ -246,7 +255,8 @@ func _build_ui() -> void:
 	# ❷ Schede di consultazione: si guardano quando servono, non ingombrano.
 	var tabs := TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.custom_minimum_size = Vector2(0, 300)
+	tabs.size_flags_stretch_ratio = 1.0
+	tabs.custom_minimum_size = Vector2(0, 260)
 	column.add_child(tabs)
 
 	var tab_state := ScrollContainer.new()
@@ -344,8 +354,12 @@ func _build_ui() -> void:
 	_log = RichTextLabel.new()
 	_log.bbcode_enabled = true
 	_log.scroll_following = true
-	_log.custom_minimum_size = Vector2(0, 240)
+	# Su schermi alti il Log si prende quel che avanza invece di restare a 240 px
+	# con il vuoto sotto; le schede sopra tengono il loro minimo e non vengono
+	# schiacciate.
+	_log.custom_minimum_size = Vector2(0, 200)
 	_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_log.size_flags_stretch_ratio = 2.0
 	column.add_child(_log)
 
 
@@ -1689,16 +1703,21 @@ func _refresh_op_bar() -> void:
 			b.pressed.connect(_start_op.bind(String(op_id)))
 			RDRTheme.faction_button(b, fid)
 			_ops_box.add_child(b)
-		# §7.0: l'Evento, nelle sue due opzioni, quando è consentito.
+		# §7.0: l'Evento, nelle sue due opzioni, quando è consentito. Non è né
+		# un'Operazione né un'Attività Speciale: è la terza scelta della carta,
+		# e va etichettato come tale.
 		if gc.sequence.is_legal(CoinEnums.ActionType.EVENT):
 			var card: CardDef = gc.game_def.card(gc.state.current_card)
 			if card != null:
+				if not gc.events.option(card.number, false).is_empty() \
+						or not gc.events.option(card.number, true).is_empty():
+					_ops_box.add_child(_group_label("Evento"))
 				for shaded in [false, true]:
 					var opt: Dictionary = gc.events.option(card.number, shaded)
 					if opt.is_empty():
 						continue
 					var e := Button.new()
-					e.text = "Evento ombreggiato" if shaded else "Evento"
+					e.text = "ombreggiato" if shaded else "non ombreggiato"
 					e.tooltip_text = String(opt.get("text", ""))
 					e.pressed.connect(_start_event.bind(shaded))
 					RDRTheme.accent_button(e, RDRTheme.BTN_HOVER_BG, RDRTheme.ACCENT)
