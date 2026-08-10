@@ -167,7 +167,9 @@ const MOVEMENT_OPERATIONS := ["secure", "recon", "march", "travel"]
 ## Attività Speciali collegate alla UI, per Fazione, con il numero massimo di
 ## spazi selezionabili (§6.0).
 const UI_SPECIALS := {
-	"marsgov": {"entrench": 2, "petition": 0, "transport": 0},
+	# Il Transport non sceglie spazi: dichiara spostamenti sulla propria rete,
+	# più al massimo 2 spazi attivati in più (1 se non è EarthGov Controller).
+	"marsgov": {"entrench": 2, "petition": 0, "transport": 2},
 	"corporations": {"public_relations": 2, "exploit": 2, "raid": 2},
 	"red_dust": {"redistribute": 4, "coordinate": 2},
 	"reclaimer": {"purify": 2, "ransack": 2},
@@ -278,12 +280,37 @@ func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Arr
 				plan["dig_in"] = String(extra["dig_in"])
 			return o.rally(plan)
 		"attack":
-			return o.attack({"faction": fid, "spaces": spaces})
+			# §6.9/§6.12 Ambush: non è un'azione a parte, sceglie i dadi
+			# dell'Attack in un massimo di due degli spazi selezionati.
+			var atk := {"faction": fid, "spaces": spaces}
+			var dice: Dictionary = extra.get("ambush_dice", {})
+			if not dice.is_empty():
+				atk["ambush_dice"] = dice
+			return o.attack(atk)
 		"campaign":
 			return o.campaign({"spaces": spaces})
 		"preach":
 			return o.preach({"spaces": spaces})
 	return {"ok": false, "error": "Operazione '%s' non ancora disponibile in UI." % op_id}
+
+
+## §6.3: la rete su cui il Transport sposta le Truppe — Phobos e ogni spazio con
+## una Base MarsGov, più quelli attivati apposta.
+func transport_network(extra: Array = []) -> PackedStringArray:
+	return ops.transport_pool(extra) if ops != null else PackedStringArray()
+
+
+## §6.9/§6.12: in quali degli spazi scelti per l'Attack si può fare Ambush —
+## serve un Ribelle Nascosto, e non più di due spazi in tutto.
+func ambush_candidates(fid: String, chosen: Array) -> PackedStringArray:
+	var out := PackedStringArray()
+	if fid != "red_dust" and fid != "reclaimer":
+		return out
+	var rebel := "rd_rebel" if fid == "red_dust" else "cr_rebel"
+	for sid in chosen:
+		if rdr().count_in(state, String(sid), rebel, "hidden") > 0:
+			out.append(String(sid))
+	return out
 
 
 ## §5.5 Bombard: si può solo se si è EarthGov Controller e c'è un Satellite in
@@ -493,11 +520,12 @@ func legal_origins(op_id: String, fid: String, dest: String, type_id: String) ->
 
 ## §6.0: esegue un'Attività Speciale della Fazione di turno. Non consuma il turno
 ## da sola: accompagna l'Operazione (qui è eseguita subito, prima o dopo).
-func execute_special(sa_id: String, spaces: Array) -> Dictionary:
+func execute_special(sa_id: String, spaces: Array,
+		extra_moves: Dictionary = {}) -> Dictionary:
 	if sequence == null or sequence.pending_faction() == "":
 		return {"ok": false, "error": "Non è il turno di nessuno."}
 	snapshot(SPECIAL_NAMES.get(sa_id, sa_id))
-	var res: Dictionary = _run_special(sa_id, spaces)
+	var res: Dictionary = _run_special(sa_id, spaces, extra_moves)
 	if not res.get("ok", false):
 		_undo.pop_back()
 		return res
@@ -511,12 +539,13 @@ func execute_special(sa_id: String, spaces: Array) -> Dictionary:
 	return res
 
 
-func _run_special(sa_id: String, spaces: Array) -> Dictionary:
-	return _run_special_on(specials, sa_id, spaces)
+func _run_special(sa_id: String, spaces: Array, extra_moves: Dictionary = {}) -> Dictionary:
+	return _run_special_on(specials, sa_id, spaces, extra_moves)
 
 
 ## Come sopra: l'anteprima esegue su una copia, non sulla partita.
-func _run_special_on(sp: RDRSpecials, sa_id: String, spaces: Array) -> Dictionary:
+func _run_special_on(sp: RDRSpecials, sa_id: String, spaces: Array,
+		extra_moves: Dictionary = {}) -> Dictionary:
 	var entries: Array = []
 	match sa_id:
 		"entrench":
@@ -547,6 +576,12 @@ func _run_special_on(sp: RDRSpecials, sa_id: String, spaces: Array) -> Dictionar
 			return sp.purify({"spaces": entries})
 		"ransack":
 			return sp.ransack({"spaces": spaces})
+		"transport":
+			# §6.3: non sceglie spazi come le altre Speciali — dichiara
+			# spostamenti sulla rete Phobos + Basi MG, più gli spazi attivati
+			# in più (fino a 2 se MarsGov è EarthGov Controller, 1 altrimenti).
+			return sp.transport({"extra": extra_moves.get("extra", []),
+				"moves": extra_moves.get("moves", [])})
 	return {"ok": false, "error": "Attività Speciale '%s' non disponibile in UI." % sa_id}
 
 

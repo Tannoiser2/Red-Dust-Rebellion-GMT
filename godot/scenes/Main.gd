@@ -51,6 +51,8 @@ var _rally_dig_in := ""
 var _assault_bombard: Array = []
 var _assault_suppress := ""
 var _assault_suppress_to := ""
+## §6.9/§6.12: i dadi scelti per l'Ambush, per spazio.
+var _ambush_dice: Dictionary = {}
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
@@ -721,6 +723,82 @@ func _refresh_turn_line() -> void:
 	_turn_line.text = line
 
 
+## §6.3 Transport: sposta Truppe fra Phobos e gli spazi con una Base MarsGov,
+## più fino a due spazi attivati apposta. Non sceglie bersagli come le altre
+## Attività Speciali — dichiara spostamenti — ed è per questo che finora era
+## elencata con zero spazi e non partiva.
+func _build_transport_box() -> void:
+	var gc := GameController
+	var net := gc.transport_network(Array(_op_spaces))
+	var head := Label.new()
+	head.text = "Transport — rete: %s" % ", ".join(net)
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	head.add_theme_font_size_override("font_size", 11)
+	_move_box.add_child(head)
+	var hint := Label.new()
+	hint.text = "Clicca fino a 2 spazi per attivarli in più, poi trascina le Truppe fra gli spazi della rete."
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.add_theme_font_size_override("font_size", 11)
+	_move_box.add_child(hint)
+	for i in range(_op_moves.size()):
+		var mv: Dictionary = _op_moves[i]
+		var l := Label.new()
+		l.text = "  %s → %s ×%d" % [gc.game_def.space(String(mv["from"])).name,
+			gc.game_def.space(String(mv["to"])).name, int(mv["count"])]
+		l.add_theme_font_size_override("font_size", 11)
+		_move_box.add_child(l)
+
+
+## §6.9/§6.12 Ambush: in un massimo di due degli spazi scelti per l'Attack, il
+## Ribelle sceglie il risultato dei due dadi invece di tirarli. Non è un comando
+## a sé — è l'Attack che cambia — ed è per questo che non è mai comparsa fra le
+## Attività Speciali della barra.
+func _build_attack_box() -> void:
+	var gc := GameController
+	var fid := gc.sequence.pending_faction()
+	var cands := gc.ambush_candidates(fid, Array(_op_spaces))
+	if cands.is_empty():
+		if not _op_spaces.is_empty() and (fid == "red_dust" or fid == "reclaimer"):
+			var hint := Label.new()
+			hint.text = "Ambush: serve un Ribelle Nascosto negli spazi scelti."
+			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			hint.add_theme_font_size_override("font_size", 11)
+			_move_box.add_child(hint)
+		return
+	var head := Label.new()
+	head.text = "Ambush — scegli i dadi (al massimo 2 spazi)"
+	head.add_theme_font_size_override("font_size", 11)
+	_move_box.add_child(head)
+	for sid_v in cands:
+		var sid := String(sid_v)
+		var row := HBoxContainer.new()
+		var cb := CheckBox.new()
+		cb.text = gc.game_def.space(sid).name
+		cb.button_pressed = _ambush_dice.has(sid)
+		cb.disabled = not _ambush_dice.has(sid) and _ambush_dice.size() >= 2
+		cb.toggled.connect(func(on: bool):
+			if on:
+				_ambush_dice[sid] = [1, 1]
+			else:
+				_ambush_dice.erase(sid)
+			_refresh_op_bar())
+		row.add_child(cb)
+		if _ambush_dice.has(sid):
+			for d in range(2):
+				var sp := SpinBox.new()
+				sp.min_value = 1
+				sp.max_value = 6
+				sp.value = int((_ambush_dice[sid] as Array)[d])
+				sp.custom_minimum_size = Vector2(56, 0)
+				sp.value_changed.connect(func(v: float):
+					var arr: Array = _ambush_dice[sid]
+					arr[d] = int(v)
+					_ambush_dice[sid] = arr
+					_refresh_preview())
+				row.add_child(sp)
+		_move_box.add_child(row)
+
+
 ## §5.5: chi è EarthGov Controller ha due opzioni in più durante l'Assault, e
 ## non erano mai state chiedibili — Bombard (un Satellite dall'Orbita su uno
 ## spazio dell'Assault, due forze nemiche Attive in più e un Danno se è un
@@ -1280,6 +1358,11 @@ func _start_sa(sa_id: String) -> void:
 	_op_spaces.clear()
 	_op_moves.clear()
 	_op_candidates = gc.special_candidates(sa_id, gc.sequence.pending_faction())
+	if sa_id == "transport":
+		# §6.3: la rete è Phobos più le Basi MG; gli spazi scelti sono quelli
+		# ATTIVATI IN PIÙ, e i pezzi si trascinano come nelle Operazioni di
+		# movimento.
+		_op_candidates = gc.rdr().mars_spaces(gc.state)
 	_append_log("%s: scegli fino a %d spazi (%d disponibili)." % [
 		gc.SPECIAL_NAMES.get(sa_id, sa_id),
 		int(gc.UI_SPECIALS[gc.sequence.pending_faction()][sa_id]),
@@ -1290,7 +1373,10 @@ func _start_sa(sa_id: String) -> void:
 
 func _confirm_sa() -> void:
 	var gc := GameController
-	var res: Dictionary = gc.execute_special(_sa_mode, Array(_op_spaces))
+	var extra_sa := {}
+	if _sa_mode == "transport":
+		extra_sa = {"extra": Array(_op_spaces), "moves": _op_moves}
+	var res: Dictionary = gc.execute_special(_sa_mode, Array(_op_spaces), extra_sa)
 	if not res.get("ok", false):
 		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "attività rifiutata"))
 		return
@@ -1316,6 +1402,7 @@ func _cancel_op() -> void:
 	_assault_bombard.clear()
 	_assault_suppress = ""
 	_assault_suppress_to = ""
+	_ambush_dice.clear()
 	_op_mode = ""
 	_sa_mode = ""
 	_ev_active = false
@@ -1338,6 +1425,8 @@ func _confirm_op() -> void:
 		extra = {"modes": _rally_modes, "dig_in": _rally_dig_in}
 	if _op_mode == "assault":
 		extra = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
+	if _op_mode == "attack":
+		extra = {"ambush_dice": _ambush_dice}
 	if _op_mode == "logistics":
 		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
 		extra = {}
@@ -1385,6 +1474,8 @@ func _refresh_preview() -> void:
 		extra_preview = {"modes": _rally_modes, "dig_in": _rally_dig_in}
 	if _op_mode == "assault":
 		extra_preview = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
+	if _op_mode == "attack":
+		extra_preview = {"ambush_dice": _ambush_dice}
 	var res: Dictionary = gc.preview_action(kind, action_id, gc.sequence.pending_faction(),
 		Array(_op_spaces), extra_preview)
 	if not res.get("ok", false):
@@ -1567,6 +1658,18 @@ func _on_piece_dropped(from_id: String, to_id: String, type_id: String) -> void:
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
 	var fid := gc.sequence.pending_faction()
+	if _sa_mode == "transport":
+		var net_t := Array(gc.transport_network(Array(_op_spaces)))
+		if not net_t.has(from_id) or not net_t.has(to_id):
+			_append_log("Transport: %s e %s devono essere entrambi nella rete." % [
+				gc.game_def.space(from_id).name, gc.game_def.space(to_id).name])
+			return
+		_op_moves.append({"from": from_id, "to": to_id, "type": type_id, "count": 1})
+		_flash(from_id, Color(0.35, 0.6, 1.0))
+		_flash(to_id, Color(0.4, 1.0, 0.5))
+		_update_moves_overlay()
+		_refresh_op_bar()
+		return
 	if not gc.MOVEMENT_OPERATIONS.has(_op_mode):
 		_append_log("Per spostare i pezzi scegli prima un'Operazione di movimento (%s)." %
 			", ".join(PackedStringArray(gc.MOVEMENT_OPERATIONS).slice(0, 4)))
@@ -1641,6 +1744,12 @@ func _refresh_move_box() -> void:
 		return
 	if _op_mode == "assault":
 		_build_assault_box()
+		return
+	if _op_mode == "attack":
+		_build_attack_box()
+		return
+	if _sa_mode == "transport":
+		_build_transport_box()
 		return
 	if not gc.MOVEMENT_OPERATIONS.has(_op_mode) or _op_spaces.is_empty():
 		return

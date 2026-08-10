@@ -596,6 +596,49 @@ func _initialize() -> void:
 		_ok(gc2.rdr().count_in(gc2.state, with_base, "rd_rebel") == reb0 - 2,
 			"…pagata con due Ribelli")
 
+	# --- §6.3 Transport e §6.9 Ambush: le due Speciali che mancavano ---------
+	gc2.new_game("standard", 20240424, [])
+	await process_frame
+	var net: PackedStringArray = gc2.transport_network([])
+	_ok(net.has("phobos"), "la rete del Transport comprende Phobos")
+	var mg_bases := 0
+	for sid_t in gc2.rdr().mars_spaces(gc2.state):
+		if gc2.rdr().count_in(gc2.state, String(sid_t), "mg_base") > 0:
+			mg_bases += 1
+	_ok(net.size() == mg_bases + 1,
+		"…e le %d Basi MG, niente altro (%d nella rete)" % [mg_bases, net.size()])
+	_ok(gc2.transport_network(["radau"]).has("radau"),
+		"uno spazio attivato in più entra nella rete")
+	# Il Transport si esegue davvero, e non crea né perde Truppe.
+	var origin_t := ""
+	for sid_t2 in net:
+		if gc2.rdr().count_in(gc2.state, String(sid_t2), "mg_troop") > 0:
+			origin_t = String(sid_t2)
+			break
+	if origin_t != "":
+		var dest_t := ""
+		for sid_t3 in net:
+			if String(sid_t3) != origin_t:
+				dest_t = String(sid_t3)
+				break
+		var tot0 := 0
+		for sid_t4 in gc2.state.spaces.keys():
+			tot0 += gc2.rdr().count_in(gc2.state, String(sid_t4), "mg_troop")
+		var rt: Dictionary = gc2.execute_special("transport", [],
+			{"extra": [], "moves": [{"from": origin_t, "to": dest_t, "type": "mg_troop", "count": 1}]})
+		_ok(rt.get("ok", false), "Transport eseguito da %s a %s" % [origin_t, dest_t])
+		var tot1 := 0
+		for sid_t5 in gc2.state.spaces.keys():
+			tot1 += gc2.rdr().count_in(gc2.state, String(sid_t5), "mg_troop")
+		_ok(tot0 == tot1, "…le Truppe si spostano, non si creano né si perdono")
+
+	# Ambush: solo negli spazi dell'Attack con un Ribelle Nascosto.
+	var atk_c: PackedStringArray = gc2.operation_candidates("attack", "red_dust")
+	var amb: PackedStringArray = gc2.ambush_candidates("red_dust", Array(atk_c))
+	_ok(amb.size() > 0, "ci sono spazi da Ambush per il Red Dust (%d su %d)" % [amb.size(), atk_c.size()])
+	_ok(gc2.ambush_candidates("marsgov", Array(atk_c)).is_empty(),
+		"…e MarsGov non può fare Ambush (§6.9: solo i Ribelli)")
+
 	# --- §5.5: Bombard e Suppress dell'EarthGov Controller ------------------
 	# Due opzioni dell'Assault che l'interfaccia non sapeva chiedere.
 	gc2.new_game("standard", 20240424, [])
