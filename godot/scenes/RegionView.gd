@@ -32,6 +32,9 @@ var _hover := false
 ## groviglio di pedine della tavola non è affatto ovvio.
 var _flash_color := Color.WHITE
 var _flash_a := 0.0
+## Stato nella scelta in corso, e la fase del pulsare dei candidati.
+var _pick_state: int = 0
+var _pulse := 0.0
 var _pieces: Array = []       ## un elemento per pezzo: {tex, type}
 var _tokens: Array[TextureRect] = []
 var _sup_marker: TextureRect
@@ -244,10 +247,17 @@ func flash(color: Color) -> void:
 
 
 func _process(delta: float) -> void:
-	if _flash_a <= 0.0:
+	var busy := false
+	if _flash_a > 0.0:
+		_flash_a = maxf(0.0, _flash_a - delta * 1.2)
+		busy = true
+	# I candidati respirano piano: attira l'occhio senza distrarre.
+	if _pick_state == PickState.CANDIDATE:
+		_pulse += delta
+		busy = true
+	if not busy:
 		set_process(false)
 		return
-	_flash_a = maxf(0.0, _flash_a - delta * 1.2)
 	queue_redraw()
 
 
@@ -265,14 +275,45 @@ func _draw() -> void:
 		draw_colored_polygon(poly, fc)
 		fc.a = _flash_a
 		draw_polyline(poly + PackedVector2Array([poly[0]]), fc, 3.0)
+	# Mentre si pianifica un'azione la mappa deve dire da sé dove si può
+	# cliccare: prima l'unico segno era il contorno degli spazi GIÀ scelti, e i
+	# candidati non si distinguevano in alcun modo dagli altri.
+	match _pick_state:
+		PickState.CANDIDATE:
+			var glow := Color(1.0, 0.94, 0.55)
+			glow.a = 0.16 + 0.06 * sin(_pulse * 3.2)
+			draw_colored_polygon(poly, glow)
+			glow.a = 0.85
+			draw_polyline(poly + PackedVector2Array([poly[0]]), glow, 2.5)
+		PickState.CHOSEN:
+			var pick := Color(0.42, 1.0, 0.58)
+			pick.a = 0.30
+			draw_colored_polygon(poly, pick)
+			pick.a = 1.0
+			draw_polyline(poly + PackedVector2Array([poly[0]]), pick, 4.0)
+		PickState.DIMMED:
+			# Spenti gli spazi che in questo momento non si possono scegliere:
+			# togliere è più leggibile che aggiungere un altro colore.
+			draw_colored_polygon(poly, Color(0.02, 0.02, 0.04, 0.45))
 	if _hover:
 		draw_polyline(poly + PackedVector2Array([poly[0]]), Color(1, 1, 1, 0.9), 3.0)
 
 
-## Evidenzia il contorno (usato per gli spazi candidati di un'Operazione).
-func set_highlight(on: bool) -> void:
-	_hover = on
+## Come lo spazio partecipa alla scelta in corso.
+enum PickState { NONE, CANDIDATE, CHOSEN, DIMMED }
+
+
+func set_pick_state(st: int) -> void:
+	if _pick_state == st:
+		return
+	_pick_state = st
+	set_process(true)
 	queue_redraw()
+
+
+## Evidenzia il contorno (retrocompatibile: true = scelto).
+func set_highlight(on: bool) -> void:
+	set_pick_state(PickState.CHOSEN if on else PickState.NONE)
 
 
 ## Punto attorno a cui sono impilati i pezzi: da qui partono e qui arrivano le

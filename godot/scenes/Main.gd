@@ -130,8 +130,9 @@ func _build_ui() -> void:
 	_instr = RichTextLabel.new()
 	_instr.bbcode_enabled = true
 	_instr.fit_content = true
-	_instr.custom_minimum_size = Vector2(0, 22)
-	_instr.add_theme_font_size_override("normal_font_size", 13)
+	_instr.custom_minimum_size = Vector2(0, 34)
+	_instr.add_theme_font_size_override("normal_font_size", 15)
+	_instr.add_theme_font_size_override("bold_font_size", 15)
 	instr_panel.add_child(_instr)
 	map_col.add_child(instr_panel)
 
@@ -1075,6 +1076,33 @@ func _append_log_once(key: String, text: String) -> void:
 	_append_log(text)
 
 
+## Etichetta che separa due gruppi di comandi nella barra.
+func _group_label(text: String) -> Control:
+	var l := Label.new()
+	l.text = text
+	l.add_theme_font_size_override("font_size", 10)
+	l.add_theme_color_override("font_color", RDRTheme.TEXT_DIM)
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return l
+
+
+## Quanti spazi restano da scegliere, detto in italiano invece che con due numeri.
+func _pick_hint() -> String:
+	var scelti := _op_spaces.size()
+	var liberi := _op_candidates.size()
+	if liberi == 0 and scelti == 0:
+		return "[color=#%s]nessuno spazio disponibile: «Annulla»[/color]" % RDRTheme.WARN.to_html(false)
+	if scelti == 0:
+		return "clicca uno degli spazi accesi (%d)" % liberi
+	return "%d %s — clicca «Esegui», o aggiungine altri" % [
+		scelti, "spazio scelto" if scelti == 1 else "spazi scelti"]
+
+
+## La legenda dei colori della mappa. Senza, il giallo e il verde vanno indovinati.
+func _legend() -> String:
+	return "   [color=#f0eb8c]▉[/color] si può scegliere   [color=#6bff94]▉[/color] scelto"
+
+
 ## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
 ## Senza, l'unico modo di capirlo è leggere il Log a posteriori.
 func _refresh_instructions() -> void:
@@ -1092,14 +1120,13 @@ func _refresh_instructions() -> void:
 	elif _op_mode != "":
 		var extra := ""
 		if gc.MOVEMENT_OPERATIONS.has(_op_mode):
-			extra = " · trascina i pezzi da uno spazio all'altro"
-		txt = "[color=#%s]%s: %d spazi scelti su %d candidati%s — poi «Esegui».[/color]" % [
-			RDRTheme.FOCUS.to_html(false), gc.OPERATION_NAMES.get(_op_mode, _op_mode),
-			_op_spaces.size(), _op_candidates.size(), extra]
+			extra = "  ·  trascina i pezzi da uno spazio all'altro"
+		txt = "[b]%s[/b] — %s%s%s" % [
+			gc.OPERATION_NAMES.get(_op_mode, _op_mode),
+			_pick_hint(), _legend(), extra]
 	elif _sa_mode != "":
-		txt = "[color=#%s]%s: scegli gli spazi (%d candidati), poi «Esegui».[/color]" % [
-			RDRTheme.FOCUS.to_html(false), gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode),
-			_op_candidates.size()]
+		txt = "[b]%s[/b] — %s%s" % [
+			gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode), _pick_hint(), _legend()]
 	elif gc.sequence != null and gc.sequence.pending_faction() != "" \
 			and gc.np != null and gc.np.is_np(gc.sequence.pending_faction()):
 		var np_fid := gc.sequence.pending_faction()
@@ -1527,9 +1554,22 @@ func _confirm_op() -> void:
 
 
 ## Evidenzia in bianco gli spazi scelti; gli altri candidati restano cliccabili.
+## Tre stati sulla mappa mentre si sceglie: verde pieno per gli spazi già presi,
+## un giallo che respira per quelli che si POSSONO prendere, e il resto spento.
+## Senza, l'unica indicazione era il numero di candidati scritto nel Log.
 func _paint_op_highlight() -> void:
+	var picking := _op_mode != "" or _sa_mode != "" or _ev_active \
+		or not GameController.support_pending().is_empty()
 	for sid in _views.keys():
-		(_views[sid] as RegionView).set_highlight(_op_spaces.has(sid))
+		var rv: RegionView = _views[sid]
+		if not picking:
+			rv.set_pick_state(RegionView.PickState.NONE)
+		elif _op_spaces.has(sid):
+			rv.set_pick_state(RegionView.PickState.CHOSEN)
+		elif _op_candidates.has(sid):
+			rv.set_pick_state(RegionView.PickState.CANDIDATE)
+		else:
+			rv.set_pick_state(RegionView.PickState.DIMMED)
 
 
 ## Ricostruisce la barra delle azioni: le Operazioni della Fazione di turno,
@@ -1638,6 +1678,10 @@ func _refresh_op_bar() -> void:
 		_build_event_bar()
 		return
 	if _op_mode == "" and _sa_mode == "":
+		# §4.1: Operazione e Attività Speciale sono due cose diverse, e la
+		# seconda accompagna la prima. Una fila unica di pulsanti simili non lo
+		# dice: due gruppi con la loro etichetta sì.
+		_ops_box.add_child(_group_label("Operazione"))
 		for op_id in gc.UI_OPERATIONS.get(fid, []):
 			var b := Button.new()
 			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
@@ -1674,6 +1718,8 @@ func _refresh_op_bar() -> void:
 			fb.pressed.connect(_run_free_op.bind(i))
 			RDRTheme.accent_button(fb, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
 			_ops_box.add_child(fb)
+		if not gc.UI_SPECIALS.get(fid, {}).is_empty():
+			_ops_box.add_child(_group_label("Attività Speciale"))
 		for sa_id in gc.UI_SPECIALS.get(fid, {}).keys():
 			var sb := Button.new()
 			sb.text = "%s" % gc.SPECIAL_NAMES.get(sa_id, sa_id)
@@ -1685,7 +1731,12 @@ func _refresh_op_bar() -> void:
 		return
 	if _sa_mode != "":
 		var run_sa := Button.new()
-		run_sa.text = "Esegui %s (%d)" % [gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode), _op_spaces.size()]
+		run_sa.text = "Esegui %s" % gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode)
+		run_sa.tooltip_text = "Clicca prima almeno uno spazio acceso sulla mappa." \
+			if _op_spaces.is_empty() and _sa_mode != "transport" and _sa_mode != "petition" \
+			else "Esegue %s." % gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode)
+		if not _op_spaces.is_empty() or _sa_mode == "transport" or _sa_mode == "petition":
+			RDRTheme.accent_button(run_sa, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
 		run_sa.pressed.connect(_confirm_sa)
 		_ops_box.add_child(run_sa)
 		var cancel_sa := Button.new()
@@ -1695,12 +1746,20 @@ func _refresh_op_bar() -> void:
 		_refresh_move_box()
 		return
 	var run := Button.new()
-	run.text = "Esegui (%d)" % _op_spaces.size()
+	run.text = "Esegui"
 	run.disabled = _op_spaces.is_empty()
+	# Un tasto grigio senza spiegazione è la cosa più frustrante di
+	# un'interfaccia: qui dice sempre cosa manca per accenderlo.
+	run.tooltip_text = "Clicca prima almeno uno spazio acceso sulla mappa." \
+		if run.disabled else "Esegue %s in %d spazi." % [
+			GameController.OPERATION_NAMES.get(_op_mode, _op_mode), _op_spaces.size()]
 	run.pressed.connect(_confirm_op)
+	if not run.disabled:
+		RDRTheme.accent_button(run, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
 	_ops_box.add_child(run)
 	var cancel := Button.new()
 	cancel.text = "Annulla"
+	cancel.tooltip_text = "Abbandona la pianificazione senza eseguire niente."
 	cancel.pressed.connect(_cancel_op)
 	_ops_box.add_child(cancel)
 	_refresh_move_box()
