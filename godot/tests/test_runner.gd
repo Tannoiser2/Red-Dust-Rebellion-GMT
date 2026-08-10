@@ -727,6 +727,10 @@ func test_dust_storm_round() -> void:
 	r.begin_game()
 	var mg_before := s.get_resources("marsgov")
 	r.dust_storm_round()
+	ok(not r.pending_support().is_empty(),
+		"il round si ferma alla Support Phase, che spetta ai giocatori (%s)" %
+			", ".join(PackedStringArray(r.pending_support())))
+	r.finish_dust_storm_round()   # nessuno agisce: si chiude e si prosegue
 	eq(int(s.tracks["dust_storm_rounds"]), 1, "primo Dust Storm Round contato")
 	eq(int(s.tracks.get("game_over", 0)), 0, "nessuno vince al primo round")
 	# Displaced Population: 4 marker → −6 Risorse MarsGov, poi +10 dalla fase Risorse.
@@ -764,6 +768,7 @@ func test_game_end() -> void:
 	r.begin_game()
 	s.tracks["dust_storm_rounds"] = 2
 	r.dust_storm_round()
+	r.finish_dust_storm_round()
 	eq(int(s.tracks["dust_storm_rounds"]), 3, "terzo Dust Storm Round")
 	eq(int(s.tracks["game_over"]), 1, "la partita finisce")
 	ok(String(s.tracks.get("winner", "")) != "", "un vincitore è determinato")
@@ -2890,6 +2895,9 @@ func test_np_dust_storm_round() -> void:
 	r11.np_round = RDRNonPlayerRound.new(np11, r11)
 	r11.begin_game()
 	r11.dust_storm_round()
+	# Il Red Dust è l'unica Fazione di un giocatore: la sua Support Phase si
+	# ferma e va chiusa a mano, le altre tre le ha già risolte il bot.
+	r11.finish_dust_storm_round()
 	eq(int(s11.tracks["dust_storm_rounds"]), 1, "il round intero gira senza intoppi")
 	eq(r11.storms_on_map() <= 6, true, "le tempeste restano entro il limite")
 	# I Ribelli CR non spariscono nel nulla: pezzi sulla mappa + disponibili +

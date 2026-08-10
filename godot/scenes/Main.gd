@@ -40,6 +40,10 @@ var _moves: MovesOverlay    ## frecce degli spostamenti dichiarati
 var _side: VBoxContainer
 var _tabs: TabContainer      ## schede di consultazione: Stato, Carta, Spazio
 var _turn_line: RichTextLabel  ## carta in corso e Fazione di turno, sempre in vista
+## §4.3 Support Phase: Fazione che la sta risolvendo e azione armata.
+var _support_faction := ""
+var _support_action := ""
+var _log_once: Dictionary = {}
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
@@ -710,6 +714,94 @@ func _refresh_turn_line() -> void:
 	_turn_line.text = line
 
 
+## §4.3 Support Phase: Pacify per MarsGov, Agitate per Red Dust — fino a due
+## azioni per spazio sotto il proprio Controllo, fra House, Repair e uno
+## spostamento del Supporto. Più il Lobby di MarsGov, una volta per fase.
+##
+## Si sceglie prima l'azione, poi lo spazio sulla mappa: è l'ordine in cui la
+## carta la descrive, e permette di evidenziare solo gli spazi dove quell'azione
+## ha effetto.
+func _build_support_bar() -> void:
+	var gc := GameController
+	var fid := String(gc.support_pending()[0])
+	var who: String = gc.game_def.faction(fid).short_name
+	var verso := "Supporto Attivo" if fid == "marsgov" else "Opposizione Attiva"
+	var costo := 3 if fid == "marsgov" else 1
+
+	_support_faction = fid
+	var cands := gc.support_candidates(fid)
+	_append_log_once("support_%s_%d" % [fid, gc.state.tracks.get("dust_storm_rounds", 0)],
+		"[b]Support Phase[/b] — %s: fino a due azioni in ognuno dei %d spazi sotto il proprio Controllo." % [
+			who, cands.size()])
+
+	for act_id in ["house", "repair", "shift"]:
+		var b := Button.new()
+		match act_id:
+			"house":
+				b.text = "House"
+				b.tooltip_text = "Riporta una Popolazione da Displaced Population (§1.7)."
+			"repair":
+				b.text = "Repair"
+				b.tooltip_text = "Toglie un Danno; costa %d Risorse (§1.7)." % (3 if fid == "marsgov" else 2)
+			"shift":
+				b.text = "Sposta verso %s" % verso
+				b.tooltip_text = "%d Risorse per un livello (§4.3)." % costo
+		b.disabled = gc.support_candidates(fid, act_id).is_empty()
+		b.pressed.connect(_start_support.bind(act_id))
+		if _support_action == act_id:
+			RDRTheme.accent_button(b, RDRTheme.BTN_HOVER_BG, RDRTheme.FOCUS)
+		else:
+			RDRTheme.faction_button(b, fid)
+		_ops_box.add_child(b)
+
+	if fid == "marsgov":
+		var lb := Button.new()
+		lb.text = "Lobby"
+		lb.tooltip_text = "5 Risorse per un livello di EarthGov Confidence, una sola volta per fase (§4.3)."
+		lb.disabled = not gc.can_lobby()
+		lb.pressed.connect(func():
+			var r: Dictionary = gc.support_lobby()
+			if not r.get("ok", false):
+				_append_log("[color=#e05a4b]%s[/color]" % r.get("error", ""))
+			_refresh_op_bar())
+		RDRTheme.style_button(lb)
+		_ops_box.add_child(lb)
+
+	var done := Button.new()
+	done.text = "Ho finito (%s)" % who
+	done.tooltip_text = "Chiude la Support Phase di %s e prosegue il Dust Storm Round." % who
+	done.pressed.connect(func():
+		_support_action = ""
+		_support_faction = ""
+		gc.support_done(fid)
+		_refresh_op_bar())
+	RDRTheme.accent_button(done, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
+	_ops_box.add_child(done)
+
+	# Evidenziati gli spazi dell'azione armata; senza azione, tutti quelli in cui
+	# la Fazione può fare qualcosa.
+	_op_candidates = gc.support_candidates(fid, _support_action)
+	_paint_op_highlight()
+
+
+## Arma un'azione della Support Phase: il prossimo clic su uno spazio la esegue.
+func _start_support(act_id: String) -> void:
+	_support_action = act_id
+	var gc := GameController
+	_op_candidates = gc.support_candidates(_support_faction, act_id)
+	_append_log("Support Phase: scegli lo spazio (%d disponibili)." % _op_candidates.size())
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+## Una riga di Log che non si ripete a ogni ridisegno del pannello.
+func _append_log_once(key: String, text: String) -> void:
+	if _log_once.has(key):
+		return
+	_log_once[key] = true
+	_append_log(text)
+
+
 ## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
 ## Senza, l'unico modo di capirlo è leggere il Log a posteriori.
 func _refresh_instructions() -> void:
@@ -848,6 +940,22 @@ func _count_control(control: String) -> int:
 
 
 func _on_space_clicked(space_id: String) -> void:
+	var gc0 := GameController
+	if not gc0.support_pending().is_empty():
+		if _support_action == "":
+			_append_log("Scegli prima l'azione (House, Repair o lo spostamento).")
+			return
+		if not _op_candidates.has(space_id):
+			_append_log("%s non è sotto il tuo Controllo o l'azione non ha effetto lì." %
+				gc0.game_def.space(space_id).name)
+			return
+		var res0: Dictionary = gc0.support_act(_support_faction, space_id, [_support_action])
+		if not res0.get("ok", false):
+			_append_log("[color=#e05a4b]%s[/color]" % res0.get("error", ""))
+		else:
+			_flash(space_id, Color(0.4, 1.0, 0.5))
+		_refresh_op_bar()
+		return
 	if _op_mode != "" or _sa_mode != "" or _ev_active:
 		if not _op_candidates.has(space_id):
 			_append_log("%s non è selezionabile per %s." % [
@@ -1129,6 +1237,11 @@ func _refresh_op_bar() -> void:
 	_refresh_instructions()
 	_refresh_preview()
 	var gc := GameController
+	# §4.3 fase 3: la Support Phase interrompe il Dust Storm Round e ha
+	# precedenza su tutto — finché non è chiusa non si gioca nient'altro.
+	if not gc.support_pending().is_empty():
+		_build_support_bar()
+		return
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
 	var fid := gc.sequence.pending_faction()
@@ -1271,6 +1384,11 @@ func _choice_label(value: String) -> String:
 ## muovere sulla mappa; il modulo qui sotto resta per le quantità grandi.
 func _on_piece_dropped(from_id: String, to_id: String, type_id: String) -> void:
 	var gc := GameController
+	# §4.3 fase 3: la Support Phase interrompe il Dust Storm Round e ha
+	# precedenza su tutto — finché non è chiusa non si gioca nient'altro.
+	if not gc.support_pending().is_empty():
+		_build_support_bar()
+		return
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
 	var fid := gc.sequence.pending_faction()

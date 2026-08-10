@@ -231,6 +231,54 @@ func agitate(sid: String, actions: Array) -> int:
 	return done
 
 
+## §4.3 Lobby: MarsGov paga 5 Risorse per migliorare di un livello la EarthGov
+## Confidence, una volta sola per Support Phase. Il tetto lo tiene il chiamante
+## (`state.tracks["lobby_done"]`), perché la fase è sua.
+func can_lobby() -> bool:
+	if not _can_afford("marsgov", 5):
+		return false
+	return int(state.tracks.get("eg_confidence", 0)) < 8
+
+
+func lobby() -> bool:
+	if not can_lobby():
+		return false
+	_spend("marsgov", 5)
+	state.tracks["eg_confidence"] = mini(8, int(state.tracks.get("eg_confidence", 0)) + 1)
+	log_line("Lobby: EarthGov Confidence sale di un livello (casella %d)." %
+		int(state.tracks["eg_confidence"]))
+	return true
+
+
+## §4.3: gli spazi in cui una Fazione può agire nella Support Phase — quelli
+## sotto il proprio Controllo dove l'azione indicata ha davvero effetto.
+## Senza `action` restituisce l'unione delle tre, che serve a sapere se la
+## Fazione ha qualcosa da fare; con `action` serve a evidenziare sulla mappa
+## esattamente dove quel comando funziona, invece di farlo scoprire per rifiuto.
+func support_candidates(faction: String, action: String = "") -> PackedStringArray:
+	var out := PackedStringArray()
+	var want := "coin" if faction == "marsgov" else "red_dust"
+	var step := 1 if faction == "marsgov" else -1
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		if state.spaces[s].control != want:
+			continue
+		var can_shift := module.population(state, s) > 0 \
+			and _can_afford(faction, 3 if faction == "marsgov" else 1)
+		if can_shift:
+			var cur: int = state.spaces[s].support
+			can_shift = cur < SUPPORT_MAX if step > 0 else cur > SUPPORT_MIN
+		var okk := false
+		match action:
+			"house": okk = can_house(s)
+			"repair": okk = can_repair(s, faction)
+			"shift": okk = can_shift
+			_: okk = can_house(s) or can_repair(s, faction) or can_shift
+		if okk:
+			out.append(s)
+	return out
+
+
 # ---------------------------------------------------------------------------
 # Movimento (§1.2, §1.10, §5.3, §5.4, §5.7, §5.8)
 # ---------------------------------------------------------------------------

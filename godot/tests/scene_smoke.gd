@@ -557,6 +557,48 @@ func _initialize() -> void:
 					"il Passo di NP MG non gli dà Risorse, che non traccia (§8.5.4)")
 		pass_notes.append(fid_p)
 	_ok(pass_notes.size() == 3, "collaudato il Passo di tutte e tre le Fazioni (%d)" % pass_notes.size())
+
+	# --- §4.3 fase 3: la Support Phase dei giocatori ------------------------
+	# Prima veniva saltata con una riga nel Log: in una partita fra umani la
+	# fase in cui MarsGov e Red Dust spingono il Supporto non si giocava affatto.
+	gc2.new_game("standard", 20240424, ["corporations", "reclaimer"])
+	await process_frame
+	gc2.rounds.dust_storm_round()
+	await process_frame
+	var pend: Array = gc2.support_pending()
+	_ok(pend.has("marsgov") and pend.has("red_dust"),
+		"il Dust Storm Round si ferma per la Support Phase di MG e RD (%s)" % ", ".join(PackedStringArray(pend)))
+	_ok(int(gc2.state.tracks.get("dust_storm_rounds", 0)) == 1,
+		"…a round contato ma non concluso")
+
+	# Pacify: uno spostamento verso il Supporto Attivo costa 3 Risorse.
+	var mg_sp: PackedStringArray = gc2.support_candidates("marsgov", "shift")
+	_ok(mg_sp.size() > 0, "MarsGov ha spazi dove spostare il Supporto (%d)" % mg_sp.size())
+	if mg_sp.size() > 0:
+		var target := String(mg_sp[0])
+		var sup_before: int = gc2.state.spaces[target].support
+		var res_before: int = gc2.state.get_resources("marsgov")
+		var r_sup: Dictionary = gc2.support_act("marsgov", target, ["shift"])
+		_ok(r_sup.get("ok", false), "Pacify eseguito in %s" % target)
+		_ok(gc2.state.spaces[target].support == sup_before + 1, "…lo spazio si sposta di un livello")
+		_ok(gc2.state.get_resources("marsgov") == res_before - 3, "…e costa 3 Risorse")
+
+	# Lobby: 5 Risorse per un livello di EG Confidence, UNA volta per fase.
+	var eg_before: int = int(gc2.state.tracks.get("eg_confidence", 0))
+	_ok(gc2.can_lobby(), "il Lobby è disponibile")
+	_ok(gc2.support_lobby().get("ok", false), "Lobby eseguito")
+	_ok(int(gc2.state.tracks.get("eg_confidence", 0)) == eg_before + 1,
+		"…EG Confidence sale di un livello")
+	_ok(not gc2.can_lobby(), "…e non si può rifare nella stessa fase")
+
+	# Chiudendo entrambe, il round riprende da dove si era fermato.
+	gc2.support_done("marsgov")
+	_ok(gc2.support_pending() == ["red_dust"], "resta il Red Dust")
+	gc2.support_done("red_dust")
+	await process_frame
+	_ok(gc2.support_pending().is_empty(), "Support Phase chiusa")
+	_ok(gc2.rounds.storms_on_map() >= 0 and gc2.state.current_card > 0,
+		"il Dust Storm Round è ripreso e la partita continua (carta #%d)" % gc2.state.current_card)
 	_ok(cards_seen.size() >= 5,
 		"la partita di soli bot scorre fra le carte (%d carte in %d turni)" % [
 			cards_seen.size(), bot_turns])

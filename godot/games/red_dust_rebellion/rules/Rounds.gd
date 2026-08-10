@@ -502,12 +502,34 @@ func dust_storm_round() -> void:
 		return
 	resources_phase()
 	support_phase()
+	# §4.3 fase 3: se Pacify, Lobby o Agitate spettano a una Fazione di un
+	# giocatore, il round si FERMA qui. Non si può decidere al posto suo, e
+	# saltare la fase — com'era prima — vuol dire togliere dal gioco l'unico
+	# momento in cui MarsGov e Red Dust spingono il Supporto senza spendere un
+	# turno. Riprende da `finish_dust_storm_round()` quando la fase è chiusa.
+	if not pending_support().is_empty():
+		log_line("Support Phase: tocca a %s." % ", ".join(pending_support()))
+		return
+	finish_dust_storm_round()
+
+
+## La coda del Dust Storm Round, dopo che la Support Phase è stata risolta.
+func finish_dust_storm_round() -> void:
+	state.tracks["support_pending"] = []
 	redeploy_phase()
-	if n >= 3:
+	if int(state.tracks.get("dust_storm_rounds", 0)) >= 3:
 		log_line("Terzo Dust Storm Round completato: fine partita.")
 		_end_game()
 		return
 	reset_phase()
+
+
+## Fazioni di giocatori che devono ancora risolvere la propria Support Phase.
+func pending_support() -> Array:
+	var out: Array = []
+	for fid in state.tracks.get("support_pending", []):
+		out.append(String(fid))
+	return out
 
 
 ## §4.3 fase 1. Restituisce true se la partita finisce qui.
@@ -610,13 +632,19 @@ func resources_phase() -> void:
 func support_phase() -> void:
 	if np_round != null:
 		np_round.support_phase()
-	var waiting: Array[String] = []
+	state.tracks["lobby_done"] = 0
+	# Solo MarsGov e Red Dust hanno qualcosa da fare in questa fase, e solo se
+	# c'è davvero uno spazio in cui agire: mettere in coda una Fazione che non
+	# può fare niente costringerebbe a un clic a vuoto.
+	var waiting: Array = []
+	var act := RDRActions.new(state, module)
 	for fid in ["marsgov", "red_dust"]:
-		if state.is_player(fid):
+		if not state.is_player(fid):
+			continue
+		if act.support_candidates(fid).size() > 0 \
+				or (fid == "marsgov" and act.can_lobby()):
 			waiting.append(fid)
-	if not waiting.is_empty():
-		log_line("Support Phase: Pacify/Lobby/Agitate di %s restano ai giocatori (UI non ancora pronta)." %
-			", ".join(waiting))
+	state.tracks["support_pending"] = waiting
 
 
 ## §4.3 fase 4. Sono automatizzati solo gli spostamenti OBBLIGATORI; quelli

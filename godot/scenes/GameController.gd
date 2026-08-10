@@ -985,6 +985,78 @@ func execute_free_op(index: int, plan_extra: Dictionary = {}) -> Dictionary:
 	return res
 
 
+# ---------------------------------------------------------------------------
+# §4.3 fase 3 — Support Phase dei giocatori
+# ---------------------------------------------------------------------------
+
+## Fazioni che devono ancora risolvere Pacify o Agitate. Vuoto = niente in sospeso.
+func support_pending() -> Array:
+	return rounds.pending_support() if rounds != null else []
+
+
+## Spazi in cui questa Fazione può agire adesso.
+func support_candidates(fid: String, action: String = "") -> PackedStringArray:
+	return ops.act.support_candidates(fid, action) if ops != null else PackedStringArray()
+
+
+func can_lobby() -> bool:
+	return ops != null and int(state.tracks.get("lobby_done", 0)) == 0 and ops.act.can_lobby()
+
+
+## §4.3: fino a due azioni fra House, Repair e lo spostamento del Supporto, in
+## uno spazio sotto il proprio Controllo. `actions` è ["house"/"repair"/"shift"].
+func support_act(fid: String, sid: String, actions: Array) -> Dictionary:
+	if not support_pending().has(fid):
+		return {"ok": false, "error": "%s non ha una Support Phase in sospeso." % fid}
+	snapshot("Support Phase — %s" % game_def.space(sid).name)
+	var done := ops.act.pacify(sid, actions) if fid == "marsgov" else ops.act.agitate(sid, actions)
+	for line in ops.act.log_lines:
+		emit_signal("log_line", line)
+	ops.act.log_lines.clear()
+	if done == 0:
+		_undo.pop_back()
+		return {"ok": false, "error": "Nessuna di quelle azioni è possibile in %s." %
+			game_def.space(sid).name}
+	emit_signal("log_line", "%s: %d azioni in %s." % [
+		game_def.faction(fid).short_name, done, game_def.space(sid).name])
+	refresh()
+	return {"ok": true, "done": done}
+
+
+## §4.3 Lobby: 5 Risorse per un livello di EarthGov Confidence, una volta sola.
+func support_lobby() -> Dictionary:
+	if not can_lobby():
+		return {"ok": false, "error": "Lobby non disponibile (5 Risorse, una sola volta)."}
+	snapshot("Lobby")
+	if not ops.act.lobby():
+		_undo.pop_back()
+		return {"ok": false, "error": "Lobby rifiutata."}
+	state.tracks["lobby_done"] = 1
+	for line in ops.act.log_lines:
+		emit_signal("log_line", line)
+	ops.act.log_lines.clear()
+	refresh()
+	return {"ok": true}
+
+
+## La Fazione dichiara di aver finito. Quando non ne resta nessuna, il Dust
+## Storm Round riprende da dove si era fermato.
+func support_done(fid: String) -> void:
+	var left: Array = []
+	for f in support_pending():
+		if String(f) != fid:
+			left.append(String(f))
+	state.tracks["support_pending"] = left
+	emit_signal("log_line", "%s chiude la propria Support Phase." %
+		game_def.faction(fid).short_name)
+	if left.is_empty():
+		rounds.finish_dust_storm_round()
+		_drain_log()
+		_start_card()
+		_autosave()
+	refresh()
+
+
 ## Chiude la carta corrente e passa alla successiva (§4.2 «Next Card»).
 func end_card() -> void:
 	if sequence == null:
