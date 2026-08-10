@@ -44,6 +44,9 @@ var _turn_line: RichTextLabel  ## carta in corso e Fazione di turno, sempre in v
 var _support_faction := ""
 var _support_action := ""
 var _log_once: Dictionary = {}
+## §5.6: modalità scelta per ogni spazio del Rally, e la Base da portare a Dig-In.
+var _rally_modes: Dictionary = {}
+var _rally_dig_in := ""
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
@@ -714,6 +717,67 @@ func _refresh_turn_line() -> void:
 	_turn_line.text = line
 
 
+## §5.6: il Rally fa cose diverse a seconda della modalità scelta per ciascuno
+## spazio — piazzare un Ribelle, costruire una Base con due, riempire fino alla
+## Popolazione, riportare Nascosti, potenziare a Conversion Center. Prima erano
+## tutte «piazza un Ribelle», che è la meno interessante delle cinque.
+func _build_rally_box() -> void:
+	var gc := GameController
+	if _op_spaces.is_empty():
+		var hint := Label.new()
+		hint.text = "Rally: scegli gli spazi sulla mappa, poi la modalità per ciascuno."
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hint.add_theme_font_size_override("font_size", 11)
+		_move_box.add_child(hint)
+		return
+	var fid := gc.sequence.pending_faction()
+	for sid_v in _op_spaces:
+		var sid := String(sid_v)
+		var row := HBoxContainer.new()
+		var lbl := Label.new()
+		lbl.text = gc.game_def.space(sid).name
+		lbl.custom_minimum_size = Vector2(110, 0)
+		lbl.add_theme_font_size_override("font_size", 11)
+		row.add_child(lbl)
+		var opt := OptionButton.new()
+		var modes: Array = gc.rally_modes(fid, sid)
+		for i in range(modes.size()):
+			var mo: Dictionary = modes[i]
+			opt.add_item(String(mo["label"]))
+			opt.set_item_metadata(i, String(mo["id"]))
+			if String(mo["id"]) == String(_rally_modes.get(sid, "place")):
+				opt.select(i)
+		opt.item_selected.connect(func(idx: int):
+			_rally_modes[sid] = String(opt.get_item_metadata(idx))
+			_refresh_preview())
+		row.add_child(opt)
+		_move_box.add_child(row)
+
+	# §5.6: il Red Dust può portare UNA Base a Dug-In, anche fuori dagli spazi
+	# scelti e anche in un'Operazione Limitata.
+	if fid == "red_dust":
+		var digs := gc.dig_in_candidates()
+		if digs.size() > 0:
+			var row2 := HBoxContainer.new()
+			var l2 := Label.new()
+			l2.text = "Dig-In"
+			l2.custom_minimum_size = Vector2(110, 0)
+			l2.add_theme_font_size_override("font_size", 11)
+			row2.add_child(l2)
+			var od := OptionButton.new()
+			od.add_item("— nessuno —")
+			od.set_item_metadata(0, "")
+			for i in range(digs.size()):
+				od.add_item(gc.game_def.space(String(digs[i])).name)
+				od.set_item_metadata(i + 1, String(digs[i]))
+				if String(digs[i]) == _rally_dig_in:
+					od.select(i + 1)
+			od.item_selected.connect(func(idx: int):
+				_rally_dig_in = String(od.get_item_metadata(idx)))
+			row2.add_child(od)
+			_move_box.add_child(row2)
+
+
 ## §4.3 Support Phase: Pacify per MarsGov, Agitate per Red Dust — fino a due
 ## azioni per spazio sotto il proprio Controllo, fra House, Repair e uno
 ## spostamento del Supporto. Più il Lobby di MarsGov, una volta per fase.
@@ -1152,6 +1216,8 @@ func _confirm_sa() -> void:
 
 
 func _cancel_op() -> void:
+	_rally_modes.clear()
+	_rally_dig_in = ""
 	_op_mode = ""
 	_sa_mode = ""
 	_ev_active = false
@@ -1170,6 +1236,8 @@ func _confirm_op() -> void:
 	if _op_mode == "" or _op_spaces.is_empty():
 		return
 	var extra := {"moves": _op_moves}
+	if _op_mode == "rally":
+		extra = {"modes": _rally_modes, "dig_in": _rally_dig_in}
 	if _op_mode == "logistics":
 		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
 		extra = {}
@@ -1210,8 +1278,13 @@ func _refresh_preview() -> void:
 		_preview.text = ""
 		_preview.tooltip_text = ""
 		return
+	# L'anteprima deve simulare esattamente quel che si sta per eseguire: col
+	# Rally sono le modalità scelte, non «piazza un Ribelle» ovunque.
+	var extra_preview := {"moves": _op_moves}
+	if _op_mode == "rally":
+		extra_preview = {"modes": _rally_modes, "dig_in": _rally_dig_in}
 	var res: Dictionary = gc.preview_action(kind, action_id, gc.sequence.pending_faction(),
-		Array(_op_spaces), {"moves": _op_moves})
+		Array(_op_spaces), extra_preview)
 	if not res.get("ok", false):
 		# Errore atteso, mostrato prima di premere «Esegui».
 		_preview.text = "[color=#%s]⚠ non eseguibile[/color]" % RDRTheme.WARN.to_html(false)
@@ -1461,6 +1534,9 @@ func _refresh_move_box() -> void:
 	for c in _move_box.get_children():
 		c.queue_free()
 	var gc := GameController
+	if _op_mode == "rally":
+		_build_rally_box()
+		return
 	if not gc.MOVEMENT_OPERATIONS.has(_op_mode) or _op_spaces.is_empty():
 		return
 	var fid := gc.sequence.pending_faction()

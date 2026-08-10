@@ -558,6 +558,44 @@ func _initialize() -> void:
 		pass_notes.append(fid_p)
 	_ok(pass_notes.size() == 3, "collaudato il Passo di tutte e tre le Fazioni (%d)" % pass_notes.size())
 
+	# --- §5.6: le modalità del Rally ---------------------------------------
+	# L'interfaccia forzava sempre «piazza 1 Ribelle», la meno interessante
+	# delle cinque: niente Basi, niente Dig-In, niente Conversion Center.
+	gc2.new_game("standard", 20240424, [])
+	await process_frame
+	for i_r in range(6):
+		if gc2.sequence.pending_faction() == "red_dust":
+			break
+		if gc2.sequence.pending_faction() == "":
+			gc2.end_card()
+			await process_frame
+			continue
+		gc2.do_pass()
+		await process_frame
+	_ok(gc2.sequence.pending_faction() == "red_dust", "turno del Red Dust")
+	var rally_c: PackedStringArray = gc2.operation_candidates("rally", "red_dust")
+	var with_base := ""
+	for sid_r in rally_c:
+		for mo in gc2.rally_modes("red_dust", String(sid_r)):
+			if String((mo as Dictionary)["id"]) == "base":
+				with_base = String(sid_r)
+				break
+		if with_base != "":
+			break
+	_ok(with_base != "", "c'è uno spazio dove il Rally può costruire una Base (%s)" % with_base)
+	_ok(gc2.dig_in_candidates().size() > 0,
+		"…e Basi RD in Deserti da portare a Dig-In (%d)" % gc2.dig_in_candidates().size())
+	if with_base != "":
+		var reb0: int = gc2.rdr().count_in(gc2.state, with_base, "rd_rebel")
+		var base0: int = gc2.rdr().count_in(gc2.state, with_base, "rd_base")
+		var rr: Dictionary = gc2.execute_operation("rally", [with_base], false,
+			{"modes": {with_base: "base"}, "dig_in": ""})
+		_ok(rr.get("ok", false), "Rally in modalità Base eseguito")
+		_ok(gc2.rdr().count_in(gc2.state, with_base, "rd_base") == base0 + 1,
+			"…una Base in più (%d → %d)" % [base0, gc2.rdr().count_in(gc2.state, with_base, "rd_base")])
+		_ok(gc2.rdr().count_in(gc2.state, with_base, "rd_rebel") == reb0 - 2,
+			"…pagata con due Ribelli")
+
 	# --- §4.3 fase 3: la Support Phase dei giocatori ------------------------
 	# Prima veniva saltata con una riga nel Log: in una partita fra umani la
 	# fase in cui MarsGov e Red Dust spingono il Supporto non si giocava affatto.

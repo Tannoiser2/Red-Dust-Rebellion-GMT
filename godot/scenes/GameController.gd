@@ -258,10 +258,17 @@ func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Arr
 		"assault":
 			return o.assault({"faction": fid, "spaces": spaces})
 		"rally":
+			# §5.6: ogni spazio scelto ha la sua modalità. Senza, il Rally
+			# sarebbe sempre «piazza un Ribelle» e non si potrebbero mai
+			# costruire Basi né riportare i Ribelli Nascosti.
+			var modes: Dictionary = extra.get("modes", {})
 			var entries: Array = []
 			for sid in spaces:
-				entries.append({"id": sid, "mode": "place"})
-			return o.rally({"faction": fid, "spaces": entries})
+				entries.append({"id": sid, "mode": String(modes.get(sid, "place"))})
+			var plan := {"faction": fid, "spaces": entries}
+			if String(extra.get("dig_in", "")) != "":
+				plan["dig_in"] = String(extra["dig_in"])
+			return o.rally(plan)
 		"attack":
 			return o.attack({"faction": fid, "spaces": spaces})
 		"campaign":
@@ -269,6 +276,47 @@ func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Arr
 		"preach":
 			return o.preach({"spaces": spaces})
 	return {"ok": false, "error": "Operazione '%s' non ancora disponibile in UI." % op_id}
+
+
+## §5.6: le modalità di Rally che hanno davvero effetto in questo spazio, con
+## l'etichetta da mostrare. Offrire quelle impossibili significa far scoprire il
+## rifiuto per tentativi, e alcune (Base, Conversion Center) dipendono da quanti
+## Ribelli ci sono in quel momento.
+func rally_modes(fid: String, sid: String) -> Array:
+	var m: RDRModule = rdr()
+	var rebel := "rd_rebel" if fid == "red_dust" else "cr_rebel"
+	var base := "rd_base" if fid == "red_dust" else "cr_base"
+	var out: Array = [{"id": "place", "label": "Piazza 1 Ribelle"}]
+	if m.count_in(state, sid, rebel) >= 2 and ops.act.can_place_base(sid) \
+			and m.available(state, base) > 0:
+		out.append({"id": "base", "label": "Base (2 Ribelli)"})
+	var has_base := (m.cr_bases_in(state, sid) > 0) if fid == "reclaimer" \
+		else m.count_in(state, sid, base) > 0
+	if fid == "reclaimer" and m.capability_active(state, 5):
+		has_base = true
+	if has_base:
+		var n := m.population(state, sid) + (m.cr_bases_in(state, sid) if fid == "reclaimer" \
+			else m.count_in(state, sid, base))
+		if n > 0:
+			out.append({"id": "fill", "label": "Riempi (%d Ribelli)" % n})
+		if m.count_in(state, sid, rebel, "active") > 0:
+			out.append({"id": "hide", "label": "Torna Nascosto"})
+	if fid == "reclaimer" and m.count_in(state, sid, base, "basic") > 0:
+		out.append({"id": "upgrade", "label": "Conversion Center"})
+	return out
+
+
+## §5.6: le Basi RD in un Deserto che si possono portare a Dug-In. Il Red Dust
+## può farlo su UNA Base, anche fuori dagli spazi scelti e in un'Operazione
+## Limitata.
+func dig_in_candidates() -> PackedStringArray:
+	var out := PackedStringArray()
+	var m: RDRModule = rdr()
+	for sid in m.mars_spaces(state):
+		var s := String(sid)
+		if m.is_desert(state, s) and m.count_in(state, s, "rd_base", "basic") > 0:
+			out.append(s)
+	return out
 
 
 ## Spazi legalmente selezionabili per l'Operazione, usati per l'evidenziazione.
