@@ -324,6 +324,22 @@ func special_options(sa_id: String, sid: String) -> Array:
 			var out3: Array = [{"key": "house", "id": "1", "label": "Repair + House"}]
 			out3.append({"key": "house", "id": "0", "label": "solo Repair"})
 			return out3
+		"entrench":
+			# §6.1: prima si può sostituire UNA Truppa con una Base, poi si
+			# Fortifica un numero qualsiasi delle Truppe che restano. Costruire
+			# la Base era impossibile: l'interfaccia non lo chiedeva mai.
+			var out4: Array = []
+			if ops.act.can_place_base(sid) and m.available(state, "mg_base") > 0 \
+					and m.count_in(state, sid, "mg_troop") > 0:
+				out4.append({"key": "build_base", "id": "0", "label": "solo Fortifica"})
+				out4.append({"key": "build_base", "id": "1", "label": "prima costruisci una Base MG"})
+			var room := m.population(state, sid) - ops.act.fortified(sid)
+			var most: int = mini(room, m.count_in(state, sid, "mg_troop"))
+			if most > 0:
+				for k in range(most, -1, -1):
+					out4.append({"key": "fortify", "id": str(k),
+						"label": "Fortifica %d Truppe" % k if k > 0 else "non Fortificare"})
+			return out4
 	return []
 
 
@@ -584,6 +600,7 @@ func _run_special_on(sp: RDRSpecials, sa_id: String, spaces: Array,
 		"entrench":
 			for sid in spaces:
 				entries.append({"id": sid,
+					"build_base": bool(extra_moves.get("build_base", {}).get(sid, false)),
 					"fortify": int(extra_moves.get("fortify", {}).get(sid, 9))})
 			return sp.entrench({"spaces": entries})
 		"petition":

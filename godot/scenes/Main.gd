@@ -1451,11 +1451,16 @@ func _sa_extra() -> Dictionary:
 	var out: Dictionary = {}
 	for key in _sa_choices.keys():
 		var k := String(key)
-		if k == "house":
+		if k == "house" or k == "build_base":
 			var h: Dictionary = {}
 			for sid in (_sa_choices[k] as Dictionary).keys():
 				h[sid] = String(_sa_choices[k][sid]) == "1"
 			out[k] = h
+		elif k == "fortify":
+			var f: Dictionary = {}
+			for sid in (_sa_choices[k] as Dictionary).keys():
+				f[sid] = int(String(_sa_choices[k][sid]))
+			out[k] = f
 		else:
 			out[k] = _sa_choices[k]
 	return out
@@ -1481,6 +1486,21 @@ func _cancel_op() -> void:
 	_update_moves_overlay()
 	_paint_op_highlight()
 	_refresh_op_bar()
+
+
+## Gli stessi parametri che «Esegui» passerebbe: serve al collaudo per provare
+## ogni azione esattamente com'è configurata nel pannello.
+func _op_extra_for_test() -> Dictionary:
+	var extra := {"moves": _op_moves}
+	if _op_mode == "rally":
+		extra = {"modes": _rally_modes, "dig_in": _rally_dig_in}
+	if _op_mode == "assault":
+		extra = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
+	if _op_mode == "attack":
+		extra = {"ambush_dice": _ambush_dice}
+	if _op_mode == "logistics":
+		extra = {}
+	return extra
 
 
 func _confirm_op() -> void:
@@ -1574,6 +1594,24 @@ func _refresh_op_bar() -> void:
 	# §4.3 fase 3: la Support Phase interrompe il Dust Storm Round e ha
 	# precedenza su tutto — finché non è chiusa non si gioca nient'altro.
 	if not gc.support_pending().is_empty():
+		# La Support Phase arriva a carta conclusa e prende il posto di tutto:
+		# quel che restava in preparazione (spazi scelti, modalità del Rally,
+		# anteprima del costo) non c'entra più niente e va tolto di mezzo,
+		# altrimenti resta sotto il pannello a raccontare un'altra azione.
+		if _op_mode != "" or _sa_mode != "" or not _op_spaces.is_empty():
+			_op_mode = ""
+			_sa_mode = ""
+			_op_spaces.clear()
+			_op_moves.clear()
+			_rally_modes.clear()
+			_sa_choices.clear()
+			_assault_bombard.clear()
+			_ambush_dice.clear()
+			_update_moves_overlay()
+		for c2 in _move_box.get_children():
+			c2.queue_free()
+		if _preview != null:
+			_preview.text = ""
 		_build_support_bar()
 		return
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
@@ -1721,6 +1759,24 @@ func _on_piece_dropped(from_id: String, to_id: String, type_id: String) -> void:
 	# §4.3 fase 3: la Support Phase interrompe il Dust Storm Round e ha
 	# precedenza su tutto — finché non è chiusa non si gioca nient'altro.
 	if not gc.support_pending().is_empty():
+		# La Support Phase arriva a carta conclusa e prende il posto di tutto:
+		# quel che restava in preparazione (spazi scelti, modalità del Rally,
+		# anteprima del costo) non c'entra più niente e va tolto di mezzo,
+		# altrimenti resta sotto il pannello a raccontare un'altra azione.
+		if _op_mode != "" or _sa_mode != "" or not _op_spaces.is_empty():
+			_op_mode = ""
+			_sa_mode = ""
+			_op_spaces.clear()
+			_op_moves.clear()
+			_rally_modes.clear()
+			_sa_choices.clear()
+			_assault_bombard.clear()
+			_ambush_dice.clear()
+			_update_moves_overlay()
+		for c2 in _move_box.get_children():
+			c2.queue_free()
+		if _preview != null:
+			_preview.text = ""
 		_build_support_bar()
 		return
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
