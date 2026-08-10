@@ -140,38 +140,29 @@ progetto è stato costruito andandola a leggere.**
 
 ## 5. Cosa manca — in ordine di valore
 
-### 5.1 Le scelte che l'interfaccia non sa chiedere ← il divario più grosso
+### 5.1 Redeploy facoltativi ← quel che resta di sostanzioso
 
-Il motore conosce le regole; l'interfaccia non offre tutti i modi di
-esercitarle, e decide al posto tuo con un «piano minimo». Le regole *ci sono*:
-manca il modo di usarle.
+Nel Dust Storm Round sono automatizzati solo gli spostamenti OBBLIGATORI. Quelli
+facoltativi — Truppe MG in più verso i Labirinti controllati, Ribelli verso le
+proprie Basi, Basi CR nella Wilderness — non vengono chiesti. Per le Fazioni NP
+sono implementati in `NonPlayerRound.gd`, quindi il comportamento corretto è già
+scritto e si può prendere a modello, come è stato fatto per la Support Phase.
 
-| Azione | Cosa l'interfaccia decide da sé |
-|---|---|
-| Rally | Sempre «piazza 1 Ribelle»: niente Base, niente Dig-In |
-| Assault | Niente Suppress, niente Bombard |
-| Logistics | Niente acquisti su Earth, niente Transit |
-| Raid | Non muove gli SpecOps dagli spazi adiacenti |
-| Entrench, Public Relations, Coordinate, Purify | Parametri fissi |
-| **Transport** | Non azionabile: elencata con 0 spazi, non gestita dal dispatcher |
-| **Ambush** | Assente dall'interfaccia (il motore la esegue, il bot la usa) |
+Il flusso da imitare è quello della Support Phase: `RDRRounds` si ferma e mette
+in coda chi deve decidere, `GameController` espone le azioni, `Main.gd` costruisce
+il pannello. Vedi il commit «Support Phase giocabile».
 
-I punti d'intervento: `GameController._run_operation_on()` e
-`_run_special_on()` costruiscono i piani; `Main.gd` costruisce la barra
-(`_refresh_op_bar`) e raccoglie gli spazi. Serve un form per azione, non un
-pulsante in più.
+### 5.2 Logistics e Operazioni gratuite
 
-### 5.2 Support Phase e Redeploy per i giocatori
-
-Nel Dust Storm Round, Pacify/Lobby/Agitate e i Redeploy facoltativi sono scelte
-del giocatore e l'interfaccia non le chiede: vengono saltate con una riga nel
-Log. Per le Fazioni NP invece sono implementate (`NonPlayerRound.gd`), quindi il
-comportamento corretto è già scritto e si può prendere a modello.
+Logistics gira ancora con un piano minimo: niente acquisti su Earth, niente
+Transit. E una carta Evento lascia al giocatore la scelta di QUALE Operazione
+gratuita eseguire: resta in coda con una nota nel Log.
 
 ### 5.3 Voci minori
 
 Un'istruzione NP (Event #30 per i Reclaimer) dalla FAQ; simulazioni di
-bilanciamento; GitHub Actions. Sono in `docs/ROADMAP.md`, 8 voci aperte in tutto.
+bilanciamento; GitHub Actions per automatizzare la build Web. Sono in
+`docs/ROADMAP.md`, 5 voci aperte in tutto.
 
 ## 6. Trappole già pagate
 

@@ -76,8 +76,8 @@ fatto su Cuba Libre e All Bridges Burning.
 - [x] Tempeste: tabella d6 bianco/nero, Approaching → Raging, limite di 6 marker
 - [x] UI: carta corrente/prossima, ordine di Eligibility, turno, pulsanti Passa e
       Concludi carta; il log mostra le fasi dei round
-- [ ] Support Phase (Pacify / Lobby / Agitate): meccaniche pronte ma sono scelte
-      dei giocatori, in attesa dell'interfaccia delle azioni
+- [x] **Support Phase (Pacify / Lobby / Agitate)**: il Dust Storm Round si ferma
+      e la chiede; il Lobby, che mancava del tutto, ora c'è
 - [ ] Redeploy facoltativi (Truppe MG extra, Ribelli verso le proprie Basi, Basi
       CR nella Wilderness): automatizzati solo gli spostamenti obbligatori
 
@@ -101,10 +101,13 @@ fatto su Cuba Libre e All Bridges Burning.
       eseguono insieme all'Operazione
 - [x] Logistics in UI (potenziamento delle Basi nei Deserti scelti)
 - [x] 9 Attività Speciali su 12 collegate alla UI con scelta degli spazi
-- [ ] Transport, Raid con spostamento di SpecOps e Ambush: servono form dedicati
+- [x] **Transport, Raid e Ambush** in interfaccia: la rete del Transport si
+      evidenzia e le Truppe si trascinano, l'Ambush sceglie i dadi dentro
+      l'Attack, il Raid può colpire qualunque forza
       (spostamenti fra spazi attivati, dadi scelti)
-- [ ] Scelte fini nella UI: modalità del Rally, bersagli dell'Assault/Attack,
-      Ambush, Pacify/Coordinate
+- [x] **Scelte fini nella UI**: le cinque modalità del Rally col Dig-In, Bombard
+      e Suppress nell'Assault, e le opzioni per spazio di Coordinate, Purify,
+      Public Relations ed Entrench
 
 ## Fase 5 — Carte
 
