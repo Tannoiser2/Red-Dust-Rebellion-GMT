@@ -70,6 +70,7 @@ func _init() -> void:
 	test_reclaimer_pays()
 	test_events()
 	test_events_all_options()
+	test_event_37_balanced_removal()
 	test_events_effects()
 	test_events_eligibility()
 	test_events_free_ops()
@@ -1515,6 +1516,55 @@ func test_events_all_options() -> void:
 								errors.append("#%d: %s negativo in %s" % [number, t, sid])
 	eq(errors.size(), 0, "nessun errore giocando le 93 opzioni (%s)" % ", ".join(errors))
 	ok(without_choices < 40, "la maggior parte delle opzioni dichiara delle scelte")
+
+
+## Ribelli di un tipo su tutta Mars.
+func _rebels(s: GameState, t: String) -> int:
+	var n := 0
+	for sid in module.mars_spaces(s):
+		n += module.count_in(s, String(sid), t)
+	return n
+
+
+## §7.0 #37: «Remove 6 Rebels total from any spaces. An equal number of RD and
+## CR Rebels must be removed IF POSSIBLE.» Il totale è sei: la parità è un
+## criterio di ripartizione, non un tetto per Fazione. Prima erano codificati
+## 3 RD + 3 CR fissi, e con pochi Ribelli di una Fazione ne cadevano meno di sei.
+func test_event_37_balanced_removal() -> void:
+	print("Eventi — #37 toglie sei Ribelli, il più equamente possibile")
+
+	# Caso normale: ce n'è d'avanzo di entrambe le Fazioni → 3 e 3.
+	var s := fresh()
+	var ev := events_for(s)
+	var rd0 := _rebels(s, "rd_rebel")
+	var cr0 := _rebels(s, "cr_rebel")
+	ok(rd0 >= 3 and cr0 >= 3, "allo schieramento ci sono Ribelli di entrambe (%d RD, %d CR)" % [rd0, cr0])
+	ev.play(37, false)
+	var tolti := (rd0 - _rebels(s, "rd_rebel")) + (cr0 - _rebels(s, "cr_rebel"))
+	eq(tolti, 6, "sei Ribelli tolti in tutto")
+	eq(rd0 - _rebels(s, "rd_rebel"), 3, "…tre Red Dust")
+	eq(cr0 - _rebels(s, "cr_rebel"), 3, "…e tre Reclaimer")
+
+	# Caso della FAQ: pochi Reclaimer sulla mappa. Il totale resta sei, e il
+	# Red Dust copre quel che i Reclaimer non possono dare.
+	var s2 := fresh()
+	var ev2 := events_for(s2)
+	for sid in module.mars_spaces(s2):
+		var n := module.count_in(s2, String(sid), "cr_rebel")
+		if n > 0:
+			module.remove_pieces(s2, String(sid), "cr_rebel", n, "available")
+	var solo := ""
+	for sid in module.mars_spaces(s2):
+		if module.count_in(s2, String(sid), "rd_rebel") > 0:
+			solo = String(sid)
+			break
+	module.place_from_available(s2, solo, "cr_rebel", 2, "hidden")
+	var rd2 := _rebels(s2, "rd_rebel")
+	eq(_rebels(s2, "cr_rebel"), 2, "sulla mappa restano due soli Ribelli CR")
+	ev2.play(37, false)
+	eq(_rebels(s2, "cr_rebel"), 0, "i due Reclaimer cadono tutti")
+	eq(rd2 - _rebels(s2, "rd_rebel"), 4,
+		"…e il Red Dust copre i quattro che mancano ai sei")
 
 
 func test_events_effects() -> void:

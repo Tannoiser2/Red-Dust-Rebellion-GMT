@@ -971,7 +971,10 @@ func _op_remove(e: Dictionary, ctx: Dictionary) -> int:
 	var budget := 99999 if (all or not e.has("total")) else _count(e["total"], ctx)
 	var removed := 0
 	var piece_state = null if String(e.get("state", "")) == "" else String(e.get("state", ""))
-	for sid in _spaces(e.get("where", {}), ctx):
+	# Con `balanced` la ripartizione fra i tipi decide tutto: il giro per spazi
+	# qui sotto svuoterebbe il budget col primo tipo che trova.
+	var balanced := bool(e.get("balanced", false))
+	for sid in (_spaces(e.get("where", {}), ctx) if not balanced else []):
 		if budget <= 0:
 			break
 		var s := String(sid)
@@ -1000,10 +1003,46 @@ func _op_remove(e: Dictionary, ctx: Dictionary) -> int:
 				budget -= 1
 		if here > 0:
 			act.normalize_support(s)
+	# §7.0 (#37): «An equal number of RD and CR Rebels must be removed IF
+	# POSSIBLE». Il totale resta quello chiesto: si prende il più equamente
+	# possibile, e quando un tipo si esaurisce il resto lo copre l'altro —
+	# altrimenti bastano due Ribelli CR sulla mappa per far rimuovere quattro
+	# forze invece di sei.
+	if balanced and budget > 0:
+		removed += _remove_balanced(e, ctx, types, budget, dest, piece_state)
 	ctx["last"] = removed
 	if removed > 0:
 		log_lines.append("Rimosse %d forze." % removed)
 	return 1
+
+
+## Distribuisce le rimozioni che restano fra i tipi indicati, un giro alla volta,
+## saltando quelli esauriti. Restituisce quante ne ha tolte davvero.
+func _remove_balanced(e: Dictionary, ctx: Dictionary, types: Array, budget: int,
+		dest: String, piece_state) -> int:
+	var spaces := _spaces(e.get("where", {}), ctx)
+	var removed := 0
+	var progress := true
+	while budget > 0 and progress:
+		progress = false
+		for t in types:
+			if budget <= 0:
+				break
+			var type_id := String(t)
+			for sid in spaces:
+				var s := String(sid)
+				var pt: PieceTypeDef = state.game_def.piece_type(type_id)
+				if pt != null and pt.is_base and bool(e.get("protect_bases", true)) \
+						and not act.base_removable(s, type_id):
+					continue
+				var to := dest if dest != "" else act.removal_dest(type_id)
+				if module.remove_pieces(state, s, type_id, 1, to, piece_state) > 0:
+					removed += 1
+					budget -= 1
+					progress = true
+					act.normalize_support(s)
+					break
+	return removed
 
 
 func _op_move(e: Dictionary, ctx: Dictionary) -> int:
