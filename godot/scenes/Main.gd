@@ -53,6 +53,8 @@ var _assault_suppress := ""
 var _assault_suppress_to := ""
 ## §6.9/§6.12: i dadi scelti per l'Ambush, per spazio.
 var _ambush_dice: Dictionary = {}
+## Scelte per Attività Speciale: {chiave: {spazio: valore}}.
+var _sa_choices: Dictionary = {}
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
@@ -723,6 +725,53 @@ func _refresh_turn_line() -> void:
 	_turn_line.text = line
 
 
+## Le scelte che alcune Attività Speciali offrono per ciascuno spazio: Coordinate
+## (poi House o Repair, e con l'Opposizione già al massimo togliere due cubi o
+## sostituirne uno), Purify (convertire forze o prendere una Base nemica),
+## Public Relations (Repair più House, o solo Repair). Erano tutte fissate a un
+## valore, che è come dire che quella scelta non esisteva.
+func _build_special_box() -> void:
+	var gc := GameController
+	var any := false
+	for sid_v in _op_spaces:
+		var sid := String(sid_v)
+		var opts: Array = gc.special_options(_sa_mode, sid)
+		if opts.is_empty():
+			continue
+		any = true
+		var byk: Dictionary = {}
+		for o in opts:
+			var k := String((o as Dictionary)["key"])
+			if not byk.has(k):
+				byk[k] = []
+			(byk[k] as Array).append(o)
+		var title := Label.new()
+		title.text = gc.game_def.space(sid).name
+		title.add_theme_font_size_override("font_size", 11)
+		_move_box.add_child(title)
+		for k in byk.keys():
+			var key := String(k)
+			var opt := OptionButton.new()
+			var list: Array = byk[key]
+			for i in range(list.size()):
+				var od: Dictionary = list[i]
+				opt.add_item(String(od["label"]))
+				opt.set_item_metadata(i, String(od["id"]))
+				if String(_sa_choices.get(key, {}).get(sid, "")) == String(od["id"]):
+					opt.select(i)
+			# La prima voce è il valore di partenza, se non è già stato scelto.
+			if not (_sa_choices.get(key, {}) as Dictionary).has(sid) and list.size() > 0:
+				if not _sa_choices.has(key):
+					_sa_choices[key] = {}
+				_sa_choices[key][sid] = String((list[0] as Dictionary)["id"])
+			opt.item_selected.connect(func(idx: int):
+				if not _sa_choices.has(key):
+					_sa_choices[key] = {}
+				_sa_choices[key][sid] = String(opt.get_item_metadata(idx))
+				_refresh_preview())
+			_move_box.add_child(opt)
+
+
 ## §6.3 Transport: sposta Truppe fra Phobos e gli spazi con una Base MarsGov,
 ## più fino a due spazi attivati apposta. Non sceglie bersagli come le altre
 ## Attività Speciali — dichiara spostamenti — ed è per questo che finora era
@@ -1373,7 +1422,7 @@ func _start_sa(sa_id: String) -> void:
 
 func _confirm_sa() -> void:
 	var gc := GameController
-	var extra_sa := {}
+	var extra_sa := _sa_extra()
 	if _sa_mode == "transport":
 		extra_sa = {"extra": Array(_op_spaces), "moves": _op_moves}
 	var res: Dictionary = gc.execute_special(_sa_mode, Array(_op_spaces), extra_sa)
@@ -1396,7 +1445,24 @@ func _suppress_plan() -> Dictionary:
 	return {"id": _assault_suppress, "moves": moves}
 
 
+## Le scelte raccolte per l'Attività Speciale in preparazione. `house` è un
+## interruttore, quindi va riportato a booleano.
+func _sa_extra() -> Dictionary:
+	var out: Dictionary = {}
+	for key in _sa_choices.keys():
+		var k := String(key)
+		if k == "house":
+			var h: Dictionary = {}
+			for sid in (_sa_choices[k] as Dictionary).keys():
+				h[sid] = String(_sa_choices[k][sid]) == "1"
+			out[k] = h
+		else:
+			out[k] = _sa_choices[k]
+	return out
+
+
 func _cancel_op() -> void:
+	_sa_choices.clear()
 	_rally_modes.clear()
 	_rally_dig_in = ""
 	_assault_bombard.clear()
@@ -1476,6 +1542,8 @@ func _refresh_preview() -> void:
 		extra_preview = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
 	if _op_mode == "attack":
 		extra_preview = {"ambush_dice": _ambush_dice}
+	if _sa_mode != "":
+		extra_preview = _sa_extra()
 	var res: Dictionary = gc.preview_action(kind, action_id, gc.sequence.pending_faction(),
 		Array(_op_spaces), extra_preview)
 	if not res.get("ok", false):
@@ -1750,6 +1818,9 @@ func _refresh_move_box() -> void:
 		return
 	if _sa_mode == "transport":
 		_build_transport_box()
+		return
+	if _sa_mode != "" and not _op_spaces.is_empty():
+		_build_special_box()
 		return
 	if not gc.MOVEMENT_OPERATIONS.has(_op_mode) or _op_spaces.is_empty():
 		return

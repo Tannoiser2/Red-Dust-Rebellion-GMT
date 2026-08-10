@@ -596,6 +596,41 @@ func _initialize() -> void:
 		_ok(gc2.rdr().count_in(gc2.state, with_base, "rd_rebel") == reb0 - 2,
 			"…pagata con due Ribelli")
 
+	# --- Le scelte delle Attività Speciali ----------------------------------
+	# Erano parametri fissi nel dispatcher: la scelta esisteva nelle regole ma
+	# non nel gioco. Purify «occupy» prende una Base nemica indifesa invece di
+	# convertire forze, ed è l'esempio più netto.
+	gc2.new_game("standard", 20240424, [])
+	await process_frame
+	var pur: PackedStringArray = gc2.special_candidates("purify", "reclaimer")
+	var with_occupy := ""
+	for sid_p in pur:
+		for op_p in gc2.special_options("purify", String(sid_p)):
+			if String((op_p as Dictionary)["id"]) == "occupy":
+				with_occupy = String(sid_p)
+				break
+		if with_occupy != "":
+			break
+	_ok(pur.size() > 0, "Purify ha spazi candidati (%d)" % pur.size())
+	for sid_p2 in pur:
+		var opts_p: Array = gc2.special_options("purify", String(sid_p2))
+		_ok(opts_p.size() >= 1, "…e almeno una modalità in %s" % sid_p2)
+		break
+	# Coordinate: la scelta «togli 2 cubi / sostituiscine 1» compare solo dove
+	# l'Opposizione è già al massimo, com'è scritto in §6.8.
+	var coo: PackedStringArray = gc2.special_candidates("coordinate", "red_dust")
+	if coo.size() > 0:
+		var sid_c := String(coo[0])
+		var keys_c: Array = []
+		for op_c in gc2.special_options("coordinate", sid_c):
+			var k_c := String((op_c as Dictionary)["key"])
+			if not keys_c.has(k_c):
+				keys_c.append(k_c)
+		_ok(keys_c.has("action"), "Coordinate offre la scelta fra House, Repair o niente")
+		var at_max: bool = gc2.state.spaces[sid_c].support == CoinEnums.Support.ACTIVE_OPPOSITION
+		_ok(keys_c.has("at_max") == at_max,
+			"…e quella dei cubi solo con l'Opposizione già al massimo (%s)" % str(at_max))
+
 	# --- §6.3 Transport e §6.9 Ambush: le due Speciali che mancavano ---------
 	gc2.new_game("standard", 20240424, [])
 	await process_frame

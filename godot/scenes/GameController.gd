@@ -294,6 +294,39 @@ func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Arr
 	return {"ok": false, "error": "Operazione '%s' non ancora disponibile in UI." % op_id}
 
 
+## Le scelte che un'Attività Speciale offre in questo spazio: {id, label} per
+## ciascuna opzione. Vuoto quando non c'è niente da decidere.
+func special_options(sa_id: String, sid: String) -> Array:
+	var m: RDRModule = rdr()
+	match sa_id:
+		"coordinate":
+			var out: Array = []
+			if m.marker(state, sid, "damage") > 0:
+				out.append({"key": "action", "id": "repair", "label": "poi Repair"})
+			if ops.act.can_house(sid):
+				out.append({"key": "action", "id": "house", "label": "poi House"})
+			out.append({"key": "action", "id": "", "label": "solo lo spostamento"})
+			# §6.8: solo se lo spazio è GIÀ in Opposizione Attiva la scelta
+			# fra togliere due cubi o sostituirne uno ha senso.
+			if state.spaces[sid].support == CoinEnums.Support.ACTIVE_OPPOSITION:
+				out.append({"key": "at_max", "id": "remove", "label": "togli 2 cubi"})
+				out.append({"key": "at_max", "id": "replace", "label": "sostituiscine 1"})
+			return out
+		"purify":
+			var out2: Array = [{"key": "mode", "id": "convert", "label": "converti forze"}]
+			for base_id in ["mg_base", "corp_base", "rd_base"]:
+				if m.count_in(state, sid, base_id) > 0 and ops.act.base_removable(sid, base_id):
+					out2.append({"key": "mode", "id": "occupy",
+						"label": "prendi la Base nemica"})
+					break
+			return out2
+		"public_relations":
+			var out3: Array = [{"key": "house", "id": "1", "label": "Repair + House"}]
+			out3.append({"key": "house", "id": "0", "label": "solo Repair"})
+			return out3
+	return []
+
+
 ## §6.3: la rete su cui il Transport sposta le Truppe — Phobos e ogni spazio con
 ## una Base MarsGov, più quelli attivati apposta.
 func transport_network(extra: Array = []) -> PackedStringArray:
@@ -550,29 +583,39 @@ func _run_special_on(sp: RDRSpecials, sa_id: String, spaces: Array,
 	match sa_id:
 		"entrench":
 			for sid in spaces:
-				entries.append({"id": sid, "fortify": 9})
+				entries.append({"id": sid,
+					"fortify": int(extra_moves.get("fortify", {}).get(sid, 9))})
 			return sp.entrench({"spaces": entries})
 		"petition":
 			return sp.petition({})
 		"public_relations":
 			for sid in spaces:
-				entries.append({"id": sid, "repairs": 1, "house": true})
+				entries.append({"id": sid, "repairs": 1,
+					"house": bool(extra_moves.get("house", {}).get(sid, true))})
 			return sp.public_relations({"spaces": entries})
 		"exploit":
 			return sp.exploit({"spaces": spaces})
 		"raid":
+			# §6.6: gli SpecOps possono colpire qualunque forza, anche le Truppe
+			# MG e i Satelliti; l'elenco fisso limitava il Raid ai soli Ribelli.
 			for sid in spaces:
-				entries.append({"id": sid, "targets": ["rd_rebel", "cr_rebel"]})
+				var tg: Array = extra_moves.get("targets", {}).get(sid,
+					["rd_rebel", "cr_rebel"])
+				entries.append({"id": sid, "targets": tg,
+					"moves": extra_moves.get("moves_by_space", {}).get(sid, [])})
 			return sp.raid({"spaces": entries})
 		"redistribute":
 			return sp.redistribute({"spaces": spaces})
 		"coordinate":
 			for sid in spaces:
-				entries.append({"id": sid, "action": "", "at_max": "remove"})
+				entries.append({"id": sid,
+					"action": String(extra_moves.get("action", {}).get(sid, "")),
+					"at_max": String(extra_moves.get("at_max", {}).get(sid, "remove"))})
 			return sp.coordinate({"spaces": entries})
 		"purify":
 			for sid in spaces:
-				entries.append({"id": sid, "mode": "convert"})
+				entries.append({"id": sid,
+					"mode": String(extra_moves.get("mode", {}).get(sid, "convert"))})
 			return sp.purify({"spaces": entries})
 		"ransack":
 			return sp.ransack({"spaces": spaces})
@@ -639,7 +682,7 @@ func preview_action(kind: String, action_id: String, fid: String, spaces: Array,
 	if kind == "special":
 		var sp := RDRSpecials.new(copy, rdr())
 		sp.cards = c
-		res = _run_special_on(sp, action_id, spaces)
+		res = _run_special_on(sp, action_id, spaces, extra)
 		res["log"] = sp.log_lines.duplicate()
 	else:
 		var o := RDROperations.new(copy, rdr(), rng)
