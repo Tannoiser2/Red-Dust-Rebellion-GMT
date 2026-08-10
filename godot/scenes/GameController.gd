@@ -931,6 +931,35 @@ func np_take_turn() -> Dictionary:
 		res["passed"] = true
 		return res
 
+	# §8.5.2: la tabella può mandare NP CR sulle proprie Asset card invece che
+	# sull'Evento della carta in corso.
+	if String(res.get("action", "")) == "asset_event":
+		var played := _play_np_asset_event(not sequence.is_first_slot())
+		if played == 0:
+			# §8.5.2: «continue down to the next line of the Eligibility table».
+			# Si rilegge la tabella con il check già speso, così si prende la
+			# riga davvero successiva invece di saltare all'ultima — e
+			# soprattutto si RIENTRA in take_turn, che è l'unico posto dove
+			# l'Operazione viene eseguita sulla plancia. Scrivere qui
+			# `res["action"] = "op_sa"` registrava una casella a vuoto: la
+			# Fazione risultava aver agito senza muovere un pezzo.
+			var ctx := _np_context()
+			ctx["critical_asset_event"] = false
+			ctx["any_asset_event"] = false
+			res = np_ops.take_turn(fid, slot, ctx, _np_rng())
+			for line in np.log_lines + np_ops.log_lines + np_move.log_lines + ops.log_lines:
+				emit_signal("log_line", line)
+			np.log_lines.clear()
+			np_ops.log_lines.clear()
+			np_move.log_lines.clear()
+			ops.log_lines.clear()
+			for line in res.get("trace", []):
+				emit_signal("log_line", "  · %s" % line)
+			if not bool(res.get("ok", false)):
+				res["action"] = "pass"
+		else:
+			res["asset_card"] = played
+
 	# §8.5.5: se la tabella ha scelto l'Evento, lo si gioca davvero.
 	if String(res.get("action", "")) == "event":
 		var which := _np_event_option(fid, state.current_card)
@@ -1044,10 +1073,117 @@ func _np_context() -> Dictionary:
 		if rounds != null:
 			ctx["next_critical"] = np.event_critical(fid, rounds.next_card())
 			ctx["first_on_next_if_pass"] = _first_on_next_if_pass(fid)
+		# §8.5.2: NP CR, prima di scendere nella tabella, guarda se fra le Asset
+		# card che rivelerebbe c'è un Evento da giocare.
+		if fid == "reclaimer":
+			# La riga della tabella non chiede «c'è un Asset Event buono?» ma
+			# «fai il check»: scatta ogni volta che il check è materialmente
+			# possibile, e le carte si bruciano anche quando va a vuoto.
+			# Ultimo capoverso §8.5.2: a mazzo esaurito niente Asset Event
+			# fino al prossimo Dust Storm Round (il Reset lo rimescola).
+			var can_check: bool = cards != null \
+				and int(state.tracks.get("asset_total", 0)) > 0 \
+				and not cards.deck().is_empty()
+			ctx["critical_asset_event"] = can_check
+			ctx["any_asset_event"] = can_check
 		var second := sequence.next_eligible()
 		if second != "":
 			ctx["current_critical_for_second"] = np.event_critical(second, state.current_card)
 	return ctx
+
+
+## §8.5.2: «draw and reveal a number of Asset cards equal to the current Asset
+## Total». Le carte rivelate NON sono una mano: si guardano e si scartano. Qui
+## si limita a guardare, senza toccare il mazzo, perché la tabella di Eligibility
+## chiede la risposta prima di sapere se la userà; a pescare davvero è
+## `_play_np_asset_event()`, e solo quando l'Evento si gioca.
+func _asset_event_peek() -> Dictionary:
+	var out := {"critical": [], "effective": [], "drawn": []}
+	if cards == null:
+		return out
+	var n: int = mini(int(state.tracks.get("asset_total", 0)), cards.deck().size())
+	var deck: Array = cards.deck()
+	for i in range(n):
+		# Si guardano le ultime `n` del mazzo: `draw_asset` prende da lì.
+		var number := int(deck[deck.size() - 1 - i])
+		(out["drawn"] as Array).append(number)
+		var c: Dictionary = cards.assets.get(number, {})
+		var kind := String(c.get("kind", ""))
+		# §1.5: anche le Capability sono Asset Event — restano in gioco invece di
+		# risolversi e basta. Per i Reclaimer sono un vantaggio permanente,
+		# quindi sempre «effective»; nessuna porta la stella del Critical.
+		if kind == "capability":
+			(out["effective"] as Array).append(number)
+			if bool(c.get("np_star", false)):
+				(out["critical"] as Array).append(number)
+			continue
+		if kind != "event":
+			continue   # le carte di solo valore non hanno Evento
+		var opt: Dictionary = events.asset_option(number)
+		if opt.is_empty():
+			continue
+		if not bool(np.event_effective("reclaimer", opt.get("effects", []))["effective"]):
+			continue
+		(out["effective"] as Array).append(number)
+		if bool(c.get("np_star", false)):
+			(out["critical"] as Array).append(number)
+	return out
+
+
+## §8.5.2: rivela le Asset card, gioca l'Evento scelto e scarta tutto. Restituisce
+## il numero della carta giocata, 0 se non se n'è giocata nessuna.
+func _play_np_asset_event(second_slot: bool) -> int:
+	if cards == null:
+		return 0
+	var peek := _asset_event_peek()
+	var drawn: Array = peek["drawn"]
+	if drawn.is_empty():
+		return 0
+	var pool: Array = peek["critical"]
+	if pool.is_empty():
+		# La seconda riga della procedura vale solo per la 2ª Disponibile.
+		pool = peek["effective"] if second_slot else []
+	# Le carte rivelate lasciano il mazzo in ogni caso: «Discard all drawn
+	# Asset cards» vale sia quando un Evento si gioca sia quando non se ne
+	# gioca nessuno. Senza questo il mazzo non calava mai e il check si
+	# ripeteva identico a ogni turno.
+	var deck: Array = cards.deck()
+	for number in drawn:
+		deck.erase(number)
+	var pick := 0
+	if not pool.is_empty():
+		pick = int(pool[_np_rng().randi_range(0, pool.size() - 1)])
+	emit_signal("log_line", "NP Reclaimer rivela %d Asset card: %s" % [drawn.size(),
+		("gioca «%s»." % cards.assets.get(pick, {}).get("title", str(pick))) if pick > 0
+		else "nessun Evento utile, le scarta tutte."])
+	var discard: Array = cards.discard_pile()
+	if pick == 0:
+		discard.append_array(drawn)
+		refresh()
+		return 0
+	var ok := true
+	# §1.5: una Capability resta in gioco e non torna mai nel mazzo; un Evento
+	# si risolve e finisce negli scarti insieme alle altre rivelate.
+	if String(cards.assets.get(pick, {}).get("kind", "")) == "capability":
+		cards.active_capabilities().append(pick)
+		emit_signal("log_line", "  · Capability in gioco: %s." %
+			cards.assets.get(pick, {}).get("title", str(pick)))
+	else:
+		var ev: Dictionary = events.play_asset(pick, {}, "reclaimer")
+		for line in events.log_lines:
+			emit_signal("log_line", line)
+		events.log_lines.clear()
+		ok = bool(ev.get("ok", false))
+	for number in drawn:
+		if int(number) != pick or not ok:
+			discard.append(number)
+	if not ok:
+		refresh()
+		return 0
+	# §8.5.2: eseguito un Asset Event, l'Asset Total cala di uno e il turno finisce.
+	rdr().add_asset(state, -1)
+	_run_np_free_ops()
+	return pick
 
 
 ## §8.5.2: passando, questa Fazione sarebbe la 1ª Disponibile sulla prossima

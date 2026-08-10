@@ -463,8 +463,8 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 	trace.append("Eligibility: %s → %s" % [decision["label"], decision["action"]])
 	var action := String(decision["action"])
 	if action in ["pass", "event", "asset_event"]:
-		# L'Evento richiede Effective Events ed Event Instructions, non ancora
-		# trascritte: per ora si passa e lo si dichiara.
+		# Passo, Evento della carta e Asset Event non passano di qui: li risolve
+		# il chiamante, che ha i mazzi e la sequenza.
 		return {"ok": true, "action": action, "trace": trace,
 			"degraded": bool(decision.get("degraded", false))}
 

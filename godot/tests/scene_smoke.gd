@@ -784,6 +784,38 @@ func _initialize() -> void:
 		_ok(true, "il pulsante del bot esegue il turno senza errori")
 	_ok(gc.state != null, "la partita è ancora coerente dopo i turni del bot")
 
+	# §8.5.2: il bot Reclaimer deve arrivare a rivelare Asset card, giocarne
+	# l'Evento e mettere in gioco le Capability. Per un bel po' non lo faceva
+	# affatto — la tabella di Eligibility ci passava sopra e `play_asset_event`
+	# pretendeva la carta «in mano», che un bot non ha — e nessun test se ne
+	# accorgeva perché la partita restava perfettamente coerente lo stesso.
+	var giocati := 0
+	var capability := 0
+	for partita in range(4):
+		gc.new_game("standard", 500 + partita * 71,
+			["marsgov", "corporations", "red_dust", "reclaimer"])
+		await process_frame
+		var righe: Array[String] = []
+		var raccogli := func(t): righe.append(String(t))
+		gc.log_line.connect(raccogli)
+		for i in range(120):
+			if gc.sequence == null or gc.rounds.is_game_over():
+				break
+			if gc.sequence.pending_faction() == "":
+				gc.end_card()
+				await process_frame
+				continue
+			if not bool(gc.np_take_turn().get("ok", false)):
+				break
+			await process_frame
+		gc.log_line.disconnect(raccogli)
+		for l in righe:
+			if l.contains("rivela") and l.contains("Asset card") and l.contains("gioca"):
+				giocati += 1
+		capability += (gc.state.tracks.get("capabilities", []) as Array).size()
+	_ok(giocati > 0, "il bot Reclaimer gioca Asset Event (%d in 4 partite)" % giocati)
+	_ok(capability > 0, "il bot Reclaimer mette Capability in gioco (%d)" % capability)
+
 	if shot_path != "":
 		await process_frame
 		var img := root.get_texture().get_image()
