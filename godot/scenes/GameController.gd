@@ -256,7 +256,15 @@ func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Arr
 				entries.append({"id": sid, "troops": 4})
 			return o.train({"spaces": entries})
 		"assault":
-			return o.assault({"faction": fid, "spaces": spaces})
+			# §5.5: chi è EarthGov Controller può Bombardare gli spazi
+			# dell'Assault (un Satellite dall'Orbita per due forze nemiche in
+			# più) e Sopprimere in UNO spazio non scelto.
+			var ap := {"faction": fid, "spaces": spaces}
+			if not (extra.get("bombard", []) as Array).is_empty():
+				ap["bombard"] = extra["bombard"]
+			if not (extra.get("suppress", {}) as Dictionary).is_empty():
+				ap["suppress"] = extra["suppress"]
+			return o.assault(ap)
 		"rally":
 			# §5.6: ogni spazio scelto ha la sua modalità. Senza, il Rally
 			# sarebbe sempre «piazza un Ribelle» e non si potrebbero mai
@@ -276,6 +284,43 @@ func _run_operation_on(o: RDROperations, op_id: String, fid: String, spaces: Arr
 		"preach":
 			return o.preach({"spaces": spaces})
 	return {"ok": false, "error": "Operazione '%s' non ancora disponibile in UI." % op_id}
+
+
+## §5.5 Bombard: si può solo se si è EarthGov Controller e c'è un Satellite in
+## Orbita da far scendere.
+func can_bombard(fid: String) -> bool:
+	return rdr().eg_controller(state) == fid \
+		and rdr().count_in(state, "orbit", "satellite") > 0
+
+
+## §5.5 Suppress: uno spazio NON scelto per l'Assault, con Truppe EG e Ribelli.
+func suppress_candidates(fid: String, chosen: Array) -> PackedStringArray:
+	var out := PackedStringArray()
+	if rdr().eg_controller(state) != fid:
+		return out
+	var m: RDRModule = rdr()
+	for sid in m.mars_spaces(state):
+		var s := String(sid)
+		if chosen.has(s):
+			continue
+		if m.count_in(state, s, "eg_troop") == 0:
+			continue
+		if m.count_in(state, s, "rd_rebel") + m.count_in(state, s, "cr_rebel") == 0:
+			continue
+		out.append(s)
+	return out
+
+
+## Deserti adiacenti in cui i Ribelli soppressi possono essere spinti.
+func suppress_destinations(sid: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	var sd: SpaceDef = game_def.space(sid)
+	if sd == null:
+		return out
+	for other in sd.adjacent:
+		if rdr().is_desert(state, String(other)):
+			out.append(String(other))
+	return out
 
 
 ## §5.6: le modalità di Rally che hanno davvero effetto in questo spazio, con

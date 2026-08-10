@@ -41,7 +41,7 @@ e fine partita al terzo Dust Storm. Manca ancora il cuore del gioco: Operazioni,
 Attività Speciali ed effetti degli Eventi — quindi per ora l'unica azione
 disponibile in UI è il Passo.
 
-**1037 test del modulo + 141 controlli di smoke test della scena, 0 falliti.**
+**1037 test del modulo + 147 controlli di smoke test della scena, 0 falliti.**
 
 | Componente | Stato |
 | --- | --- |
@@ -86,7 +86,7 @@ disponibile in UI è il Passo.
 | House / Repair / Pacify / Agitate §1.7 | ✅ |
 | Movimento: adiacenza, Maglev, Spaceport, tempeste | ✅ |
 | UI: tutte e 11 le Operazioni | ✅ con pianificatore di movimento per Secure/Recon/March/Travel |
-| UI: 9 Attività Speciali su 12 | ✅ Transport e Ambush restano da collegare |
+| UI: 9 Attività Speciali su 11 | ✅ Transport e Ambush restano da collegare |
 | 30 carte Asset + 12 Campaign (dati) | ✅ lette dal Vassal |
 | Mano, pagamento, Capability, rimescolamento §1.5 | ✅ i Reclaimer pagano davvero |
 | Partita riproducibile con un seme | ✅ `new_game(scenario, seed)` |

@@ -596,6 +596,35 @@ func _initialize() -> void:
 		_ok(gc2.rdr().count_in(gc2.state, with_base, "rd_rebel") == reb0 - 2,
 			"…pagata con due Ribelli")
 
+	# --- §5.5: Bombard e Suppress dell'EarthGov Controller ------------------
+	# Due opzioni dell'Assault che l'interfaccia non sapeva chiedere.
+	gc2.new_game("standard", 20240424, [])
+	await process_frame
+	var ctrl: String = gc2.rdr().eg_controller(gc2.state)
+	_ok(ctrl != "", "c'è un EarthGov Controller (%s)" % ctrl)
+	_ok(gc2.can_bombard(ctrl), "il Controller può Bombardare (Satelliti in Orbita)")
+	var other := "marsgov" if ctrl != "marsgov" else "corporations"
+	_ok(not gc2.can_bombard(other), "chi non è Controller non può (%s)" % other)
+
+	# Suppress: serve uno spazio con Truppe EG e Ribelli, che lo schieramento
+	# iniziale non offre. Se ne costruisce uno.
+	var sup_space := ""
+	for sid_s in gc2.rdr().mars_spaces(gc2.state):
+		var s_s := String(sid_s)
+		if gc2.rdr().count_in(gc2.state, s_s, "rd_rebel") > 0 \
+				and gc2.suppress_destinations(s_s).size() > 0:
+			sup_space = s_s
+			break
+	if sup_space != "":
+		gc2.rdr().move_pieces(gc2.state, "phobos", sup_space, "eg_troop", 2)
+		var cands_s: PackedStringArray = gc2.suppress_candidates(ctrl, [])
+		_ok(cands_s.has(sup_space),
+			"%s è un candidato per Suppress (Truppe EG + Ribelli)" % sup_space)
+		_ok(not gc2.suppress_candidates(ctrl, [sup_space]).has(sup_space),
+			"…ma non se è fra gli spazi scelti per l'Assault (§5.5)")
+		_ok(gc2.suppress_destinations(sup_space).size() > 0,
+			"…e ha Deserti adiacenti dove spingere i Ribelli")
+
 	# --- §4.3 fase 3: la Support Phase dei giocatori ------------------------
 	# Prima veniva saltata con una riga nel Log: in una partita fra umani la
 	# fase in cui MarsGov e Red Dust spingono il Supporto non si giocava affatto.

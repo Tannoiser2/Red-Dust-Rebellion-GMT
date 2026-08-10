@@ -47,6 +47,10 @@ var _log_once: Dictionary = {}
 ## §5.6: modalità scelta per ogni spazio del Rally, e la Base da portare a Dig-In.
 var _rally_modes: Dictionary = {}
 var _rally_dig_in := ""
+## §5.5: spazi da Bombardare e lo spazio (con destinazione) da Sopprimere.
+var _assault_bombard: Array = []
+var _assault_suppress := ""
+var _assault_suppress_to := ""
 var _status: RichTextLabel
 var _space_info: RichTextLabel
 var _card_info: RichTextLabel
@@ -717,6 +721,84 @@ func _refresh_turn_line() -> void:
 	_turn_line.text = line
 
 
+## §5.5: chi è EarthGov Controller ha due opzioni in più durante l'Assault, e
+## non erano mai state chiedibili — Bombard (un Satellite dall'Orbita su uno
+## spazio dell'Assault, due forze nemiche Attive in più e un Danno se è un
+## Labirinto) e Suppress (in UNO spazio non scelto, spinge i Ribelli nei Deserti
+## adiacenti e riporta l'Opposizione verso il Neutrale).
+func _build_assault_box() -> void:
+	var gc := GameController
+	var fid := gc.sequence.pending_faction()
+	if not gc.can_bombard(fid) and gc.suppress_candidates(fid, Array(_op_spaces)).is_empty():
+		return   # non è EarthGov Controller, o non ha di che usarle
+
+	if gc.can_bombard(fid) and not _op_spaces.is_empty():
+		var head := Label.new()
+		head.text = "Bombard (Satelliti in Orbita: %d)" % gc.rdr().count_in(gc.state, "orbit", "satellite")
+		head.add_theme_font_size_override("font_size", 11)
+		_move_box.add_child(head)
+		for sid_v in _op_spaces:
+			var sid := String(sid_v)
+			var cb := CheckBox.new()
+			cb.text = gc.game_def.space(sid).name
+			cb.button_pressed = _assault_bombard.has(sid)
+			cb.toggled.connect(func(on: bool):
+				if on and not _assault_bombard.has(sid):
+					_assault_bombard.append(sid)
+				elif not on:
+					_assault_bombard.erase(sid)
+				_refresh_preview())
+			_move_box.add_child(cb)
+
+	var sup := gc.suppress_candidates(fid, Array(_op_spaces))
+	if sup.size() > 0:
+		var row := HBoxContainer.new()
+		var l := Label.new()
+		l.text = "Suppress"
+		l.custom_minimum_size = Vector2(80, 0)
+		l.add_theme_font_size_override("font_size", 11)
+		row.add_child(l)
+		var opt := OptionButton.new()
+		opt.add_item("— nessuno —")
+		opt.set_item_metadata(0, "")
+		for i in range(sup.size()):
+			opt.add_item(gc.game_def.space(String(sup[i])).name)
+			opt.set_item_metadata(i + 1, String(sup[i]))
+			if String(sup[i]) == _assault_suppress:
+				opt.select(i + 1)
+		opt.item_selected.connect(func(idx: int):
+			_assault_suppress = String(opt.get_item_metadata(idx))
+			_assault_suppress_to = ""
+			_refresh_op_bar())
+		row.add_child(opt)
+		_move_box.add_child(row)
+
+		# Dove finiscono i Ribelli spinti fuori. Al tavolo la sceglie il
+		# proprietario di ciascun Ribelle; qui è una sola destinazione per tutti,
+		# ed è dichiarato nel suggerimento.
+		if _assault_suppress != "":
+			var dests := gc.suppress_destinations(_assault_suppress)
+			var row2 := HBoxContainer.new()
+			var l2 := Label.new()
+			l2.text = "→ Deserto"
+			l2.custom_minimum_size = Vector2(80, 0)
+			l2.add_theme_font_size_override("font_size", 11)
+			row2.add_child(l2)
+			var od := OptionButton.new()
+			od.tooltip_text = "Al tavolo ogni Ribelle lo sceglie il suo proprietario: qui vanno tutti nello stesso Deserto."
+			for i in range(dests.size()):
+				od.add_item(gc.game_def.space(String(dests[i])).name)
+				od.set_item_metadata(i, String(dests[i]))
+				if String(dests[i]) == _assault_suppress_to:
+					od.select(i)
+			if _assault_suppress_to == "" and dests.size() > 0:
+				_assault_suppress_to = String(dests[0])
+			od.item_selected.connect(func(idx: int):
+				_assault_suppress_to = String(od.get_item_metadata(idx)))
+			row2.add_child(od)
+			_move_box.add_child(row2)
+
+
 ## §5.6: il Rally fa cose diverse a seconda della modalità scelta per ciascuno
 ## spazio — piazzare un Ribelle, costruire una Base con due, riempire fino alla
 ## Popolazione, riportare Nascosti, potenziare a Conversion Center. Prima erano
@@ -1215,9 +1297,25 @@ func _confirm_sa() -> void:
 	_cancel_op()
 
 
+## Il piano di Suppress: tutti i Ribelli dello spazio verso il Deserto scelto,
+## fin dove arrivano le Truppe EG (il motore taglia da sé all'eccedenza).
+func _suppress_plan() -> Dictionary:
+	if _assault_suppress == "" or _assault_suppress_to == "":
+		return {}
+	var moves: Array = []
+	for t in ["rd_rebel", "cr_rebel"]:
+		var n := GameController.rdr().count_in(GameController.state, _assault_suppress, t)
+		if n > 0:
+			moves.append({"type": t, "to": _assault_suppress_to, "count": n})
+	return {"id": _assault_suppress, "moves": moves}
+
+
 func _cancel_op() -> void:
 	_rally_modes.clear()
 	_rally_dig_in = ""
+	_assault_bombard.clear()
+	_assault_suppress = ""
+	_assault_suppress_to = ""
 	_op_mode = ""
 	_sa_mode = ""
 	_ev_active = false
@@ -1238,6 +1336,8 @@ func _confirm_op() -> void:
 	var extra := {"moves": _op_moves}
 	if _op_mode == "rally":
 		extra = {"modes": _rally_modes, "dig_in": _rally_dig_in}
+	if _op_mode == "assault":
+		extra = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
 	if _op_mode == "logistics":
 		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
 		extra = {}
@@ -1283,6 +1383,8 @@ func _refresh_preview() -> void:
 	var extra_preview := {"moves": _op_moves}
 	if _op_mode == "rally":
 		extra_preview = {"modes": _rally_modes, "dig_in": _rally_dig_in}
+	if _op_mode == "assault":
+		extra_preview = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
 	var res: Dictionary = gc.preview_action(kind, action_id, gc.sequence.pending_faction(),
 		Array(_op_spaces), extra_preview)
 	if not res.get("ok", false):
@@ -1536,6 +1638,9 @@ func _refresh_move_box() -> void:
 	var gc := GameController
 	if _op_mode == "rally":
 		_build_rally_box()
+		return
+	if _op_mode == "assault":
+		_build_assault_box()
 		return
 	if not gc.MOVEMENT_OPERATIONS.has(_op_mode) or _op_spaces.is_empty():
 		return
