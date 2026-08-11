@@ -1027,7 +1027,26 @@ func train(activation_number: int, limited: bool = false) -> Array:
 				pool.append(s)
 	if pool.is_empty():
 		return used
-	var pick := String(np.select_space("marsgov", "place_population", pool)["space"])
+	# Le tre sotto-istruzioni del Pacify hanno DUE colonne, come il Coordinate
+	# di Red Dust: ① «House at Support» e ② «Repair» usano Place Population,
+	# ③ «Shift Towards Active Support» usa la propria. Per MarsGov Place
+	# Population parte da «most Support» — lo spazio già più in alto, dove lo
+	# Shift non può più salire — mentre la colonna ③ parte da «not at Active
+	# Support». Sceglierle tutte con la prima buttava via il Pacify ogni volta
+	# che l'unica azione utile era lo Shift, ed è l'unica leva con cui MarsGov
+	# alza il Supporto fuori dal Dust Storm Round.
+	var pick := ""
+	for istruzione in [["house", "place_population"], ["repair", "place_population"],
+			["shift", "shift_toward_active_support"]]:
+		var adatti: Array = []
+		for sid in pool:
+			if _pacify_actions(String(sid)).has(String(istruzione[0])):
+				adatti.append(String(sid))
+		if adatti.is_empty():
+			continue
+		pick = String(np.select_space("marsgov", String(istruzione[1]), adatti)["space"])
+		if pick != "":
+			break
 	if pick == "":
 		return used
 	var actions := _pacify_actions(pick)
