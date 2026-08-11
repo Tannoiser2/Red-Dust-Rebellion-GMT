@@ -505,6 +505,10 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 		var moved := move.run_operation(faction, op_id, an, limited)
 		out["pairs"] = moved.get("pairs", [])
 		trace.append_array(moved.get("trace", []))
+		var basi := _place_bases_after_move(faction, op_id, out["pairs"])
+		if not basi.is_empty():
+			out["bases_placed"] = basi
+			trace.append("Basi piazzate in %s" % ", ".join(PackedStringArray(basi)))
 		return out
 
 	_ambush_done = false
@@ -513,6 +517,51 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 	_ambush_pending = false
 	_maybe_special(faction, action, read, out, trace)
 	return out
+
+
+## Le istruzioni ★ di Secure e Recon che piazzano Basi nelle destinazioni:
+##
+##   MG Recon    «Place Bases only in Deserts without MG Base»   (AA, CC, DD, EE, FF)
+##   CORP Recon  «Place Base in all destinations with no CORP Base»          (JJ, KK, MM)
+##   CORP Secure «Place Base in all destinations with 3+ cubes and no CORP Base»
+##
+## Erano trascritte, ma dentro il campo `note` — testo libero che il motore non
+## legge. Il risultato: in 100 partite le Corporations chiudevano con 6,7 Basi
+## su 9 mai piazzate, e le Basi COIN sono la soglia di vittoria dei Reclaimer.
+## §5.3: piazzare una Base consuma un cubo, che torna fra i Disponibili.
+func _place_bases_after_move(faction: String, op_id: String, pairs: Array) -> Array:
+	if not (op_id in ["secure", "recon"]) or faction not in ["marsgov", "corporations"]:
+		return []
+	var cubo := "mg_troop" if faction == "marsgov" else "security"
+	var base := "mg_base" if faction == "marsgov" else "corp_base"
+	# Il Secure di MarsGov non ha l'istruzione: solo House o Repair.
+	if faction == "marsgov" and op_id == "secure":
+		return []
+	var minimo := 3 if (faction == "corporations" and op_id == "secure") else 1
+	var viste: Array[String] = []
+	var messe: Array = []
+	for pr in pairs:
+		var sid := String((pr as Dictionary).get("to", ""))
+		if sid == "" or viste.has(sid):
+			continue
+		viste.append(sid)
+		if module.count_in(state, sid, base) > 0:
+			continue
+		# «only in Deserts» vale per MarsGov; le Corporations non hanno il vincolo.
+		if faction == "marsgov" and not module.is_desert(state, sid):
+			continue
+		if module.count_in(state, sid, cubo) < maxi(minimo, 1):
+			continue
+		if not ops.act.can_place_base(sid):
+			continue
+		if module.available(state, base) <= 0:
+			break
+		module.remove_pieces(state, sid, cubo, 1, "available")
+		module.place_from_available(state, sid, base, 1)
+		messe.append(sid)
+	if not messe.is_empty():
+		module.recompute_all_control(state)
+	return messe
 
 
 ## La carta offre l'Ambush fra le Attività Speciali?
