@@ -821,23 +821,49 @@ func _run_special(faction: String, sa_id: String) -> Dictionary:
 				e1.append({"id": sid, "mode": "convert"})
 			res = sp.purify({"spaces": e1})
 		"coordinate":
-			# Le istruzioni della carta sono ❶ House ❷ Repair ❸ Shift verso
-			# l'Opposizione Attiva. Il bot passava `action: ""` e faceva solo la
-			# ❸: 650 Coordinate in 100 partite senza un solo House o Repair,
-			# ed è l'Attività Speciale che Red Dust usa più di ogni altra.
+			# Le tre istruzioni della carta hanno DUE colonne diverse:
+			#   ❶ House  using Place Population
+			#   ❷ Repair using Place Population
+			#   ❸        Using Shift Towards Active Opposition
+			# Si sceglieva tutto con Place Population, la cui prima riga è
+			# «most Opposition»: spazi già all'Opposizione Attiva, dove lo shift
+			# non può più salire. La colonna ❸ parte invece da «not at Active
+			# Opposition», cioè esattamente dove lo shift ha effetto — ed è
+			# quella che conta quando la Displaced Population è esaurita e il
+			# Coordinate serve solo a spingere.
 			# Il costo del Repair lo gestisce già `_spend`, che per NP RD toglie
-			# un Agitate Total — la ★ «Reduce Agitate Total by 1 for each Repair».
+			# un Agitate Total: la ★ «Reduce Agitate Total by 1 for each Repair».
 			var e2: Array = []
-			var house_fatto := false
-			for sid in picks:
-				var s := String(sid)
-				var azione := ""
-				if not house_fatto and ops.act.can_house(s):
-					azione = "house"
-					house_fatto = true
-				elif ops.act.can_repair(s, "red_dust"):
-					azione = "repair"
-				e2.append({"id": s, "action": azione, "at_max": "remove"})
+			var presi: Array = []
+			for azione in ["house", "repair"]:
+				if presi.size() >= 2:
+					break
+				var adatti: Array = []
+				for sid in pool:
+					var sd := String(sid)
+					if presi.has(sd):
+						continue
+					if azione == "house" and ops.act.can_house(sd):
+						adatti.append(sd)
+					elif azione == "repair" and ops.act.can_repair(sd, "red_dust"):
+						adatti.append(sd)
+				if adatti.is_empty():
+					continue
+				var sc := String(np.select_space(faction, column, adatti).get("space", ""))
+				if sc == "":
+					continue
+				presi.append(sc)
+				e2.append({"id": sc, "action": azione, "at_max": "remove"})
+			# ❸: si completa fino a due spazi con la colonna dello Shift.
+			if presi.size() < 2:
+				var resto: Array = []
+				for sid in pool:
+					if not presi.has(String(sid)):
+						resto.append(String(sid))
+				for sid in np.select_spaces(faction, "shift_active_opposition",
+						resto, 2 - presi.size()):
+					presi.append(String(sid))
+					e2.append({"id": String(sid), "action": "", "at_max": "remove"})
 			res = sp.coordinate({"spaces": e2})
 		"entrench":
 			# Le due istruzioni stampate sulla carta: ❶ «Place Bases only in
