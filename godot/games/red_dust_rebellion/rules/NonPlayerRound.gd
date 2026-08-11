@@ -148,8 +148,17 @@ func _support_for(faction: String, cfg: Dictionary) -> void:
 	_flush_act()
 
 	var step := int(cfg.get("shift_step", 1))
+	# Gli spazi che una Campaign in gioco blocca: si mettono da parte e si passa
+	# ai successivi. Prima qui c'era un `break`, e bastava un solo spazio bloccato
+	# per far buttare via l'INTERO budget: con la Campaign #5 («i Labirinti non
+	# salgono al Supporto Attivo») e la priorità «most Population», che ripropone
+	# sempre lo stesso spazio, NP MarsGov perdeva tutti i suoi passi di Pacify a
+	# ogni Dust Storm Round — e senza Pacify il Supporto non sale mai abbastanza
+	# per arrivare alla soglia di vittoria.
+	var bloccati: Array[String] = []
 	while spent < budget:
-		var pool := _spaces_where("", func(sid): return _can_shift(sid, step))
+		var pool := _spaces_where("", func(sid):
+			return _can_shift(sid, step) and not bloccati.has(sid))
 		if pool.is_empty():
 			break
 		var pick := _pick(faction, String(cfg["shift_column"]), pool)
@@ -158,7 +167,8 @@ func _support_for(faction: String, cfg: Dictionary) -> void:
 		var before: int = state.spaces[pick].support
 		act.shift(pick, step)
 		if state.spaces[pick].support == before:
-			break   # la Campaign in gioco blocca quello spostamento: si smette
+			bloccati.append(pick)
+			continue
 		spent += 1
 		_log("Support: %s si sposta di un passo (%s)." % [_name(pick), faction])
 	_flush_act()

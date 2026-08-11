@@ -702,9 +702,39 @@ func _run_special(faction: String, sa_id: String) -> Dictionary:
 				e2.append({"id": sid, "action": "", "at_max": "remove"})
 			res = sp.coordinate({"spaces": e2})
 		"entrench":
-			var e3: Array = []
+			# Le due istruzioni stampate sulla carta: ❶ «Place Bases only in
+			# Deserts without MG Base», ❷ «Fortify only at Support». Prima si
+			# passava soltanto `fortify: 9`, uguale per ogni spazio: NP MarsGov
+			# eseguiva l'Entrench centinaia di volte senza piazzare una sola
+			# Base — e le Basi COIN sono la soglia di vittoria dei Reclaimer.
+			# Le istruzioni sono numerate, e la ❶ va servita per prima: fra i
+			# candidati si prendono anzitutto i Deserti senza Base MG. Con la
+			# sola colonna «place_bases» la scelta cadeva quasi sempre su
+			# Labirinti, dove una Base non si può piazzare, e l'istruzione ❶
+			# restava lettera morta a ogni singolo Entrench.
+			var deserti: Array = []
+			for sid in pool:
+				var sd := String(sid)
+				if module.is_desert(state, sd) and module.count_in(state, sd, "mg_base") == 0 \
+						and ops.act.can_place_base(sd):
+					deserti.append(sd)
+			var scelti: Array = []
+			if not deserti.is_empty():
+				scelti = np.select_spaces(faction, column, deserti, 2)
 			for sid in picks:
-				e3.append({"id": sid, "fortify": 9})
+				if scelti.size() >= 2:
+					break
+				if not scelti.has(sid):
+					scelti.append(sid)
+			var e3: Array = []
+			for sid in scelti:
+				var s := String(sid)
+				e3.append({
+					"id": s,
+					"build_base": module.is_desert(state, s) \
+						and module.count_in(state, s, "mg_base") == 0,
+					"fortify": 9 if int(state.spaces[s].support) > 0 else 0,
+				})
 			res = sp.entrench({"spaces": e3})
 		"public_relations":
 			var e4: Array = []

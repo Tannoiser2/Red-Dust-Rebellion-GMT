@@ -117,6 +117,36 @@ func _start_card() -> void:
 	if card == null:
 		return
 	sequence = RDRSequence.new(state, module, card)
+	_np_reclaimer_eligibility()
+
+
+## §8.5.2, primo capoverso: «Before any Faction (player or NP) acts», se l'Asset
+## Total basta a coprire gli scarti richiesti, NP CR tira 3d6 e decide se pagare
+## per diventare 1ª o 2ª Disponibile.
+##
+## Non è un dettaglio: sulle carte Evento i Reclaimer sono stampati ULTIMI tutte
+## e 48 le volte (le altre tre ruotano fra le prime tre posizioni), quindi
+## scartare Asset card è il loro unico modo di agire per primi. Finché questo
+## check non veniva chiamato — la funzione esisteva, la collaudava perfino il
+## test_runner, ma nessuno la invocava — il bot CR è stato 1ª Disponibile una
+## volta su 93 e ha tenuto tutto l'Asset Total per gli Asset Event: tutti i
+## vantaggi delle Asset card senza il loro costo principale.
+func _np_reclaimer_eligibility() -> void:
+	if sequence == null or np == null or not np.is_np("reclaimer"):
+		return
+	if state.eligibility.get("reclaimer", CoinEnums.Eligibility.ELIGIBLE) \
+			!= CoinEnums.Eligibility.ELIGIBLE:
+		return
+	var cost_first := sequence.reclaimer_cost_to_reach(1)
+	var cost_second := sequence.reclaimer_cost_to_reach(2)
+	if cost_first <= 0 and cost_second <= 0:
+		return   # già in testa: non c'è niente da comprare
+	var res: Dictionary = np.reclaimer_eligibility_check(cost_first, cost_second)
+	for line in np.log_lines:
+		emit_signal("log_line", line)
+	np.log_lines.clear()
+	if int(res.get("rank", 0)) > 0:
+		sequence.reclaimer_discard(int(res["spent"]))
 
 
 ## La Fazione di turno Passa (§4.1). Restituisce false se non è una mossa legale.
@@ -1425,6 +1455,14 @@ func _after_action() -> void:
 func _drain_log() -> void:
 	if rounds == null:
 		return
+	# Anche quelle del Dust Storm Round dei bot: House, Repair, Pacify, Agitate,
+	# Redeploy. Non venivano drenate da nessuna parte, così l'unica fase in cui
+	# MarsGov e Red Dust spingono il Supporto scorreva del tutto invisibile —
+	# e i miei stessi test la davano per non eseguita.
+	if rounds.np_round != null:
+		for line in rounds.np_round.log_lines:
+			emit_signal("log_line", line)
+		rounds.np_round.log_lines.clear()
 	for line in rounds.log_lines:
 		emit_signal("log_line", line)
 	rounds.log_lines.clear()
