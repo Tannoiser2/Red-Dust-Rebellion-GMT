@@ -67,6 +67,10 @@ func reclaimer_cost_to_reach(target: int) -> int:
 		for fid in card.faction_order:
 			printed.append(String(fid))
 		var pos := printed.find("reclaimer")
+		# Tre carte del mazzo (le Dust Storm) non hanno ordine di Fazioni: lì
+		# non c'è nessuna posizione da comprare.
+		if pos < 0:
+			return -1
 		printed.remove_at(pos)
 		printed.insert(maxi(0, pos - n), "reclaimer")
 		var rank := 0
