@@ -75,6 +75,7 @@ func _init(p_np: RDRNonPlayer, p_ops: RDROperations) -> void:
 func read_card(card_id: String, faction: String, rng: RandomNumberGenerator) -> Dictionary:
 	var card: Dictionary = cards.get(card_id, {})
 	var trace: Array[String] = []
+	var alternativa := false
 	if card.is_empty():
 		return {"ok": false, "outcome": "missing", "trace": trace,
 			"error": "Carta Curiosity «%s» non ancora trascritta." % card_id}
@@ -88,13 +89,36 @@ func read_card(card_id: String, faction: String, rng: RandomNumberGenerator) -> 
 			if no == "draw" or no == "flip":
 				return {"ok": true, "outcome": no, "trace": trace,
 					"next": String(card.get("flip", "")) if no == "flip" else ""}
-			break  # ramo alternativo dichiarato dai blocchi
+			# «branch_…»: il riquadro rimanda al blocco alternativo in fondo alla
+			# carta. Prima si usciva e basta, e il primo blocco con un'Operazione
+			# vinceva lo stesso: su CR-WW, senza 3+ Ribelli presso una Base
+			# nemica, la carta manda in Travel e il motore faceva Attack.
+			alternativa = true
+			break
 
 	# Blocchi: il primo che nomina un'Operazione decide l'Operazione.
 	var op := ""
 	var instructions: Array = []
+	# Le Attività Speciali stampate SOPRA l'Operazione: la carta le offre prima,
+	# e alcune portano una condizione propria (CR-UU: «Asset Total < 3»). Non
+	# venivano lette affatto — il blocco non ha né `branch` né `operation`, così
+	# il ciclo lo scavalcava — e finivano valutate solo dopo l'Operazione,
+	# insieme a tutte le altre.
+	var sa_prima: Array = []
+	for entry1 in card.get("blocks", []):
+		var b0: Dictionary = entry1
+		if b0.has("special_activity_first"):
+			sa_prima = b0.get("only", [])
 	for entry2 in card.get("blocks", []):
 		var block: Dictionary = entry2
+		if alternativa:
+			if not block.has("alternative"):
+				continue
+			var alt: Dictionary = block["alternative"]
+			op = String(alt.get("operation", ""))
+			instructions = alt.get("instructions", [])
+			trace.append("ramo alternativo della carta")
+			break
 		if block.has("branch"):
 			var br: Dictionary = block["branch"]
 			var yes := _card_condition(String(br["cond"]), faction, rng)
@@ -114,6 +138,7 @@ func read_card(card_id: String, faction: String, rng: RandomNumberGenerator) -> 
 	return {"ok": true, "outcome": "operation", "operation": op,
 		"instructions": instructions,
 		"special_activities": card.get("special_activities", []),
+		"special_first": sa_prima,
 		"activation_number": int(card.get("activation_number", 0)),
 		"limits": card.get("limits", {}), "trace": trace}
 
@@ -519,6 +544,16 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 
 	_ambush_done = false
 	_ambush_pending = action == "op_sa" and _offers_ambush(read)
+	# Le Attività Speciali stampate sopra l'Operazione si tentano prima, come
+	# sulla carta. Se una va a segno, quelle in fondo non si scelgono più
+	# («unless already selected»).
+	var sa_iniziale: Dictionary = {"ok": false}
+	if action == "op_sa" and not (read.get("special_first", []) as Array).is_empty():
+		sa_iniziale = run_special_activity(faction, read["special_first"])
+		if bool(sa_iniziale.get("ok", false)):
+			out["special"] = String(sa_iniziale["special"])
+			out["special_spaces"] = sa_iniziale["spaces"]
+			trace.append("Attività Speciale (prima dell'Operazione): %s" % sa_iniziale["special"])
 	# §6.2: la Petition conta i Ribelli Attivati dall'Operazione e guarda se un
 	# Assault ha tolto più forze Ribelli che COIN. Le Operazioni non riportano
 	# quei numeri, quindi si fotografa la mappa prima e dopo.
@@ -530,7 +565,8 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 		and (int(prima["ribelli"]) - int(dopo["ribelli"])) \
 			> (int(prima["coin"]) - int(dopo["coin"]))
 	_ambush_pending = false
-	_maybe_special(faction, action, read, out, trace)
+	if not bool(sa_iniziale.get("ok", false)):
+		_maybe_special(faction, action, read, out, trace)
 	return out
 
 
@@ -767,6 +803,8 @@ func _special_condition(cond: String, faction: String) -> bool:
 			return false
 		"secure_performed", "recon_performed":
 			return true   # la carta le offre solo dopo quell'Operazione
+		"asset_total_lt_3":
+			return int(state.tracks.get("asset_total", 0)) < 3
 	return true
 
 

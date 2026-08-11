@@ -420,7 +420,8 @@
        "letter": "A",
        "id": "ransack",
        "text": "Ransack using Ransack",
-       "note": "solo se Asset Total < 3"
+       "note": "solo se Asset Total < 3",
+       "when": "asset_total_lt_3"
       }
      ]
     },
