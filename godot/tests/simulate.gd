@@ -137,6 +137,10 @@ func _una_partita(gc, seme: int) -> Dictionary:
 	# economico che significhi qualcosa è il Profits, che è anche la condizione
 	# di vittoria delle CORP.
 	rec["profits"] = int(gc.state.tracks.get("profits", 0))
+	rec["support"] = int(gc.rdr().total_support(gc.state))
+	rec["opposition"] = int(gc.rdr().total_opposition(gc.state))
+	rec["eg"] = int(gc.rdr().eg_confidence_value(gc.state))
+	rec["displaced"] = int(gc.state.tracks.get("displaced_population", 0))
 	rec["asset_total"] = int(gc.state.tracks.get("asset_total", 0))
 	return rec
 

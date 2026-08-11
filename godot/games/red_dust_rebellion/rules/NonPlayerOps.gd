@@ -28,6 +28,9 @@ const NEEDS_MOVE_PRIORITIES := ["secure", "recon", "march", "travel", "transport
 ## `_ambush_done` che è stata consumata, così non la si ripropone in coda.
 var _ambush_pending := false
 var _ambush_done := false
+## §6.2: quel che la Petition ha bisogno di sapere sull'Operazione appena finita.
+var _rebels_activated := 0
+var _assault_favourable := false
 
 var state: GameState
 var module: RDRModule
@@ -509,14 +512,41 @@ func take_turn(faction: String, slot: String, ctx: Dictionary = {},
 		if not basi.is_empty():
 			out["bases_placed"] = basi
 			trace.append("Basi piazzate in %s" % ", ".join(PackedStringArray(basi)))
+		var hr := _house_repair_after_move(faction, op_id, out["pairs"])
+		if hr != "":
+			trace.append(hr)
 		return out
 
 	_ambush_done = false
 	_ambush_pending = action == "op_sa" and _offers_ambush(read)
+	# §6.2: la Petition conta i Ribelli Attivati dall'Operazione e guarda se un
+	# Assault ha tolto più forze Ribelli che COIN. Le Operazioni non riportano
+	# quei numeri, quindi si fotografa la mappa prima e dopo.
+	var prima := _forze()
 	out["spaces"] = _run_instructions(faction, op_id, read.get("instructions", []), an, limited)
+	var dopo := _forze()
+	_rebels_activated = maxi(0, int(dopo["attivi"]) - int(prima["attivi"]))
+	_assault_favourable = op_id == "assault" \
+		and (int(prima["ribelli"]) - int(dopo["ribelli"])) \
+			> (int(prima["coin"]) - int(dopo["coin"]))
 	_ambush_pending = false
 	_maybe_special(faction, action, read, out, trace)
 	return out
+
+
+## Forze sulla mappa, per il conto della Petition.
+func _forze() -> Dictionary:
+	var ribelli := 0
+	var coin := 0
+	var attivi := 0
+	for sid in module.mars_spaces(state):
+		var s := String(sid)
+		for t in ["rd_rebel", "cr_rebel"]:
+			ribelli += module.count_in(state, s, t)
+			attivi += module.count_in(state, s, t, "active")
+		for t in ["mg_troop", "security", "eg_troop", "specops"]:
+			coin += module.count_in(state, s, t)
+	return {"ribelli": ribelli, "coin": coin, "attivi": attivi}
 
 
 ## Le istruzioni ★ di Secure e Recon che piazzano Basi nelle destinazioni:
@@ -562,6 +592,44 @@ func _place_bases_after_move(faction: String, op_id: String, pairs: Array) -> Ar
 	if not messe.is_empty():
 		module.recompute_all_control(state)
 	return messe
+
+
+## L'altra istruzione ★ di Secure e Recon, in coda al movimento:
+##
+##   MG   «House or Repair in one destination without Opposition using Place Population»
+##   CORP «House in one destination with a CORP Base using Place Population»
+##
+## Una sola destinazione, scelta con la colonna Place Population. Anche questa
+## stava nel campo `note`, quindi non veniva mai eseguita: sono 8 carte MarsGov
+## e 6 Corporations, cioè quasi tutte le loro Operazioni di movimento.
+func _house_repair_after_move(faction: String, op_id: String, pairs: Array) -> String:
+	if not (op_id in ["secure", "recon"]) or faction not in ["marsgov", "corporations"]:
+		return ""
+	var pool: Array = []
+	for pr in pairs:
+		var sid := String((pr as Dictionary).get("to", ""))
+		if sid == "" or pool.has(sid):
+			continue
+		if faction == "marsgov":
+			# «without Opposition»: Neutrale o meglio.
+			if int(state.spaces[sid].support) < 0:
+				continue
+		elif module.count_in(state, sid, "corp_base") == 0:
+			continue
+		if ops.act.can_house(sid) or ops.act.can_repair(sid, faction):
+			pool.append(sid)
+	if pool.is_empty():
+		return ""
+	var sid := String(np.select_space(faction, "place_population", pool).get("space", ""))
+	if sid == "":
+		return ""
+	# La carta mette House prima di Repair per le Corporations, e le lascia in
+	# alternativa a MarsGov: in entrambi i casi si prova prima l'House.
+	if ops.act.can_house(sid) and ops.act.house(sid, faction):
+		return "House in %s" % sid
+	if faction == "marsgov" and ops.act.repair(sid, faction):
+		return "Repair in %s" % sid
+	return ""
 
 
 ## La carta offre l'Ambush fra le Attività Speciali?
@@ -726,7 +794,14 @@ func _run_special(faction: String, sa_id: String) -> Dictionary:
 	var res: Dictionary = {"ok": false}
 	match sa_id:
 		"petition":
-			res = sp.petition({})
+			# Si passavano zero Ribelli Attivati e nessun Assault favorevole:
+			# la Petition metteva sempre un solo marker Supply e non girava mai
+			# l'ago della EG Confidence su EG+, che è la contromisura di
+			# MarsGov quando i Ribelli lo tengono su EG−.
+			res = sp.petition({
+				"rebels_activated": _rebels_activated,
+				"assault_favourable": _assault_favourable,
+			})
 		"exploit":
 			res = sp.exploit({"spaces": picks})
 		"ransack":
@@ -746,9 +821,23 @@ func _run_special(faction: String, sa_id: String) -> Dictionary:
 				e1.append({"id": sid, "mode": "convert"})
 			res = sp.purify({"spaces": e1})
 		"coordinate":
+			# Le istruzioni della carta sono ❶ House ❷ Repair ❸ Shift verso
+			# l'Opposizione Attiva. Il bot passava `action: ""` e faceva solo la
+			# ❸: 650 Coordinate in 100 partite senza un solo House o Repair,
+			# ed è l'Attività Speciale che Red Dust usa più di ogni altra.
+			# Il costo del Repair lo gestisce già `_spend`, che per NP RD toglie
+			# un Agitate Total — la ★ «Reduce Agitate Total by 1 for each Repair».
 			var e2: Array = []
+			var house_fatto := false
 			for sid in picks:
-				e2.append({"id": sid, "action": "", "at_max": "remove"})
+				var s := String(sid)
+				var azione := ""
+				if not house_fatto and ops.act.can_house(s):
+					azione = "house"
+					house_fatto = true
+				elif ops.act.can_repair(s, "red_dust"):
+					azione = "repair"
+				e2.append({"id": s, "action": azione, "at_max": "remove"})
 			res = sp.coordinate({"spaces": e2})
 		"entrench":
 			# Le due istruzioni stampate sulla carta: ❶ «Place Bases only in
