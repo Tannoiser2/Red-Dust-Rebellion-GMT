@@ -914,22 +914,15 @@ func play_asset_card(number: int, choices = {}) -> Dictionary:
 
 ## §8.0: la Fazione Non-Player di turno gioca da sé. Restituisce il resoconto,
 ## già registrato nella sequenza della carta.
-##
-## `surrogate` serve solo alle simulazioni: fa giocare con la politica Curiosity
-## una Fazione che per il motore resta di un giocatore. La differenza non è
-## cosmetica — un giocatore paga le Risorse (§8.5.4), accende le righe con la
-## spunta rossa delle tabelle NP, e col solitario contro tre bot non può
-## vincere prima dell'ultimo Dust Storm Round (§8.5.9). Non è un umano vero:
-## è la stessa euristica dei bot messa sotto le regole dei giocatori.
-func np_take_turn(surrogate: bool = false) -> Dictionary:
+func np_take_turn() -> Dictionary:
 	if sequence == null or sequence.pending_faction() == "":
 		return {"ok": false, "error": "Non è il turno di nessuno."}
 	var fid := sequence.pending_faction()
-	if not surrogate and not np.is_np(fid):
+	if not np.is_np(fid):
 		return {"ok": false, "error": "%s non è una Fazione Non-Player." % fid}
 	snapshot("Turno di %s (bot)" % game_def.faction(fid).short_name)
 	var slot := "first" if sequence.is_first_slot() else "second"
-	var res: Dictionary = np_ops.take_turn(fid, slot, _np_context(surrogate), _np_rng())
+	var res: Dictionary = np_ops.take_turn(fid, slot, _np_context(), _np_rng())
 	for line in np.log_lines + np_ops.log_lines + np_move.log_lines + ops.log_lines:
 		emit_signal("log_line", line)
 	np.log_lines.clear()
@@ -980,7 +973,7 @@ func np_take_turn(surrogate: bool = false) -> Dictionary:
 			# l'Operazione viene eseguita sulla plancia. Scrivere qui
 			# `res["action"] = "op_sa"` registrava una casella a vuoto: la
 			# Fazione risultava aver agito senza muovere un pezzo.
-			var ctx := _np_context(surrogate)
+			var ctx := _np_context()
 			ctx["critical_asset_event"] = false
 			ctx["any_asset_event"] = false
 			res = np_ops.take_turn(fid, slot, ctx, _np_rng())
@@ -1092,7 +1085,7 @@ func _run_np_free_ops() -> void:
 ## Ciò che il bot sa della carta in corso. Critical/Performed/effective
 ## dipendono da tabelle non ancora trascritte: restano fuori, e la Eligibility
 ## lo dichiara con `degraded`.
-func _np_context(surrogate: bool = false) -> Dictionary:
+func _np_context() -> Dictionary:
 	var ctx := {}
 	if sequence != null and not sequence.is_first_slot():
 		ctx["first_chose"] = String(NP_ACTION_TOKEN.get(sequence.first_action(), ""))
@@ -1102,7 +1095,7 @@ func _np_context(surrogate: bool = false) -> Dictionary:
 	# event_effects.json. Il «Critical» invece è un simbolo stampato sulle carte
 	# (★/⊘ sotto l'icona della Fazione), che non abbiamo ancora estratto.
 	var fid := sequence.pending_faction() if sequence != null else ""
-	if fid != "" and np != null and (surrogate or np.is_np(fid)):
+	if fid != "" and np != null and np.is_np(fid):
 		ctx["current_effective"] = _np_event_option(fid, state.current_card) >= 0
 		# §8.5.5: ★ Critico e ⊘ Non eseguito sono stampati sulle carte.
 		ctx["current_critical"] = np.event_critical(fid, state.current_card) \
