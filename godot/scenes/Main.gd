@@ -93,6 +93,11 @@ var _op_mode := ""          ## Operazione in corso di pianificazione
 var _op_spaces: Array[String] = []
 var _op_candidates: PackedStringArray = PackedStringArray()
 var _op_moves: Array = []              ## spostamenti dichiarati {from,to,type,count}
+## Spostamento in composizione nel pianificatore (destinazione, tipo, origine, quanti).
+var _mv_dest := ""
+var _mv_type := ""
+var _mv_from := ""
+var _mv_count := 1
 var _sa_mode := ""                     ## Attività Speciale in corso
 ## §7.0: Evento in corso di pianificazione — le sue scelte si raccolgono una
 ## alla volta (spazi sulla mappa, Fazioni e rami con i pulsanti del pannello);
@@ -673,7 +678,11 @@ func _choice_buttons(parent: Control, opts: Array, current: String, on_pick: Cal
 
 ## Titoletto di una riga di scelte (nome dello spazio, «Dig-In»…).
 func _small_title(text: String) -> Label:
-	return RDRTheme.label(text, RDRTheme.TEXT_DIM, 13, RDRTheme.ui_bold())
+	var l := RDRTheme.label(text, RDRTheme.TEXT_DIM, 13, RDRTheme.ui_bold())
+	# A capo: un titolo lungo non deve allargare il pannello oltre lo schermo.
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(1, 0)
+	return l
 
 
 # ---------------------------------------------------------------------------
@@ -758,7 +767,10 @@ func _view_mars() -> void:
 	if _board == null or _board.size.x <= 0.0 or _map_base.x <= 0.0:
 		return
 	var r := MARS_RECT
-	var z := minf(_board.size.x / (_map_base.x * r.size.x), _board.size.y / (_map_base.y * r.size.y))
+	# Si adatta la LARGHEZZA della superficie: così la colonna dei tracciati resta
+	# fuori quadro anche quando il riquadro è più largo che alto; in verticale si
+	# scorre (rotellina o trascinamento) per le poche file che restano fuori.
+	var z := _board.size.x / (_map_base.x * r.size.x)
 	_set_zoom(z)
 	await get_tree().process_frame
 	_board.scroll_horizontal = int(_map_base.x * _zoom * r.position.x)
@@ -2182,78 +2194,100 @@ func _refresh_move_box() -> void:
 	if types.is_empty():
 		return
 
-	var title := Label.new()
-	title.text = "Spostamenti (%d dichiarati) — trascina i pezzi sulla mappa" % _op_moves.size()
-	title.add_theme_font_size_override("font_size", 13)
-	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_move_box.add_child(title)
+	_move_box.add_child(_small_title("Spostamenti: %d (trascinali sulla mappa o componili qui)" % _op_moves.size()))
 	for i in range(_op_moves.size()):
 		var m: Dictionary = _op_moves[i]
 		var row_m := HBoxContainer.new()
-		var l := Label.new()
-		l.text = "%d× %s: %s → %s" % [int(m["count"]), String(m["type"]),
-			gc.game_def.space(String(m["from"])).name, gc.game_def.space(String(m["to"])).name]
-		l.add_theme_font_size_override("font_size", 13)
+		var l := RDRTheme.label("%d× %s: %s → %s" % [int(m["count"]), _type_name(String(m["type"])),
+			gc.game_def.space(String(m["from"])).name, gc.game_def.space(String(m["to"])).name],
+			RDRTheme.TEXT, 14)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size = Vector2(1, 0)
 		row_m.add_child(l)
-		var del := Button.new()
-		del.text = "×"
-		del.tooltip_text = "Togli questo spostamento"
-		del.pressed.connect(func():
+		var del := _mk_btn("×", func():
 			_op_moves.remove_at(i)
 			_after_moves_changed())
+		del.tooltip_text = "Togli questo spostamento"
+		del.custom_minimum_size = Vector2(28, 26)
 		row_m.add_child(del)
 		_move_box.add_child(row_m)
 
-	# Form: destinazione (fra quelle scelte) · tipo · origine · quantità.
-	var dest_opt := OptionButton.new()
+	# Composizione a tasti (niente tendine): destinazione · tipo · origine · quantità.
+	# Le scelte restano in memoria fra un ridisegno e l'altro e si correggono da sole
+	# quando non sono più valide (per esempio dopo aver tolto uno spazio).
+	if not _op_spaces.has(_mv_dest):
+		_mv_dest = String(_op_spaces[0])
+	if not types.has(_mv_type):
+		_mv_type = String(types[0])
+	var dests: Array = []
 	for sid in _op_spaces:
-		dest_opt.add_item(gc.game_def.space(sid).name)
-		dest_opt.set_item_metadata(dest_opt.item_count - 1, sid)
-	var type_opt := OptionButton.new()
-	for t in types:
-		type_opt.add_item(String(t))
-		type_opt.set_item_metadata(type_opt.item_count - 1, String(t))
-	var from_opt := OptionButton.new()
-	var count_spin := SpinBox.new()
-	count_spin.min_value = 1
-	count_spin.max_value = 12
-	count_spin.value = 1
-
-	var refill := func():
-		from_opt.clear()
-		if dest_opt.selected < 0 or type_opt.selected < 0:
-			return
-		var dest := String(dest_opt.get_item_metadata(dest_opt.selected))
-		var t := String(type_opt.get_item_metadata(type_opt.selected))
-		for o in gc.legal_origins(_op_mode, fid, dest, t):
-			from_opt.add_item("%s (%d)" % [gc.game_def.space(String(o)).name,
-				gc.rdr().count_in(gc.state, String(o), t)])
-			from_opt.set_item_metadata(from_opt.item_count - 1, String(o))
-	dest_opt.item_selected.connect(func(_i): refill.call())
-	type_opt.item_selected.connect(func(_i): refill.call())
-	refill.call()
-
-	_move_box.add_child(dest_opt)
-	_move_box.add_child(type_opt)
-	_move_box.add_child(from_opt)
+		dests.append({"id": String(sid), "label": gc.game_def.space(String(sid)).name})
+	if dests.size() > 1:
+		_move_box.add_child(_small_title("Verso"))
+		_choice_buttons(_move_box, dests, _mv_dest, func(id):
+			_mv_dest = id
+			_refresh_move_box())
+	else:
+		_move_box.add_child(_small_title("Verso %s" % gc.game_def.space(_mv_dest).name))
+	if types.size() > 1:
+		var topts: Array = []
+		for t in types:
+			topts.append({"id": String(t), "label": _type_name(String(t))})
+		_move_box.add_child(_small_title("Che cosa"))
+		_choice_buttons(_move_box, topts, _mv_type, func(id):
+			_mv_type = id
+			_refresh_move_box())
+	var origins: Array = gc.legal_origins(_op_mode, fid, _mv_dest, _mv_type)
+	if origins.is_empty():
+		_move_box.add_child(_small_title("Nessuna origine valida per %s verso %s." % [
+			_type_name(_mv_type), gc.game_def.space(_mv_dest).name]))
+		return
+	var oopts: Array = []
+	for o in origins:
+		oopts.append({"id": String(o), "label": "%s (%d)" % [gc.game_def.space(String(o)).name,
+			gc.rdr().count_in(gc.state, String(o), _mv_type)]})
+	if not origins.has(_mv_from):
+		_mv_from = String(origins[0])
+	_move_box.add_child(_small_title("Da"))
+	_choice_buttons(_move_box, oopts, _mv_from, func(id):
+		_mv_from = id
+		_refresh_move_box())
+	var avail := maxi(1, gc.rdr().count_in(gc.state, _mv_from, _mv_type))
+	_mv_count = clampi(_mv_count, 1, avail)
 	var row := HBoxContainer.new()
-	row.add_child(count_spin)
-	var add := Button.new()
-	add.text = "Aggiungi spostamento"
-	add.pressed.connect(func():
-		if from_opt.selected < 0 or dest_opt.selected < 0:
-			_append_log("Nessuna origine valida per questa combinazione.")
-			return
-		_op_moves.append({
-			"from": String(from_opt.get_item_metadata(from_opt.selected)),
-			"to": String(dest_opt.get_item_metadata(dest_opt.selected)),
-			"type": String(type_opt.get_item_metadata(type_opt.selected)),
-			"count": int(count_spin.value),
-		})
-		_refresh_op_bar())
+	row.add_theme_constant_override("separation", 4)
+	var minus := _mk_btn("−", func():
+		_mv_count = maxi(1, _mv_count - 1)
+		_refresh_move_box())
+	minus.custom_minimum_size = Vector2(34, 30)
+	minus.disabled = _mv_count <= 1
+	row.add_child(minus)
+	var cnt := RDRTheme.label(str(_mv_count), RDRTheme.TEXT, 18, RDRTheme.display())
+	cnt.custom_minimum_size = Vector2(34, 0)
+	cnt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cnt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(cnt)
+	var plus := _mk_btn("+", func():
+		_mv_count = mini(avail, _mv_count + 1)
+		_refresh_move_box())
+	plus.custom_minimum_size = Vector2(34, 30)
+	plus.disabled = _mv_count >= avail
+	row.add_child(plus)
+	var add := _mk_btn("Aggiungi spostamento", func():
+		_op_moves.append({"from": _mv_from, "to": _mv_dest, "type": _mv_type, "count": _mv_count})
+		_mv_count = 1
+		_after_moves_changed())
+	add.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add.custom_minimum_size = Vector2(0, 30)
 	row.add_child(add)
 	_move_box.add_child(row)
+
+
+## Nome leggibile di un tipo di pezzo (per i tasti del pianificatore di movimento).
+func _type_name(type_id: String) -> String:
+	var pt: PieceTypeDef = GameController.game_def.piece_type(type_id)
+	return pt.name if pt != null and pt.name != "" else type_id
 
 
 func _refresh_space_info(space_id: String) -> void:

@@ -2,8 +2,8 @@ name: Deploy Web (Godot)
 
 # Compila l'export Web del progetto Godot e lo pubblica su GitHub Pages.
 # Su ogni pull request esegue test ed export (senza pubblicare); su master pubblica.
-# Pages serve il sito dalla branch `gh-pages` (solo l'export, storia separata):
-# il job di pubblicazione la riscrive con l'export appena compilato.
+# Sorgente di Pages: "GitHub Actions" (Settings -> Pages). L'export viene caricato
+# come artifact e pubblicato dal job "deploy"; la vecchia branch gh-pages non serve più.
 
 on:
   push:
@@ -13,7 +13,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: "pages-${{ github.event.pull_request.head.ref || github.ref_name }}"
@@ -60,13 +62,20 @@ jobs:
           # GitHub Pages: assicura che non venga processato da Jekyll
           touch web/.nojekyll
 
-      # Solo su master: sulle PR ci si ferma alla build (CI).
-      - name: Pubblica su gh-pages
-        if: github.ref == 'refs/heads/master'
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Carica artifact Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: web
-          force_orphan: true
-          commit_message: "Build Web da ${{ github.sha }}"
+          path: web
+
+  deploy:
+    needs: build
+    # Solo su master: sulle PR ci si ferma alla build (CI).
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

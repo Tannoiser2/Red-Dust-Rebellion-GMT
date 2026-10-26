@@ -21,10 +21,10 @@ Il progetto vive in `godot/`. Si apre con l'editor Godot 4.7; la scena iniziale
 Repository: <https://github.com/Tannoiser2/Red-Dust-Rebellion-GMT>
 Build giocabile nel browser: <https://tannoiser2.github.io/Red-Dust-Rebellion-GMT/>
 
-La build Web sta sulla branch **`gh-pages`**, che contiene *solo* l'export e non
-ha in comune la storia con `master`. La rigenera e la pubblica in automatico il
-workflow `.github/workflows/deploy-web.yml` a ogni push su `master` (sulle pull
-request esegue solo test ed export, come controllo). A mano, l'export è:
+La build Web la compila e la pubblica in automatico il workflow
+`.github/workflows/deploy-web.yml` a ogni push su `master` (sorgente di Pages:
+"GitHub Actions"; sulle pull request esegue solo test ed export, come controllo).
+La vecchia branch `gh-pages` non è più usata. A mano, l'export è:
 
 ```bash
 godot --headless --path godot --export-release "Web" "../web/index.html"

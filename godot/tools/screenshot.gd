@@ -13,6 +13,7 @@ extends SceneTree
 ##   evento     opzione dell'Evento scelta, con le sue scelte;
 ##   bot        turno di una Fazione Non-Player;
 ##   reclaimer  turno dei Reclaimer giocatore (mano di Asset card nel pannello);
+##   marcia     March del Red Dust con una destinazione (pianificatore a tasti);
 ##   menu       schermata iniziale.
 ##
 ## Un terzo argomento «piccolo» prova il canvas logico da 1180×650 (iPad).
@@ -72,6 +73,13 @@ func _initialize() -> void:
 				main._on_execute()
 				await process_frame
 				main._on_sa_button("coordinate")
+		"marcia":
+			main._start_op("march")
+			await process_frame
+			for sid in gc.operation_candidates("march", human):
+				if not gc.legal_origins("march", human, String(sid), String(gc.movable_types("march", human)[0])).is_empty():
+					main._on_space_clicked(String(sid))
+					break
 		"evento":
 			main._start_event(false)
 		"reclaimer":
