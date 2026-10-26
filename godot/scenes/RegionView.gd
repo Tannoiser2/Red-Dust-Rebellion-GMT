@@ -280,13 +280,13 @@ func _draw() -> void:
 	# candidati non si distinguevano in alcun modo dagli altri.
 	match _pick_state:
 		PickState.CANDIDATE:
-			var glow := Color(1.0, 0.94, 0.55)
+			var glow := RDRTheme.CYAN
 			glow.a = 0.16 + 0.06 * sin(_pulse * 3.2)
 			draw_colored_polygon(poly, glow)
 			glow.a = 0.85
 			draw_polyline(poly + PackedVector2Array([poly[0]]), glow, 2.5)
 		PickState.CHOSEN:
-			var pick := Color(0.42, 1.0, 0.58)
+			var pick := RDRTheme.CHOSEN
 			pick.a = 0.30
 			draw_colored_polygon(poly, pick)
 			pick.a = 1.0

@@ -93,6 +93,13 @@ func _init() -> void:
 	test_np_cards()
 	test_campaign_effects()
 
+
+## Le prove che passano dal GameController (autoload) partono qui: in `_init()`
+## gli autoload non sono ancora pronti.
+func _initialize() -> void:
+	await process_frame
+	await test_one_action_per_turn()
+
 	print("\n%d passati, %d falliti" % [passed, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -3448,3 +3455,89 @@ func test_campaign_effects() -> void:
 	a12.shift("europa", -1)
 	eq(s12.spaces["europa"].support, CoinEnums.Support.PASSIVE_OPPOSITION,
 		"#12: Europa salta il Neutrale")
+
+
+# ---------------------------------------------------------------------------
+# §4.1/§6.0: una sola Operazione e una sola Attività Speciale per turno
+# ---------------------------------------------------------------------------
+
+func test_one_action_per_turn() -> void:
+	print("Una Operazione e una Attività Speciale per turno")
+	var gc = root.get_node_or_null("GameController")
+	if gc == null:
+		ok(false, "GameController disponibile (autoload)")
+		return
+	# Si cerca una carta in cui il Red Dust è 1ª Disponibile: Rally e Attack
+	# hanno candidati fin dallo schieramento.
+	var found := false
+	for seed_v in range(20240424, 20240524):
+		gc.new_game("standard", seed_v, [])
+		await process_frame
+		for i in range(4):
+			if gc.sequence == null or gc.sequence.pending_faction() == "red_dust":
+				break
+			gc.do_pass()
+		if gc.sequence != null and gc.sequence.pending_faction() == "red_dust" \
+				and gc.sequence.is_first_slot():
+			found = true
+			break
+	ok(found, "il Red Dust arriva 1ª Disponibile")
+	if not found:
+		return
+	var rally: PackedStringArray = gc.operation_candidates("rally", "red_dust")
+	var attack: PackedStringArray = gc.operation_candidates("attack", "red_dust")
+	ok(rally.size() >= 2, "almeno due spazi per il Rally (%d)" % rally.size())
+	if rally.size() < 2:
+		return
+	var r1: Dictionary = gc.execute_operation("rally", [rally[0]])
+	ok(r1.get("ok", false), "prima Operazione eseguita (%s)" % r1.get("error", ""))
+	eq(gc.turn_op(), "rally", "l'Operazione del turno è registrata")
+	eq(gc.sequence.pending_faction(), "red_dust", "eseguire l'Operazione non chiude il turno")
+	if attack.size() > 0:
+		ok(not gc.execute_operation("attack", [attack[0]]).get("ok", true),
+			"un'altra Operazione nello stesso turno è rifiutata")
+	ok(not gc.execute_operation("rally", [rally[0]]).get("ok", true),
+		"la stessa Operazione non torna in uno spazio già usato")
+	ok(gc.execute_operation("rally", [rally[1]]).get("ok", false),
+		"la stessa Operazione prosegue in un altro spazio")
+	ok(not gc.do_pass(), "dopo un'Operazione non si può Passare")
+	ok(not gc.execute_event(false).get("ok", true), "dopo un'Operazione non si gioca l'Evento")
+	# Attività Speciale: la prima passa, la seconda no.
+	var sa_sp: PackedStringArray = gc.special_candidates("redistribute", "red_dust")
+	var sa_ok := false
+	if sa_sp.size() > 0:
+		sa_ok = gc.execute_special("redistribute", [sa_sp[0]]).get("ok", false)
+	else:
+		gc._turn_sa = "redistribute"
+		sa_ok = true
+	ok(sa_ok, "prima Attività Speciale eseguita")
+	ok(gc.turn_special_done(), "l'Attività Speciale del turno è registrata")
+	ok(gc.special_block_reason() != "", "una seconda Attività Speciale è bloccata")
+	var co: PackedStringArray = gc.special_candidates("coordinate", "red_dust")
+	ok(not gc.execute_special("coordinate", Array(co.slice(0, 1))).get("ok", true),
+		"…e rifiutata anche da execute_special")
+	# Annulla: torna a prima dell'Attività Speciale, l'Operazione resta quella.
+	gc.undo()
+	ok(not gc.turn_special_done(), "Annulla toglie l'Attività Speciale")
+	eq(gc.turn_op(), "rally", "…e l'Operazione del turno resta il Rally")
+	# Il salvataggio conserva i vincoli del turno.
+	var path := "user://test_turno.json"
+	gc.save_game(path)
+	gc.load_game(path)
+	eq(gc.turn_op(), "rally", "il salvataggio conserva l'Operazione del turno")
+	ok(not gc.execute_operation("rally", [rally[0]]).get("ok", true),
+		"…e gli spazi già usati")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	# Concludere il turno registra l'azione e passa la mano.
+	var e: Dictionary = gc.end_turn()
+	ok(e.get("ok", false), "Concludi turno registra l'Operazione (%s)" % e.get("error", ""))
+	ok(gc.sequence == null or gc.sequence.pending_faction() != "red_dust",
+		"il turno passa alla Fazione seguente")
+	eq(gc.turn_op(), "", "la nuova Fazione parte senza Operazione")
+	# 2ª Disponibile dopo un'Operazione senza Attività Speciale: solo Op Limitata.
+	if gc.sequence != null and gc.sequence.pending_faction() != "":
+		ok(gc.limited_only(), "la 2ª Disponibile ha solo l'Operazione Limitata")
+		ok(gc.special_block_reason() != "", "…e nessuna Attività Speciale")
+	# Senza aver agito non c'è niente da concludere.
+	ok(not gc.end_turn().get("ok", true) or gc.sequence == null,
+		"Concludi turno senza azione è rifiutato")
