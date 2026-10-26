@@ -1,9 +1,14 @@
 extends Control
 
-## Schermata di gioco: mappa di Mars a sinistra (scalata mantenendo le proporzioni
-## della tavola Vassal 5175x3775), pannello di stato a destra.
+## Schermata di gioco, schema comune ai giochi COIN:
+##   barra superiore · Fazioni (Risorse, Vittoria), contatori e comandi di partita;
+##   mappa di Mars al centro, con lo zoom sopra;
+##   pannello azione a destra · Fazione di turno, istruzioni, Operazione, Attività
+##     Speciale, Evento (e Mano dei Reclaimer), Esegui contestuale, Passa/Concludi;
+##   in basso · il Registro e, accanto, le schede di consultazione
+##     (Stato, Carta, Spazio, Mano).
 
-const BUILD_VERSION := "b001"
+const BUILD_VERSION := "b002"
 
 ## Che cosa fa ciascuna Operazione, in una riga: il regolamento è di 40 pagine e
 ## nessuno se lo ricorda a memoria mentre gioca (§5.0).
@@ -21,25 +26,48 @@ const OPERATION_TIPS := {
 	"preach": "§5.11 Preach — Reclaimer: converte gli spazi Neutrali dove ha Ribelli Nascosti.",
 }
 
+## Che cosa fa ciascuna Attività Speciale (§6.0), in una riga.
+const SPECIAL_TIPS := {
+	"entrench": "§6.1 Entrench — fino a 2 spazi a Controllo COIN con forze MG: una Truppa diventa Base e/o si Fortificano Truppe.",
+	"petition": "§6.2 Petition — Supply su Earth (1 + 1 ogni 3 Ribelli Attivati), a spese dei Profits; dopo Secure, Recon o Assault.",
+	"transport": "§6.3 Transport — sposta Truppe fra Phobos, gli spazi con Base MG e 1 spazio in più (2 se EarthGov Controller).",
+	"public_relations": "§6.4 Public Relations — fino a 2 spazi con Security: Repair (+2 Profits per Danno) e House.",
+	"exploit": "§6.5 Exploit — fino a 2 spazi con Base CORP: Profits pari alla Popolazione, poi verso il Neutrale.",
+	"raid": "§6.6 Raid — fino a 2 spazi: SpecOps colpiscono una Truppa EG o due altre forze.",
+	"redistribute": "§6.7 Redistribute — fino a 4 spazi Popolati a Controllo RD: Risorse pari alla Popolazione.",
+	"coordinate": "§6.8 Coordinate — fino a 2 spazi senza Supporto: House o Repair, poi verso l'Opposizione Attiva.",
+	"purify": "§6.10 Purify — fino a 2 spazi a Controllo CR: converte forze nemiche o prende una Base indifesa.",
+	"ransack": "§6.11 Ransack — fino a 2 spazi Danneggiati: una Asset card per ogni Danno.",
+	"ambush": "§6.9/§6.12 Ambush — accompagna l'Attack: in fino a 2 spazi con un Ribelle Nascosto i dadi si scelgono invece di tirarli.",
+}
+
 var _board: ScrollContainer   ## area scorrevole della mappa
+var _map_frame: Panel         ## cornice attorno alla mappa
 var _map_wrap: Control        ## definisce l'estensione scrollabile (base × zoom)
 var _map_root: Control        ## la mappa vera, scalata dallo zoom
 var _map_base := Vector2.ZERO ## dimensione della mappa a zoom 1 (adattata all'area)
 var _zoom := 1.0
+var _view_ready := false      ## prima inquadratura (Mars a tutta larghezza) già fatta
 var _panning := false
 var _map_tex: TextureRect
-var _instr: RichTextLabel     ## riga che dice sempre cosa si può fare adesso
 var _regions_layer: Control
 var _anim: MapAnimator        ## pezzi che volano e spazi che lampeggiano
 ## Pausa fra un turno di bot e il successivo: quanto basta perché l'animazione
 ## del volo (MapAnimator.DURATION) finisca prima che parta la prossima.
 const NP_TURN_PAUSE := 1.1
 var _np_running := false
+var _auto_bot := false        ## se acceso, i bot giocano da soli al loro turno
 var _tracks: TrackOverlay
-var _moves: MovesOverlay    ## frecce degli spostamenti dichiarati
-var _side: VBoxContainer
-var _tabs: TabContainer      ## schede di consultazione: Stato, Carta, Spazio
-var _turn_line: RichTextLabel  ## carta in corso e Fazione di turno, sempre in vista
+var _moves: MovesOverlay      ## frecce degli spostamenti dichiarati
+var _top: TopBar
+var _strip: BottomStrip
+var _info: PanelContainer     ## schede di consultazione accanto al Registro
+var _tabs: TabContainer       ## Stato, Carta, Spazio, Mano
+var _zoom_box: PanelContainer
+var _zoom_lbl: Label
+var _confirm_new: ConfirmationDialog
+var _confirm_menu: ConfirmationDialog
+
 ## §4.3 Support Phase: Fazione che la sta risolvendo e azione armata.
 var _support_faction := ""
 var _support_action := ""
@@ -61,25 +89,22 @@ var _card_info: RichTextLabel
 var _card_now: TextureRect          ## anteprima della carta in corso
 var _card_next: TextureRect         ## anteprima della prossima carta
 var _card_zoom: Control             ## ingrandimento a schermo intero
-var _btn_pass: Button
-var _btn_end: Button
-var _btn_undo: Button
-var _ops_box: HFlowContainer
 var _op_mode := ""          ## Operazione in corso di pianificazione
 var _op_spaces: Array[String] = []
 var _op_candidates: PackedStringArray = PackedStringArray()
 var _op_moves: Array = []              ## spostamenti dichiarati {from,to,type,count}
 var _sa_mode := ""                     ## Attività Speciale in corso
 ## §7.0: Evento in corso di pianificazione — le sue scelte si raccolgono una
-## alla volta (spazi sulla mappa, Fazioni e rami con i pulsanti della barra).
+## alla volta (spazi sulla mappa, Fazioni e rami con i pulsanti del pannello);
+## quando sono tutte raccolte lo esegue «Esegui Evento».
 var _ev_active := false
 var _ev_shaded := false
 var _ev_choices: Dictionary = {}
 var _ev_reqs: Array = []
 var _ev_index := 0
-var _move_box: VBoxContainer
+var _move_box: VBoxContainer  ## scelte dell'azione in preparazione (modalità, spostamenti…)
 var _preview: RichTextLabel   ## costo ed effetti previsti dell'azione in preparazione
-var _hand_box: HFlowContainer ## mano di Asset card dei Reclaimer (§1.5)
+var _hand_box: VBoxContainer  ## scheda «Mano»: Asset card, Capability, Campaign
 var _log: RichTextLabel
 var _log_details: CheckButton
 ## Righe del Log, ciascuna con la Fazione a cui appartiene e se è un dettaglio.
@@ -90,15 +115,71 @@ var _log_last_faction := ""
 var _views: Dictionary = {}   ## space_id -> RegionView
 var _selected := ""
 
+# --- Pannello azione ---------------------------------------------------------
+var _panel: PanelContainer
+var _head: PanelContainer
+var _head_tok: TextureRect
+var _head_name: Label
+var _head_sub: Label
+var _head_stamp: Label
+var _banner: InstrBox
+var _instr: RichTextLabel     ## dice sempre di chi è il turno e cosa si può fare
+var _body: VBoxContainer
+var _sec_op: Label
+var _ops_box: GridContainer   ## tasti delle Operazioni (o del bot, o della Support Phase)
+var _op_btn_map: Dictionary = {}
+var _op_desc: Label
+var _sec_sa: Control
+var _sa_btns: GridContainer
+var _sa_btn_map: Dictionary = {}
+var _sa_desc: Label
+var _sec_free: Label
+var _free_box: VBoxContainer  ## §7.0 Operazioni gratuite concesse dagli Eventi
+var _sec_hand: Label
+var _panel_hand: HFlowContainer   ## mano dei Reclaimer, nel loro turno
+var _sec_ev: Label
+var _ev_row: HBoxContainer
+var _ev_title: Label
+var _ev_btns: VBoxContainer
+var _ev_choice_box: VBoxContainer ## scelte dell'Evento in corso
+var _btn_exec: Button
+var _btn_clear: Button
+var _btn_pass: Button
+var _btn_end: Button
+
+const PANEL_W := 352.0
+const PANEL_W_SMALL := 316.0
+const INFO_W := 372.0
+const INFO_W_SMALL := 300.0
+const GAP := 8.0
+const MARGIN := 10.0
+const BOARD_W := 5175.0
+const BOARD_H := 3775.0
+## Riquadro di Mars sulla tavola (frazioni): esclude la colonna dei tracciati a
+## destra e le strisce di Edge Track e carte. È l'inquadratura «Mars».
+const MARS_RECT := Rect2(0.0, 0.035, 0.79, 0.83)
+
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Su schermi touch (iPad): canvas logico più piccolo = testi e bersagli più grandi.
+	if DisplayServer.is_touchscreen_available():
+		get_window().content_scale_size = Vector2i(1180, 650)
 	_build_ui()
 	GameController.state_changed.connect(_on_state_changed)
 	GameController.log_line.connect(_append_log)
+	get_viewport().size_changed.connect(_layout)
+	# Driver delle Fazioni Non-Player quando «Auto-Bot» è acceso.
+	var bot_timer := Timer.new()
+	bot_timer.wait_time = 0.6
+	bot_timer.one_shot = false
+	add_child(bot_timer)
+	bot_timer.timeout.connect(_auto_bot_tick)
+	bot_timer.start()
 	if GameController.state != null:
 		_build_regions()
 		_on_state_changed()
+	_layout.call_deferred()
 
 
 # ---------------------------------------------------------------------------
@@ -106,41 +187,42 @@ func _ready() -> void:
 # ---------------------------------------------------------------------------
 
 func _build_ui() -> void:
-	theme = RDRTheme.make_theme()
+	theme = RDRTheme.dark_theme()
+	get_window().theme = RDRTheme.dark_theme()
 	var bg := ColorRect.new()
 	bg.color = RDRTheme.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 
-	var split := HSplitContainer.new()
-	split.set_anchors_preset(Control.PRESET_FULL_RECT)
-	split.split_offset = -360
-	add_child(split)
+	# Barra superiore: emblema, Fazioni, contatori, comandi di partita.
+	_top = TopBar.new()
+	_top.undo_requested.connect(_on_undo)
+	_top.auto_bot_toggled.connect(_toggle_auto_bot)
+	_top.bot_turn_requested.connect(_run_np_turn)
+	_top.menu_id_pressed.connect(_on_game_menu)
+	add_child(_top)
 
 	# --- Mappa -------------------------------------------------------------
 	# ScrollContainer + wrapper: lo zoom è una SCALA sul nodo mappa, così mappa,
 	# pedine e marcatori ingrandiscono insieme, e il wrapper (base × zoom) dice
 	# allo scroll quanto c'è da scorrere.
-	var map_col := VBoxContainer.new()
-	map_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	split.add_child(map_col)
-
-	var instr_panel := PanelContainer.new()
-	_instr = RichTextLabel.new()
-	_instr.bbcode_enabled = true
-	_instr.fit_content = true
-	_instr.custom_minimum_size = Vector2(0, 34)
-	_instr.add_theme_font_size_override("normal_font_size", 15)
-	_instr.add_theme_font_size_override("bold_font_size", 15)
-	instr_panel.add_child(_instr)
-	map_col.add_child(instr_panel)
+	_map_frame = Panel.new()
+	var fsb := RDRTheme.flat(Color("06090c"))
+	fsb.set_border_width_all(1)
+	fsb.border_color = RDRTheme.PANEL_EDGE
+	fsb.set_corner_radius_all(4)
+	fsb.expand_margin_left = 2
+	fsb.expand_margin_right = 2
+	fsb.expand_margin_top = 2
+	fsb.expand_margin_bottom = 2
+	_map_frame.add_theme_stylebox_override("panel", fsb)
+	_map_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_map_frame)
 
 	_board = ScrollContainer.new()
-	_board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_board.resized.connect(_relayout_map)
-	map_col.add_child(_board)
+	add_child(_board)
 
 	_map_wrap = Control.new()
 	_map_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -155,238 +237,1249 @@ func _build_ui() -> void:
 	_map_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_map_tex.stretch_mode = TextureRect.STRETCH_SCALE
 	_map_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_map_tex.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_map_tex)
 
 	_regions_layer = Control.new()
 	_regions_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_regions_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_regions_layer)
 
 	_tracks = TrackOverlay.new()
-	_tracks.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_tracks)
 
 	# I pezzi che volano da uno spazio all'altro e il lampeggio degli spazi
 	# cambiati: puramente decorativo, sopra la mappa e trasparente al mouse.
 	_anim = MapAnimator.new()
-	_anim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_anim)
 
 	# Sopra a tutto: le frecce degli spostamenti ancora da eseguire.
 	_moves = MovesOverlay.new()
-	_moves.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_map_root.add_child(_moves)
 
-	# --- Pannello laterale --------------------------------------------------
-	#
-	# Tre fasce, non una colonna unica: impilando tutto, il pannello arrivava a
-	# 2000 px in una finestra da 1150 e il Log — la parte che si consulta di più —
-	# finiva sotto il bordo dello schermo.
-	#   in alto  · di chi è il turno e cosa può fare: serve sempre, non si scorre
-	#   in mezzo · schede di consultazione (Stato, Carta, Spazio)
-	#   in basso · il Log, con un'altezza propria e il suo scorrimento
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(360, 0)
-	split.add_child(panel)
+	_build_zoom_box()
 
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
-	panel.add_child(column)
+	# --- In basso: Registro e schede di consultazione ------------------------
+	_strip = BottomStrip.new()
+	_log = _strip.log_view
+	_log_details = _strip.details
+	_log_details.toggled.connect(func(_on): _render_log())
+	add_child(_strip)
+	_info = _build_info_box()
+	add_child(_info)
 
-	# ❶ Fascia delle azioni, fissa.
-	_side = VBoxContainer.new()
-	_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_side.add_theme_constant_override("separation", 6)
-	column.add_child(_side)
+	# --- Pannello azione ------------------------------------------------------
+	_panel = _build_action_panel()
+	add_child(_panel)
 
-	# Carta in corso e Fazione di turno: due righe che devono stare sempre sotto
-	# gli occhi, altrimenti per sapere a chi tocca bisogna cambiare scheda.
-	_turn_line = RichTextLabel.new()
-	_turn_line.bbcode_enabled = true
-	_turn_line.fit_content = true
-	_turn_line.custom_minimum_size = Vector2(0, 40)
-	_side.add_child(_turn_line)
-	# I comandi del TURNO (che riguardano la carta) stanno separati da quelli
-	# dell'AZIONE (che riguardano quel che si sta pianificando): mescolarli
-	# faceva sembrare «Passa» e «Annulla» due varianti della stessa cosa.
-	var actions := HBoxContainer.new()
-	actions.add_child(_group_label("Turno"))
-	_btn_pass = Button.new()
-	_btn_pass.text = "Passa"
-	_btn_pass.tooltip_text = "Rinuncia ad agire su questa carta e resta Disponibile (§4.1)."
-	_btn_pass.pressed.connect(func(): GameController.do_pass())
-	actions.add_child(_btn_pass)
-	_btn_end = Button.new()
-	_btn_end.text = "Concludi carta"
-	_btn_end.tooltip_text = "Chiude la carta in corso e passa alla successiva."
-	_btn_end.pressed.connect(func(): GameController.end_card())
-	actions.add_child(_btn_end)
-	_side.add_child(actions)
-	var sep := HSeparator.new()
-	sep.add_theme_constant_override("separation", 6)
-	_side.add_child(sep)
+	_confirm_new = ConfirmationDialog.new()
+	_confirm_new.title = "Nuova partita"
+	_confirm_new.dialog_text = "Iniziare una nuova partita?\nQuella in corso resta nel salvataggio automatico."
+	_confirm_new.ok_button_text = "Nuova partita"
+	_confirm_new.cancel_button_text = "Annulla"
+	_confirm_new.confirmed.connect(_on_new_game)
+	add_child(_confirm_new)
+	_confirm_menu = ConfirmationDialog.new()
+	_confirm_menu.title = "Menu iniziale"
+	_confirm_menu.dialog_text = "Tornare al menu iniziale?\nLa partita resta nel salvataggio automatico."
+	_confirm_menu.ok_button_text = "Torna al menu"
+	_confirm_menu.cancel_button_text = "Resta in partita"
+	_confirm_menu.confirmed.connect(func(): get_tree().change_scene_to_file("res://scenes/MainMenu.tscn"))
+	add_child(_confirm_menu)
 
-	# HFlowContainer: i pulsanti vanno a capo invece di uscire dal pannello.
-	_ops_box = HFlowContainer.new()
-	_ops_box.add_theme_constant_override("h_separation", 4)
-	_ops_box.add_theme_constant_override("v_separation", 4)
-	_side.add_child(_ops_box)
+	resized.connect(_layout)
 
-	# §1.5: la mano dei Reclaimer. Le Capability restano in gioco come
-	# modificatori permanenti, gli Eventi si risolvono subito.
-	_hand_box = HFlowContainer.new()
-	_hand_box.add_theme_constant_override("h_separation", 4)
-	_hand_box.add_theme_constant_override("v_separation", 4)
-	_side.add_child(_hand_box)
 
+## Comandi di vista sopra la mappa: zoom e inquadratura.
+func _build_zoom_box() -> void:
+	_zoom_box = PanelContainer.new()
+	_zoom_box.add_theme_stylebox_override("panel", RDRTheme.dark_box())
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 3)
+	_zoom_box.add_child(h)
+	var minus := _mk_btn("−", func(): _zoom_at(1.0 / 1.25))
+	minus.tooltip_text = "Rimpicciolisci (tasto −, rotellina)"
+	minus.custom_minimum_size = Vector2(34, 30)
+	h.add_child(minus)
+	_zoom_lbl = RDRTheme.label("100%", RDRTheme.TEXT, 14, RDRTheme.mono())
+	_zoom_lbl.custom_minimum_size = Vector2(46, 0)
+	_zoom_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_zoom_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(_zoom_lbl)
+	var plus := _mk_btn("+", func(): _zoom_at(1.25))
+	plus.tooltip_text = "Ingrandisci (tasto +, rotellina, pinch)"
+	plus.custom_minimum_size = Vector2(34, 30)
+	h.add_child(plus)
+	var mars := _mk_btn("Mars", _view_mars)
+	mars.tooltip_text = "Inquadra la superficie di Mars, senza i tracciati"
+	h.add_child(mars)
+	var whole := _mk_btn("Tutta", func(): _set_zoom(1.0))
+	whole.tooltip_text = "Tavola intera, con tracciati e carte (tasto 0). Col tasto destro si trascina la mappa."
+	h.add_child(whole)
+	add_child(_zoom_box)
+
+
+## Schede di consultazione accanto al Registro: si guardano quando servono.
+func _build_info_box() -> PanelContainer:
+	var pc := PanelContainer.new()
+	pc.theme = RDRTheme.panel_theme()
+	var sb := RDRTheme.dark_box(RDRTheme.LOG_BG, RDRTheme.LOG_EDGE)
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	sb.content_margin_top = 2
+	sb.content_margin_bottom = 4
+	pc.add_theme_stylebox_override("panel", sb)
+	var tabs := TabContainer.new()
+	var tp := RDRTheme.flat(RDRTheme.LOG_BG, 4)
+	tp.border_width_top = 1
+	tp.border_color = RDRTheme.LOG_EDGE
+	tabs.add_theme_stylebox_override("panel", tp)
+	tabs.add_theme_stylebox_override("tab_selected", _tab_style(true))
+	tabs.add_theme_stylebox_override("tab_unselected", _tab_style(false))
+	tabs.add_theme_stylebox_override("tab_hovered", _tab_style(false, true))
+	tabs.add_theme_font_size_override("font_size", 13)
+	pc.add_child(tabs)
+	_status = _info_tab(tabs, "Stato")
+	_card_info = _info_tab(tabs, "Carta")
+	_space_info = _info_tab(tabs, "Spazio")
+	_space_info.text = "[color=#%s]Clicca uno spazio della mappa per vederne i dettagli.[/color]" % \
+		RDRTheme.TEXT_DIM.to_html(false)
+	var sc := ScrollContainer.new()
+	sc.name = "Mano"
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_hand_box = VBoxContainer.new()
+	_hand_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_hand_box.add_theme_constant_override("separation", 3)
+	sc.add_child(_hand_box)
+	tabs.add_child(sc)
+	_tabs = tabs
+	return pc
+
+
+func _tab_style(selected: bool, hover: bool = false) -> StyleBoxFlat:
+	var s := RDRTheme.flat(RDRTheme.PANEL if selected else (RDRTheme.PANEL_HI if hover else Color(0, 0, 0, 0)), 0)
+	s.content_margin_left = 9
+	s.content_margin_right = 9
+	s.content_margin_top = 1
+	s.content_margin_bottom = 2
+	s.border_width_top = 2
+	s.border_color = RDRTheme.CYAN if selected else Color(0, 0, 0, 0)
+	return s
+
+
+func _info_tab(tabs: TabContainer, title: String) -> RichTextLabel:
+	var sc := ScrollContainer.new()
+	sc.name = title
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var r := _rich(0)
+	r.add_theme_font_size_override("normal_font_size", 13)
+	r.add_theme_font_size_override("bold_font_size", 13)
+	r.add_theme_font_size_override("italics_font_size", 13)
+	sc.add_child(r)
+	tabs.add_child(sc)
+	return r
+
+
+func _mk_btn(text: String, cb: Callable) -> Button:
+	var b := TipButton.new()
+	b.text = text
+	b.pressed.connect(cb)
+	RDRTheme.style_button(b)
+	return b
+
+
+## Pannello azione: Fazione e istruzioni in testa, poi Operazioni, Attività
+## Speciali, Evento (e Mano dei Reclaimer), e in fondo il tasto Esegui
+## contestuale con Passa e Concludi turno.
+func _build_action_panel() -> PanelContainer:
+	var pc := PanelContainer.new()
+	pc.theme = RDRTheme.panel_theme()
+	pc.add_theme_stylebox_override("panel", RDRTheme.glass_box(0.0))
+	pc.clip_contents = true
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 0)
+	pc.add_child(outer)
+
+	# Intestazione nel colore della Fazione di turno.
+	_head = PanelContainer.new()
+	outer.add_child(_head)
+	var hh := HBoxContainer.new()
+	hh.add_theme_constant_override("separation", 10)
+	_head.add_child(hh)
+	_head_tok = TextureRect.new()
+	_head_tok.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_head_tok.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_head_tok.custom_minimum_size = Vector2(30, 38)
+	hh.add_child(_head_tok)
+	var hv := VBoxContainer.new()
+	hv.add_theme_constant_override("separation", 0)
+	hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hh.add_child(hv)
+	_head_name = RDRTheme.label("", Color.WHITE, 19, RDRTheme.display())
+	_head_name.clip_text = true
+	hv.add_child(_head_name)
+	_head_sub = RDRTheme.label("", Color(1, 1, 1, 0.85), 14)
+	_head_sub.clip_text = true
+	_head_sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	hv.add_child(_head_sub)
+	_head_stamp = RDRTheme.label("", Color.WHITE, 11, RDRTheme.display())
+	var stamp_sb := StyleBoxFlat.new()
+	stamp_sb.bg_color = Color(0, 0, 0, 0.18)
+	stamp_sb.set_border_width_all(1)
+	stamp_sb.border_color = Color.WHITE
+	stamp_sb.set_corner_radius_all(2)
+	stamp_sb.content_margin_left = 6
+	stamp_sb.content_margin_right = 6
+	stamp_sb.content_margin_top = 2
+	stamp_sb.content_margin_bottom = 2
+	_head_stamp.add_theme_stylebox_override("normal", stamp_sb)
+	_head_stamp.rotation_degrees = -5.0
+	_head_stamp.resized.connect(func(): _head_stamp.pivot_offset = _head_stamp.size * 0.5)
+	_head_stamp.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	hh.add_child(_head_stamp)
+
+	# Istruzioni di turno, subito sotto la Fazione: cosa fare adesso.
+	_banner = InstrBox.new()
+	var bsb := RDRTheme.flat(RDRTheme.PANEL_DARK, 0)
+	bsb.content_margin_left = 14
+	bsb.content_margin_right = 14
+	bsb.content_margin_top = 7
+	bsb.content_margin_bottom = 7
+	bsb.border_width_bottom = 1
+	bsb.border_color = RDRTheme.PANEL_EDGE
+	_banner.add_theme_stylebox_override("panel", bsb)
+	_banner.mouse_filter = Control.MOUSE_FILTER_STOP
+	_banner.mouse_entered.connect(func(): _banner.tooltip_text = _instr.get_parsed_text())
+	_instr = RichTextLabel.new()
+	_instr.bbcode_enabled = true
+	_instr.fit_content = true
+	_instr.scroll_active = false
+	_instr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_instr.add_theme_font_override("normal_font", RDRTheme.ui())
+	_instr.add_theme_font_override("bold_font", RDRTheme.ui_heavy())
+	_instr.add_theme_font_size_override("normal_font_size", 15)
+	_instr.add_theme_font_size_override("bold_font_size", 15)
+	_instr.add_theme_color_override("default_color", RDRTheme.TEXT)
+	_banner.add_child(_instr)
+	outer.add_child(_banner)
+
+	# Corpo scorrevole (schermi bassi), con il blocco «Esegui» sempre in fondo.
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(scroll)
+	var m := MarginContainer.new()
+	m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	m.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for side in ["left", "right"]:
+		m.add_theme_constant_override("margin_" + side, 14)
+	m.add_theme_constant_override("margin_top", 10)
+	m.add_theme_constant_override("margin_bottom", 6)
+	scroll.add_child(m)
+	_body = VBoxContainer.new()
+	_body.add_theme_constant_override("separation", 6)
+	m.add_child(_body)
+
+	_sec_op = RDRTheme.section_title("Operazione")
+	_body.add_child(_sec_op)
+	_ops_box = _grid()
+	_body.add_child(_ops_box)
+	_op_desc = _desc_label()
+	_body.add_child(_op_desc)
+	# Le scelte dell'azione in preparazione: si sposta sotto l'Operazione o sotto
+	# l'Attività Speciale, a seconda di cosa si sta preparando.
+	_move_box = VBoxContainer.new()
+	_move_box.add_theme_constant_override("separation", 4)
+	_body.add_child(_move_box)
+
+	var sa_title := HBoxContainer.new()
+	sa_title.add_child(RDRTheme.section_title("Attività speciale"))
+	var opt := RDRTheme.label(" (facoltativa)", RDRTheme.TEXT_FAINT, 13)
+	opt.size_flags_vertical = Control.SIZE_SHRINK_END
+	sa_title.add_child(opt)
+	_sec_sa = sa_title
+	_body.add_child(sa_title)
+	_sa_btns = _grid()
+	_body.add_child(_sa_btns)
+	_sa_desc = _desc_label()
+	_body.add_child(_sa_desc)
+
+	_sec_free = RDRTheme.section_title("Operazioni gratuite", RDRTheme.OK)
+	_body.add_child(_sec_free)
+	_free_box = VBoxContainer.new()
+	_free_box.add_theme_constant_override("separation", 4)
+	_body.add_child(_free_box)
+
+	# Evento: carta corrente, titolo e opzioni, prossima carta in piccolo.
+	_sec_ev = RDRTheme.section_title("Evento")
+	_body.add_child(_sec_ev)
+	_ev_row = HBoxContainer.new()
+	_ev_row.add_theme_constant_override("separation", 8)
+	_body.add_child(_ev_row)
+	_card_now = _card_thumb(Vector2(66, 91), "Carta in corso: clicca per ingrandire")
+	_ev_row.add_child(_card_now)
+	var cv := VBoxContainer.new()
+	cv.add_theme_constant_override("separation", 4)
+	cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ev_row.add_child(cv)
+	_ev_title = RDRTheme.label("", RDRTheme.TEXT, 16, RDRTheme.ui_heavy())
+	_ev_title.clip_text = true
+	_ev_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_ev_title.mouse_filter = Control.MOUSE_FILTER_PASS
+	cv.add_child(_ev_title)
+	_ev_btns = VBoxContainer.new()
+	_ev_btns.add_theme_constant_override("separation", 4)
+	cv.add_child(_ev_btns)
+	var nv := VBoxContainer.new()
+	nv.add_theme_constant_override("separation", 0)
+	nv.alignment = BoxContainer.ALIGNMENT_END
+	_ev_row.add_child(nv)
+	var nl := RDRTheme.label("Prossima", RDRTheme.TEXT_DIM, 12)
+	nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nv.add_child(nl)
+	_card_next = _card_thumb(Vector2(48, 66), "Prossima carta: clicca per ingrandire")
+	_card_next.modulate = Color(1, 1, 1, 0.85)
+	nv.add_child(_card_next)
+	_ev_choice_box = VBoxContainer.new()
+	_ev_choice_box.add_theme_constant_override("separation", 4)
+	_body.add_child(_ev_choice_box)
+
+	# §1.5: la mano dei Reclaimer, nel loro turno (Asset Event e Capability).
+	_sec_hand = RDRTheme.section_title("Mano Reclaimer")
+	_body.add_child(_sec_hand)
+	_panel_hand = HFlowContainer.new()
+	_panel_hand.add_theme_constant_override("h_separation", 4)
+	_panel_hand.add_theme_constant_override("v_separation", 4)
+	_body.add_child(_panel_hand)
+
+	# Fondo fisso: anteprima, Esegui contestuale, Passa / Concludi turno.
+	var foot_m := MarginContainer.new()
+	for side in ["left", "right"]:
+		foot_m.add_theme_constant_override("margin_" + side, 14)
+	foot_m.add_theme_constant_override("margin_top", 6)
+	foot_m.add_theme_constant_override("margin_bottom", 12)
+	var foot_bg := PanelContainer.new()
+	var fbs := RDRTheme.flat(RDRTheme.PANEL, 0)
+	fbs.border_width_top = 1
+	fbs.border_color = RDRTheme.PANEL_EDGE
+	foot_bg.add_theme_stylebox_override("panel", fbs)
+	foot_bg.add_child(foot_m)
+	outer.add_child(foot_bg)
+	var foot := VBoxContainer.new()
+	foot.add_theme_constant_override("separation", 7)
+	foot_m.add_child(foot)
+	var prow := HBoxContainer.new()
+	prow.add_theme_constant_override("separation", 6)
+	foot.add_child(prow)
 	# Anteprima: costo ed effetti previsti PRIMA di premere «Esegui».
 	_preview = RichTextLabel.new()
 	_preview.bbcode_enabled = true
 	_preview.fit_content = true
-	_preview.custom_minimum_size = Vector2(0, 18)
-	_preview.add_theme_font_size_override("normal_font_size", 11)
-	_side.add_child(_preview)
+	_preview.scroll_active = false
+	_preview.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_preview.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_preview.add_theme_font_override("normal_font", RDRTheme.mono())
+	_preview.add_theme_font_size_override("normal_font_size", 13)
+	prow.add_child(_preview)
+	_btn_clear = _mk_btn("Annulla scelta", _cancel_op)
+	_btn_clear.tooltip_text = "Scarta la scelta in preparazione, senza toccare le azioni già eseguite (Esc)."
+	_btn_clear.add_theme_font_size_override("font_size", 13)
+	_btn_clear.custom_minimum_size = Vector2(0, 28)
+	_btn_clear.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	prow.add_child(_btn_clear)
 
-	_move_box = VBoxContainer.new()
-	_move_box.add_theme_constant_override("separation", 2)
-	_side.add_child(_move_box)
+	_btn_exec = _mk_btn("Esegui", _on_execute)
+	_btn_exec.tooltip_text = "Applica la scelta preparata (Invio)"
+	RDRTheme.primary_button(_btn_exec, 15)
+	_btn_exec.custom_minimum_size = Vector2(0, 50)
+	_btn_exec.clip_text = true
+	_btn_exec.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	foot.add_child(_btn_exec)
 
-	# ❷ Schede di consultazione: si guardano quando servono, non ingombrano.
-	var tabs := TabContainer.new()
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.size_flags_stretch_ratio = 1.0
-	tabs.custom_minimum_size = Vector2(0, 260)
-	column.add_child(tabs)
-
-	var tab_state := ScrollContainer.new()
-	tab_state.name = "Stato"
-	var state_box := VBoxContainer.new()
-	state_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_state.add_child(state_box)
-	_status = _rich(240)
-	state_box.add_child(_status)
-	tabs.add_child(tab_state)
-
-	var tab_card := ScrollContainer.new()
-	tab_card.name = "Carta"
-	var card_box := VBoxContainer.new()
-	card_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_card.add_child(card_box)
-	# Le due carte in vista, come sul tavolo: quella in corso e la prossima
-	# (serve a decidere, il suo Flashpoint conta già). Un clic le ingrandisce.
-	var cards_row := HBoxContainer.new()
-	cards_row.add_theme_constant_override("separation", 6)
-	_card_now = _add_card_slot(cards_row, "In corso", 1.0)
-	_card_next = _add_card_slot(cards_row, "Prossima", 0.55)
-	card_box.add_child(cards_row)
-	_card_info = _rich(120)
-	card_box.add_child(_card_info)
-	tabs.add_child(tab_card)
-
-	var tab_space := ScrollContainer.new()
-	tab_space.name = "Spazio"
-	var space_box := VBoxContainer.new()
-	space_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_space.add_child(space_box)
-	_space_info = _rich(150)
-	space_box.add_child(_space_info)
-	tabs.add_child(tab_space)
-	_tabs = tabs
-
-	var buttons := HBoxContainer.new()
-	# Partita: nuova, salva, riprendi. Il salvataggio sta in user://, cioè nella
-	# cartella dati dell'app: non serve scegliere un percorso.
-	var game_menu := MenuButton.new()
-	game_menu.text = "Partita…"
-	var pm := game_menu.get_popup()
-	pm.add_item("Nuova partita", 0)
-	pm.add_item("Salva", 1)
-	pm.add_item("Riprendi l'ultima salvata", 2)
-	pm.add_item("Riprendi il salvataggio automatico", 3)
-	pm.add_separator()
-	pm.add_item("Copia il Log negli appunti", 5)
-	pm.add_item("Salva il Log sulla Scrivania", 6)
-	pm.add_separator()
-	pm.add_item("Torna al menu", 4)
-	pm.id_pressed.connect(_on_game_menu)
-	buttons.add_child(game_menu)
-
-	_btn_undo = Button.new()
-	_btn_undo.text = "Annulla"
-	_btn_undo.pressed.connect(func():
-		if _anim != null:
-			_anim.reset()
-		GameController.undo()
-		_cancel_op())
-	buttons.add_child(_btn_undo)
-	# Zoom: la tavola è 5175×3775, a schermo intero le pedine sono minuscole.
-	var b_out := Button.new()
-	b_out.text = "−"
-	b_out.tooltip_text = "Rimpicciolisci (tasto −)"
-	b_out.pressed.connect(func(): _zoom_at(1.0 / 1.25))
-	buttons.add_child(b_out)
-	var b_in := Button.new()
-	b_in.text = "+"
-	b_in.tooltip_text = "Ingrandisci (tasto +, rotellina, pinch)"
-	b_in.pressed.connect(func(): _zoom_at(1.25))
-	buttons.add_child(b_in)
-	var b_fit := Button.new()
-	b_fit.text = "Adatta"
-	b_fit.tooltip_text = "Tavola intera (tasto 0). Col tasto destro si trascina la mappa."
-	b_fit.pressed.connect(func(): _set_zoom(1.0))
-	buttons.add_child(b_fit)
-	column.add_child(buttons)
-
-	# ❸ Log, in fondo e con un'altezza propria.
-	var log_head := HBoxContainer.new()
-	log_head.add_child(_title("Log"))
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	log_head.add_child(spacer)
-	_log_details = CheckButton.new()
-	_log_details.text = "Dettagli"
-	_log_details.tooltip_text = "Mostra tiri di dado, righe delle tabelle e passaggi intermedi."
-	_log_details.button_pressed = false
-	_log_details.toggled.connect(func(_on): _render_log())
-	log_head.add_child(_log_details)
-	column.add_child(log_head)
-	_log = RichTextLabel.new()
-	_log.bbcode_enabled = true
-	_log.scroll_following = true
-	# Su schermi alti il Log si prende quel che avanza invece di restare a 240 px
-	# con il vuoto sotto; le schede sopra tengono il loro minimo e non vengono
-	# schiacciate.
-	_log.custom_minimum_size = Vector2(0, 200)
-	_log.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_log.size_flags_stretch_ratio = 2.0
-	column.add_child(_log)
+	var row_a := GridContainer.new()
+	row_a.columns = 2
+	row_a.add_theme_constant_override("h_separation", 8)
+	foot.add_child(row_a)
+	_btn_pass = _mk_btn("Passa", _on_pass)
+	_btn_pass.tooltip_text = "Rinuncia ad agire su questa carta e resta Disponibile (§4.1): MarsGov +3 Risorse, Red Dust +1, le Corporations attivano l'Aldrin Cycler, i Reclaimer pescano una Asset card."
+	_btn_end = _mk_btn("Concludi turno", _on_end_turn)
+	_btn_end.tooltip_text = "Esegue la scelta in preparazione (se c'è) e chiude il turno della Fazione (Spazio)."
+	for b in [_btn_pass, _btn_end]:
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 40)
+		b.add_theme_font_size_override("font_size", 16)
+		row_a.add_child(b)
+	RDRTheme.inverse_button(_btn_end)
+	return pc
 
 
-## Colonna con etichetta e anteprima cliccabile di una carta Evento.
-## `alpha` distingue a colpo d'occhio la carta in corso da quella che verrà.
-func _add_card_slot(row: HBoxContainer, label: String, alpha: float) -> TextureRect:
-	var col := VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var l := Label.new()
-	l.text = label
-	l.add_theme_font_size_override("font_size", 11)
-	l.add_theme_color_override("font_color", Color("9aa4ad"))
-	col.add_child(l)
-	var img := TextureRect.new()
-	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
-	img.custom_minimum_size = Vector2(0, 150)
-	img.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	img.modulate = Color(1, 1, 1, alpha)
-	img.mouse_filter = Control.MOUSE_FILTER_STOP
-	img.tooltip_text = "Clic per ingrandire"
-	img.gui_input.connect(func(e: InputEvent):
-		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
-			_show_card_zoom(img.texture))
-	col.add_child(img)
-	row.add_child(col)
-	return img
+func _grid() -> GridContainer:
+	var g := GridContainer.new()
+	g.columns = 2
+	g.add_theme_constant_override("h_separation", 6)
+	g.add_theme_constant_override("v_separation", 6)
+	return g
+
+
+func _desc_label() -> Label:
+	var l := RDRTheme.label("", RDRTheme.TEXT_DIM, 13, RDRTheme.mono())
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.visible = false
+	return l
+
+
+## Un tasto della griglia del pannello (Operazioni, Attività Speciali, bot…).
+func _grid_btn(text: String, cb: Callable, tip: String = "", h: float = 36.0) -> Button:
+	var b := _mk_btn(text, cb)
+	b.tooltip_text = tip
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, h)
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.add_theme_font_size_override("font_size", 16 if h >= 36.0 else 15)
+	return b
+
+
+func _card_thumb(sz: Vector2, tip: String) -> TextureRect:
+	var r := TextureRect.new()
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.custom_minimum_size = sz
+	r.mouse_filter = Control.MOUSE_FILTER_STOP
+	r.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	r.tooltip_text = tip
+	r.gui_input.connect(func(e):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and r.texture != null:
+			_show_card_zoom(r.texture))
+	return r
+
+
+## Fila di tasti per una scelta fra poche opzioni (modalità del Rally, varianti
+## delle Attività Speciali, Suppress…): niente tendine, tutto in vista.
+## `opts` = [{id, label}]; `current` è l'id scelto.
+func _choice_buttons(parent: Control, opts: Array, current: String, on_pick: Callable) -> void:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 4)
+	flow.add_theme_constant_override("v_separation", 4)
+	for o in opts:
+		var od: Dictionary = o
+		var id := String(od["id"])
+		var b := _mk_btn(String(od["label"]), func(): on_pick.call(id))
+		b.custom_minimum_size = Vector2(0, 26)
+		b.add_theme_font_size_override("font_size", 14)
+		if id == current:
+			RDRTheme.accent_button(b, RDRTheme.CYAN_DIM, RDRTheme.CYAN)
+		flow.add_child(b)
+	parent.add_child(flow)
+
+
+## Titoletto di una riga di scelte (nome dello spazio, «Dig-In»…).
+func _small_title(text: String) -> Label:
+	return RDRTheme.label(text, RDRTheme.TEXT_DIM, 13, RDRTheme.ui_bold())
+
+
+# ---------------------------------------------------------------------------
+# Layout
+# ---------------------------------------------------------------------------
+
+func _layout() -> void:
+	if _top == null or _board == null or _strip == null or _panel == null:
+		return
+	var W := size.x
+	var H := size.y
+	if W <= 0.0 or H <= 0.0:
+		return
+	var compact := W < 1300.0
+	_top.set_compact(compact)
+	_top.position = Vector2.ZERO
+	_top.size = Vector2(W, TopBar.HEIGHT)
+	var top := TopBar.HEIGHT + GAP
+	var panel_w := PANEL_W_SMALL if compact else PANEL_W
+	var left := MARGIN
+	var map_w := maxf(300.0, W - left - GAP - panel_w - MARGIN)
+	var strip_h := BottomStrip.HEIGHT_SMALL if H < 760.0 else BottomStrip.HEIGHT
+	var map_h := maxf(200.0, H - top - GAP - strip_h - MARGIN)
+	_panel.position = Vector2(W - MARGIN - panel_w, top)
+	_panel.size = Vector2(panel_w, H - top - MARGIN)
+	var info_w := INFO_W_SMALL if compact else INFO_W
+	_strip.position = Vector2(left, top + map_h + GAP)
+	_strip.size = Vector2(map_w - info_w - GAP, strip_h)
+	_info.position = Vector2(left + map_w - info_w, top + map_h + GAP)
+	_info.size = Vector2(info_w, strip_h)
+	_board.position = Vector2(left, top)
+	_board.size = Vector2(map_w, map_h)
+	_map_frame.position = _board.position
+	_map_frame.size = _board.size
+	var zb := _zoom_box.get_combined_minimum_size()
+	_zoom_box.position = Vector2(left + map_w - zb.x - 10.0, top + 10.0)
+	_zoom_box.size = zb
+	_relayout_map()
+	# Prima inquadratura: la superficie di Mars (la tavola intera resta a un tasto).
+	if not _view_ready and map_w > 300.0:
+		_view_ready = true
+		_view_mars.call_deferred()
+
+
+## Zoom 1 = la tavola intera entra nell'area disponibile; da lì si ingrandisce.
+func _relayout_map() -> void:
+	if _board == null or _map_root == null:
+		return
+	var avail: Vector2 = _board.size
+	if avail.x <= 0.0 or avail.y <= 0.0:
+		return
+	var fit: float = minf(avail.x / BOARD_W, avail.y / BOARD_H)
+	_map_base = Vector2(BOARD_W * fit, BOARD_H * fit)
+	var scaled := _map_base * _zoom
+
+	_map_root.custom_minimum_size = _map_base
+	_map_root.size = _map_base
+	_map_root.scale = Vector2(_zoom, _zoom)
+	# Se la tavola è più piccola del riquadro resta centrata.
+	_map_root.position = ((avail - scaled) * 0.5).max(Vector2.ZERO)
+	_map_wrap.custom_minimum_size = scaled.max(avail)
+	_map_wrap.size = scaled.max(avail)
+
+	# Le viste si dimensionano a mano: `relayout()` deve vedere la misura nuova
+	# subito, non al frame dopo.
+	for c in [_map_tex, _regions_layer, _tracks, _anim, _moves]:
+		(c as Control).position = Vector2.ZERO
+		(c as Control).size = _map_base
+	for sid in _views.keys():
+		var rv: RegionView = _views[sid]
+		rv.position = Vector2.ZERO
+		rv.size = _map_base
+		rv.relayout()
+	_tracks.queue_redraw()
+	_update_moves_overlay()
+	if _zoom_lbl != null:
+		_zoom_lbl.text = "%d%%" % roundi(_zoom * 100.0)
+
+
+## Inquadra la superficie di Mars: la porzione di tavola senza i tracciati.
+func _view_mars() -> void:
+	if _board == null or _board.size.x <= 0.0 or _map_base.x <= 0.0:
+		return
+	var r := MARS_RECT
+	var z := minf(_board.size.x / (_map_base.x * r.size.x), _board.size.y / (_map_base.y * r.size.y))
+	_set_zoom(z)
+	await get_tree().process_frame
+	_board.scroll_horizontal = int(_map_base.x * _zoom * r.position.x)
+	_board.scroll_vertical = int(maxf(0.0, _map_base.y * _zoom * (r.position.y + r.size.y * 0.5) - _board.size.y * 0.5))
+
+
+# ---------------------------------------------------------------------------
+# Zoom e scorrimento della mappa
+# ---------------------------------------------------------------------------
+
+const ZOOM_MIN := 1.0
+const ZOOM_MAX := 5.0
+
+
+func _set_zoom(z: float) -> void:
+	_zoom = clampf(z, ZOOM_MIN, ZOOM_MAX)
+	_relayout_map()
+
+
+## Zoom tenendo fermo il punto della mappa sotto il puntatore; senza puntatore
+## si tiene fermo il centro di ciò che si sta guardando.
+func _zoom_at(factor: float, screen_pos: Vector2 = Vector2(-1, -1)) -> void:
+	if _board == null:
+		return
+	var local := screen_pos - _board.global_position
+	if screen_pos.x < 0 or not Rect2(Vector2.ZERO, _board.size).has_point(local):
+		local = _board.size * 0.5
+	var old_zoom := _zoom
+	var target: float = clampf(_zoom * factor, ZOOM_MIN, ZOOM_MAX)
+	if is_equal_approx(target, old_zoom):
+		return
+	var map_pt := (Vector2(_board.scroll_horizontal, _board.scroll_vertical) + local - _map_root.position) / old_zoom
+	_zoom = target
+	_relayout_map()
+	_board.scroll_horizontal = int(map_pt.x * _zoom + _map_root.position.x - local.x)
+	_board.scroll_vertical = int(map_pt.y * _zoom + _map_root.position.y - local.y)
+
+
+## Scorciatoie da tastiera: Esc chiude l'ingrandimento o annulla la scelta in
+## preparazione, Invio esegue, Spazio conclude il turno, Ctrl+Z disfa, +/−/0
+## regolano lo zoom.
+func _unhandled_input(event: InputEvent) -> void:
+	if not (event is InputEventKey) or not event.pressed or (event as InputEventKey).echo:
+		return
+	var k := event as InputEventKey
+	match k.keycode:
+		KEY_ESCAPE:
+			if _card_zoom != null:
+				_close_card_zoom()
+			else:
+				_cancel_op()
+		KEY_ENTER, KEY_KP_ENTER:
+			if not _btn_exec.disabled:
+				_on_execute()
+		KEY_SPACE:
+			if not _btn_end.disabled:
+				_on_end_turn()
+		KEY_Z:
+			if k.ctrl_pressed or k.meta_pressed:
+				_on_undo()
+			else:
+				return
+		KEY_PLUS, KEY_EQUAL, KEY_KP_ADD:
+			_zoom_at(1.25)
+		KEY_MINUS, KEY_KP_SUBTRACT:
+			_zoom_at(1.0 / 1.25)
+		KEY_0, KEY_KP_0:
+			_set_zoom(1.0)
+		_:
+			return
+	get_viewport().set_input_as_handled()
+
+
+# ---------------------------------------------------------------------------
+# Comandi della barra superiore
+# ---------------------------------------------------------------------------
+
+func _on_undo() -> void:
+	if not GameController.can_undo():
+		return
+	if _anim != null:
+		_anim.reset()
+	GameController.undo()
+	_cancel_op()
+
+
+func _toggle_auto_bot(on: bool) -> void:
+	_auto_bot = on
+	_top.set_auto_bot(on)
+	_append_log("[i]Auto-Bot %s.[/i]" % ("acceso: i bot giocano da soli" if on else "spento"))
+
+
+## Con «Auto-Bot» acceso le Fazioni Non-Player giocano da sole al loro turno.
+func _auto_bot_tick() -> void:
+	if not _auto_bot or _np_running:
+		return
+	var gc := GameController
+	if gc.sequence == null or not gc.support_pending().is_empty():
+		return
+	var fid := gc.sequence.pending_faction()
+	if fid != "" and gc.np != null and gc.np.is_np(fid):
+		_run_np_until_player()
+
+
+func _on_game_menu(id: int) -> void:
+	# Nuova partita e caricamenti cambiano tutta la plancia in un colpo: senza
+	# azzerare l'animatore si vedrebbero decine di pezzi volare all'indietro.
+	if _anim != null and id in [TopBar.MenuId.LOAD, TopBar.MenuId.AUTOSAVE]:
+		_anim.reset()
+	match id:
+		TopBar.MenuId.NEW_GAME:
+			_confirm_new.popup_centered()
+		TopBar.MenuId.SAVE:
+			GameController.save_game(GameController.SAVE_PATH)
+		TopBar.MenuId.LOAD:
+			GameController.load_game(GameController.SAVE_PATH)
+			_cancel_op()
+		TopBar.MenuId.AUTOSAVE:
+			GameController.load_game(GameController.AUTOSAVE_PATH)
+			_cancel_op()
+		TopBar.MenuId.MAIN_MENU:
+			_confirm_menu.popup_centered()
+		TopBar.MenuId.COPY_LOG:
+			DisplayServer.clipboard_set(_log_plain())
+			_append_log("[i]Log copiato negli appunti (%d righe).[/i]" %
+				_log_plain().split("\n").size())
+		TopBar.MenuId.SAVE_LOG:
+			_save_log()
+		TopBar.MenuId.BOTS_UNTIL_ME:
+			_run_np_until_player()
+
+
+func _on_new_game() -> void:
+	if _anim != null:
+		_anim.reset()
+	# Le Fazioni al bot restano quelle scelte nel menu iniziale: senza questo,
+	# «Nuova partita» le rimetteva tutte in mano ai giocatori.
+	GameController.new_game("standard", 0, Array(GameController.np.np_factions))
+	_cancel_op()
+
+
+# ---------------------------------------------------------------------------
+# Stato
+# ---------------------------------------------------------------------------
+
+func _on_state_changed() -> void:
+	if _views.is_empty():
+		_build_regions()
+	# Prima l'animazione, che confronta la plancia con com'era all'aggiornamento
+	# precedente; poi le viste, che ridisegnano lo stato definitivo.
+	if _anim != null:
+		_anim.update(GameController.state)
+	var m: RDRModule = GameController.rdr()
+	for sid in _views.keys():
+		(_views[sid] as RegionView).refresh(GameController.state, m)
+	_tracks.queue_redraw()
+	_top.refresh()
+	_refresh_status()
+	_refresh_card_info()
+	_refresh_hand()
+	_refresh_op_bar()
+	if _selected != "":
+		_refresh_space_info(_selected)
+
+
+## Scheda «Mano»: la mano dei Reclaimer (§1.5), le Capability in gioco e la
+## Campaign card del Red Dust. Le carte di solo valore servono a pagare le
+## Operazioni e non si giocano; Capability ed Eventi hanno un tasto.
+func _refresh_hand() -> void:
+	if _hand_box == null:
+		return
+	for c in _hand_box.get_children():
+		c.queue_free()
+	var gc := GameController
+	if gc.cards == null:
+		return
+	var camp: int = gc.cards.campaign_in_play()
+	var caps: Array = gc.cards.active_capabilities()
+	var info := _rich(0)
+	info.add_theme_font_size_override("normal_font_size", 13)
+	info.add_theme_font_size_override("bold_font_size", 13)
+	var lines: Array[String] = []
+	lines.append("[b]Campaign in gioco[/b]  %s" % (gc.cards.campaign_title(camp) if camp > 0 else "—"))
+	var cap_names: Array[String] = []
+	for n in caps:
+		cap_names.append(String(gc.cards.assets.get(int(n), {}).get("title", n)))
+	lines.append("[b]Capability[/b]  %s" % (", ".join(cap_names) if not cap_names.is_empty() else "nessuna"))
+	if gc.np != null and gc.np.is_np("reclaimer"):
+		lines.append("[b]Reclaimer (bot)[/b]  Asset Total %d" % gc.rdr().asset_total(gc.state))
+	else:
+		lines.append("[b]Mano Reclaimer[/b]  %d carte" % gc.cards.hand().size())
+	info.text = "\n".join(lines)
+	_hand_box.add_child(info)
+	if gc.np == null or not gc.np.is_np("reclaimer"):
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 4)
+		flow.add_theme_constant_override("v_separation", 4)
+		_fill_hand(flow)
+		_hand_box.add_child(flow)
+
+
+## Un tasto per Asset card della mano: le carte di solo valore restano spente.
+func _fill_hand(box: Container) -> void:
+	var gc := GameController
+	for number in gc.cards.hand():
+		var n := int(number)
+		var card: Dictionary = gc.cards.assets.get(n, {})
+		var kind := String(card.get("kind", ""))
+		var b := _mk_btn("#%d %s" % [n, card.get("title", "")], _play_asset.bind(n))
+		var what := {"capability": "Capability", "event": "Evento", "resource": "solo valore"}
+		b.tooltip_text = "%s\n\nValore %s · %s" % [card.get("text", ""), card.get("value", "?"),
+			what.get(kind, kind)]
+		b.custom_minimum_size = Vector2(0, 26)
+		b.add_theme_font_size_override("font_size", 13)
+		b.disabled = kind == "resource"
+		box.add_child(b)
+
+
+## Intestazione del pannello: Fazione di turno, posto nella sequenza, Risorse, ruolo.
+func _refresh_panel_header(fid: String, title: String, sub: String, stamp: String) -> void:
+	var col := RDRTheme.faction(fid) if fid != "" else RDRTheme.PANEL_HI
+	var hsb := RDRTheme.flat(col, 0)
+	hsb.content_margin_left = 14
+	hsb.content_margin_right = 14
+	hsb.content_margin_top = 8
+	hsb.content_margin_bottom = 8
+	hsb.corner_radius_top_left = 4
+	hsb.corner_radius_top_right = 4
+	hsb.border_width_bottom = 2
+	hsb.border_color = col.lightened(0.25) if fid != "" else RDRTheme.PANEL_EDGE
+	_head.add_theme_stylebox_override("panel", hsb)
+	var fg := RDRTheme.faction_on(fid)
+	_head_tok.texture = RDRAssets.pawn_tex(fid) if fid != "" else null
+	_head_tok.visible = fid != ""
+	_head_name.text = title.to_upper()
+	_head_name.add_theme_color_override("font_color", fg)
+	_head_sub.text = sub
+	_head_sub.add_theme_color_override("font_color", Color(fg, 0.85))
+	_head_stamp.text = stamp
+	_head_stamp.visible = stamp != ""
+	_head_stamp.add_theme_color_override("font_color", fg)
+	(_head_stamp.get_theme_stylebox("normal") as StyleBoxFlat).border_color = fg
+
+
+## Risorse della Fazione come le dice il gioco: le Corporations hanno i Profits,
+## i Reclaimer la mano di Asset card, i bot i loro contatori (§8.5.4).
+func _resources_text(fid: String) -> String:
+	var gc := GameController
+	var m: RDRModule = gc.rdr()
+	var np: bool = gc.np != null and gc.np.is_np(fid)
+	match fid:
+		"corporations":
+			return "Profits %d" % int(gc.state.tracks.get("profits", 0))
+		"reclaimer":
+			return "Asset Total %d" % m.asset_total(gc.state) if np \
+				else "Asset card %d" % gc.cards.hand().size()
+		"marsgov":
+			return "Supply %d" % m.supply_total(gc.state) if np \
+				else "Risorse %d" % gc.state.get_resources(fid)
+		"red_dust":
+			return "Agitate %d" % m.agitate_total(gc.state) if np \
+				else "Risorse %d" % gc.state.get_resources(fid)
+	return ""
+
+
+## Carta in corso e prossima, titolo e opzioni dell'Evento.
+func _refresh_event_box(human: bool) -> void:
+	var gc := GameController
+	var r: RDRRounds = gc.rounds
+	if r == null:
+		return
+	_card_now.texture = RDRAssets.card_tex(r.current_card())
+	_card_next.texture = RDRAssets.card_tex(r.next_card())
+	var cur: CardDef = gc.game_def.card(r.current_card())
+	for c in _ev_btns.get_children():
+		c.queue_free()
+	for c in _ev_choice_box.get_children():
+		c.queue_free()
+	if cur == null:
+		_ev_title.text = "Nessuna carta"
+		return
+	var fp := int(gc.rdr().card_flashpoint.get(cur.number, 0))
+	_ev_title.text = "#%d · %s" % [cur.number, cur.title]
+	_ev_title.tooltip_text = "Flashpoint %d" % fp
+	_card_now.tooltip_text = "#%d %s · Flashpoint %d\n\n(clicca per ingrandire)" % [cur.number, cur.title, fp]
+	var nxt: CardDef = gc.game_def.card(r.next_card())
+	_card_next.tooltip_text = ("Prossima: #%d %s\n\n(clicca per ingrandire)" % [nxt.number, nxt.title]) \
+		if nxt != null else "Prossima carta non ancora rivelata"
+	# Le opzioni stampate: quasi tutte le carte ne hanno due (§7.0); tre carte
+	# hanno un solo effetto.
+	var sides: Array = []
+	for shaded in [false, true]:
+		if not gc.events.option(cur.number, shaded).is_empty():
+			sides.append(shaded)
+	var legal: bool = human and gc.sequence != null and gc.sequence.is_legal(CoinEnums.ActionType.EVENT) \
+		and not gc.turn_started() and _op_mode == "" and _sa_mode == ""
+	for shaded in sides:
+		var opt: Dictionary = gc.events.option(cur.number, shaded)
+		var label := "Evento" if sides.size() == 1 else ("Ombreggiato" if shaded else "Non ombreggiato")
+		var b := _mk_btn(label, _pick_event.bind(shaded))
+		b.custom_minimum_size = Vector2(0, 28)
+		b.add_theme_font_size_override("font_size", 14)
+		b.tooltip_text = String(opt.get("text", ""))
+		var chosen: bool = _ev_active and _ev_shaded == shaded
+		b.disabled = not (legal or chosen) or (_ev_active and not chosen)
+		if chosen:
+			RDRTheme.accent_button(b, RDRTheme.CYAN_DIM, RDRTheme.CYAN)
+		_ev_btns.add_child(b)
+	if sides.is_empty():
+		_ev_btns.add_child(RDRTheme.label("Questa carta non ha Evento.", RDRTheme.TEXT_DIM, 13))
+	if _ev_active:
+		_build_event_choices()
+
+
+## Scelta di un'opzione dell'Evento: un secondo clic la ritira.
+func _pick_event(shaded: bool) -> void:
+	if _ev_active and _ev_shaded == shaded:
+		_cancel_op()
+		return
+	_start_event(shaded)
+
+
+## Le scelte dell'Evento in corso: la richiesta corrente, e un tasto per ogni
+## Fazione o ramo («either/or»); gli spazi si prendono sulla mappa.
+func _build_event_choices() -> void:
+	var gc := GameController
+	var opt: Dictionary = gc.events.option(gc.state.current_card, _ev_shaded)
+	var txt := RDRTheme.label(String(opt.get("text", "")), RDRTheme.TEXT_DIM, 13, RDRTheme.mono())
+	txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ev_choice_box.add_child(txt)
+	if _ev_index >= _ev_reqs.size():
+		_ev_choice_box.add_child(RDRTheme.label("Scelte complete: «Esegui Evento».", RDRTheme.CYAN, 14, RDRTheme.ui_bold()))
+		return
+	var req: Dictionary = _ev_reqs[_ev_index]
+	var head := RDRTheme.label("Scelta %d/%d · %s" % [_ev_index + 1, _ev_reqs.size(), req.get("prompt", "scegli")],
+		RDRTheme.CYAN, 14, RDRTheme.ui_bold())
+	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ev_choice_box.add_child(head)
+	if String(req.get("kind", "space")) == "space":
+		if not _op_spaces.is_empty():
+			var clear := _mk_btn("Svuota la scelta", func():
+				_op_spaces.clear()
+				_paint_op_highlight()
+				_refresh_op_bar())
+			clear.custom_minimum_size = Vector2(0, 26)
+			clear.add_theme_font_size_override("font_size", 13)
+			_ev_choice_box.add_child(clear)
+	else:
+		var opts: Array = []
+		for value in req.get("candidates", []):
+			opts.append({"id": String(value), "label": _choice_label(String(value))})
+		_choice_buttons(_ev_choice_box, opts, "", func(id): _ev_pick(id))
+
+
+# ---------------------------------------------------------------------------
+# Pannello azione
+# ---------------------------------------------------------------------------
+
+## Ricostruisce il pannello azione per lo stato attuale: Support Phase, turno di
+## un bot, turno di un giocatore, carta conclusa.
+func _refresh_op_bar() -> void:
+	if _ops_box == null:
+		return
+	for c in _ops_box.get_children():
+		c.queue_free()
+	for c in _sa_btns.get_children():
+		c.queue_free()
+	for c in _free_box.get_children():
+		c.queue_free()
+	for c in _panel_hand.get_children():
+		c.queue_free()
+	_op_btn_map.clear()
+	_sa_btn_map.clear()
+	var gc := GameController
+	var support := not gc.support_pending().is_empty()
+	var fid := gc.sequence.pending_faction() if gc.sequence != null else ""
+	var np_turn: bool = fid != "" and gc.np != null and gc.np.is_np(fid) and not support
+	var human: bool = fid != "" and not np_turn and not support
+	_refresh_instructions()
+	_refresh_preview()
+	_refresh_event_box(human)
+	_top.set_undo(gc.can_undo(), gc.undo_label())
+	_top.set_bot_enabled(np_turn and not _np_running)
+
+	# Visibilità delle sezioni: dipende da chi deve agire.
+	_sec_sa.visible = human
+	_sa_btns.visible = human
+	_sec_ev.visible = not support
+	_ev_row.visible = not support
+	_ev_choice_box.visible = human and _ev_active
+	var free: Array = gc.pending_free_ops()
+	_sec_free.visible = human and not free.is_empty()
+	_free_box.visible = _sec_free.visible
+	var cr_turn: bool = human and fid == "reclaimer" and not gc.cards.hand().is_empty()
+	_sec_hand.visible = cr_turn
+	_panel_hand.visible = cr_turn
+	_op_desc.visible = false
+	_sa_desc.visible = false
+
+	if support:
+		_refresh_support_panel()
+	elif np_turn:
+		_refresh_np_panel(fid)
+	elif human:
+		_refresh_human_panel(fid)
+	else:
+		_refresh_idle_panel()
+	_refresh_move_box()
+	_refresh_footer(fid, support, np_turn, human)
+
+
+## Nessuna Fazione di turno: partita conclusa o carta chiusa.
+func _refresh_idle_panel() -> void:
+	var gc := GameController
+	_sec_op.text = "PARTITA"
+	if gc.rounds != null and gc.rounds.is_game_over():
+		var w := String(gc.state.tracks.get("winner", ""))
+		var f: FactionDef = gc.game_def.faction(w)
+		_refresh_panel_header(w if f != null else "", "Partita conclusa",
+			"Vince %s" % (f.short_name if f != null else "—"), "FINE")
+	else:
+		_refresh_panel_header("", "In attesa", "Nessuna Fazione di turno", "")
+
+
+## §8.0: tocca a una Fazione Non-Player. L'unica azione è farla giocare — le
+## Operazioni le sceglie la carta Curiosity, non il giocatore.
+func _refresh_np_panel(fid: String) -> void:
+	var gc := GameController
+	var slot := "1ª" if gc.sequence.is_first_slot() else "2ª"
+	_refresh_panel_header(fid, gc.game_def.faction(fid).short_name,
+		"%s Disponibile · %s · Non-Player" % [slot, _resources_text(fid)], "BOT")
+	_sec_op.text = "TURNO NON-PLAYER"
+	var b_np := _grid_btn("Gioca il turno", _run_np_turn,
+		"Sistema Non-Player Curiosity (§8.0): pesca la carta, sceglie ed esegue.")
+	b_np.disabled = _np_running
+	_ops_box.add_child(b_np)
+	var b_all := _grid_btn("…e i successivi", _run_np_until_player,
+		"Fa giocare di seguito tutte le Fazioni Non-Player fino al tuo turno.")
+	b_all.disabled = _np_running
+	_ops_box.add_child(b_all)
+
+
+## Turno di un giocatore: Operazioni, Attività Speciali, Evento, Mano, gratuite.
+func _refresh_human_panel(fid: String) -> void:
+	var gc := GameController
+	var lim: bool = gc.limited_only()
+	var slot := "1ª" if gc.sequence.is_first_slot() else "2ª"
+	var stamp := "IN AZIONE"
+	_refresh_panel_header(fid, gc.game_def.faction(fid).short_name,
+		"%s Disponibile · %s%s" % [slot, _resources_text(fid), " · solo Op. Limitata" if lim else ""], stamp)
+	_sec_op.text = "OPERAZIONE LIMITATA" if lim else "OPERAZIONE"
+
+	# Una sola Operazione e una sola Attività Speciale per turno: scelta (o
+	# svolta) un'Operazione, le altre si spengono; si può solo proseguirla.
+	var done_op: String = gc.turn_op()
+	var lock_op := _op_mode if _op_mode != "" else done_op
+	var lim_used: bool = lim and done_op != ""
+	var fcol := RDRTheme.faction(fid)
+	for op_id in gc.UI_OPERATIONS.get(fid, []):
+		var op := String(op_id)
+		var b := _grid_btn(gc.OPERATION_NAMES.get(op, op), _start_op.bind(op), String(OPERATION_TIPS.get(op, "")))
+		var blocked: bool = lock_op != "" and op != lock_op
+		b.disabled = _ev_active or _sa_mode != "" or lim_used or blocked
+		if blocked:
+			b.tooltip_text = "In questo turno l'Operazione è %s." % gc.OPERATION_NAMES.get(lock_op, lock_op)
+		elif lim_used:
+			b.tooltip_text = "Operazione Limitata già svolta: «Concludi turno»."
+		if op == _op_mode:
+			RDRTheme.accent_button(b, fcol, fcol.lightened(0.3), RDRTheme.faction_on(fid))
+		elif op == done_op:
+			RDRTheme.accent_button(b, fcol.darkened(0.5), fcol)
+			b.add_theme_stylebox_override("disabled", RDRTheme.box(fcol.darkened(0.6), fcol.darkened(0.2)))
+		_ops_box.add_child(b)
+		_op_btn_map[op] = b
+	if _op_mode != "":
+		_op_desc.text = String(OPERATION_TIPS.get(_op_mode, ""))
+		_op_desc.visible = _op_desc.text != ""
+
+	# Attività Speciali: un tasto per ciascuna (Ambush compresa: accompagna l'Attack).
+	var sa_block: String = gc.special_block_reason()
+	var sa_ids: Array = gc.UI_SPECIALS.get(fid, {}).keys()
+	if fid in ["red_dust", "reclaimer"]:
+		sa_ids.append("ambush")
+	for sa_v in sa_ids:
+		var sa := String(sa_v)
+		var b := _grid_btn(gc.SPECIAL_NAMES.get(sa, sa), _on_sa_button.bind(sa),
+			String(SPECIAL_TIPS.get(sa, "Attività Speciale (§6.0)")), 32.0)
+		var busy_op: bool = _op_mode != "" and not _op_spaces.is_empty() and sa != "ambush"
+		b.disabled = _ev_active or sa_block != "" or (_sa_mode != "" and sa != _sa_mode) or busy_op \
+			or (sa == "ambush" and _op_mode != "" and _op_mode != "attack")
+		if sa_block != "":
+			b.tooltip_text = sa_block
+		elif busy_op:
+			b.tooltip_text = "Esegui o annulla prima l'Operazione in preparazione."
+		var on: bool = sa == _sa_mode or (sa == "ambush" and _op_mode == "attack" and not _ambush_dice.is_empty())
+		if on:
+			RDRTheme.accent_button(b, fcol, fcol.lightened(0.3), RDRTheme.faction_on(fid))
+		elif sa == gc.turn_special():
+			RDRTheme.accent_button(b, fcol.darkened(0.5), fcol)
+			b.add_theme_stylebox_override("disabled", RDRTheme.box(fcol.darkened(0.6), fcol.darkened(0.2)))
+		_sa_btns.add_child(b)
+		_sa_btn_map[sa] = b
+	if _sa_mode != "":
+		_sa_desc.text = String(SPECIAL_TIPS.get(_sa_mode, ""))
+		_sa_desc.visible = true
+
+	# §7.0: Operazioni gratuite concesse da un Evento e non ancora eseguite.
+	var queue: Array = gc.pending_free_ops()
+	for i in range(queue.size()):
+		var entry: Dictionary = queue[i]
+		var label := String(entry.get("operation", ""))
+		if label == "":
+			label = String(entry.get("special", ""))
+		var fb := _grid_btn("★ %s gratis (%s)" % [
+			gc.OPERATION_NAMES.get(label, gc.SPECIAL_NAMES.get(label, label)),
+			gc.game_def.faction(String(entry.get("faction", ""))).short_name],
+			_run_free_op.bind(i), String(entry.get("note", "")), 30.0)
+		_free_box.add_child(fb)
+
+	# §1.5: nel turno dei Reclaimer la mano è a portata (Asset Event, Capability).
+	if _panel_hand.visible:
+		_sec_hand.text = "MANO RECLAIMER · %d" % gc.cards.hand().size()
+		_fill_hand(_panel_hand)
+
+
+## Tasto di un'Attività Speciale. L'Ambush non è un'azione a sé: cambia l'Attack,
+## quindi apre (o tiene) l'Attack e mostra la scelta dei dadi.
+func _on_sa_button(sa: String) -> void:
+	if sa == "ambush":
+		if _op_mode != "attack":
+			_start_op("attack")
+		return
+	if _sa_mode == sa:
+		_cancel_op()
+		return
+	_start_sa(sa)
+
+
+## Fondo del pannello: tasto contestuale, Passa e Concludi.
+func _refresh_footer(fid: String, support: bool, np_turn: bool, human: bool) -> void:
+	var gc := GameController
+	var label := "Esegui"
+	var can := false
+	if support:
+		var sf := String(gc.support_pending()[0])
+		label = "Ho finito (%s)" % gc.game_def.faction(sf).short_name
+		can = true
+	elif np_turn:
+		label = "Gioca il turno di %s" % gc.game_def.faction(fid).short_name
+		can = not _np_running
+	elif human and _ev_active:
+		if _ev_index >= _ev_reqs.size():
+			var single: bool = gc.events.option(gc.state.current_card, not _ev_shaded).is_empty()
+			label = "Esegui Evento" if single else ("Esegui Evento ombreggiato" if _ev_shaded \
+				else "Esegui Evento non ombreggiato")
+			can = true
+		elif String((_ev_reqs[_ev_index] as Dictionary).get("kind", "space")) == "space":
+			label = "Conferma spazi (%d/%d)" % [_op_spaces.size(), int(_ev_reqs[_ev_index].get("count", 0))]
+			can = true
+		else:
+			label = "Scegli un'opzione"
+	elif human and _sa_mode != "":
+		label = "Esegui %s" % gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode)
+		can = not _op_spaces.is_empty() or _sa_mode in ["transport", "petition"]
+	elif human and _op_mode != "":
+		label = "Esegui %s" % gc.OPERATION_NAMES.get(_op_mode, _op_mode)
+		can = not _op_spaces.is_empty()
+	_btn_exec.text = label
+	_btn_exec.disabled = not can
+	_btn_exec.tooltip_text = "Applica la scelta preparata (Invio)" if can \
+		else "Scegli prima un'azione e i suoi spazi sulla mappa."
+	_btn_clear.disabled = not (_op_mode != "" or _sa_mode != "" or _ev_active or _support_action != "")
+	_btn_pass.disabled = not human or gc.turn_started() or _ev_active
+	var planned: bool = (_op_mode != "" and not _op_spaces.is_empty())
+	if fid == "" and not support:
+		_btn_end.text = "Concludi carta"
+		_btn_end.disabled = gc.sequence == null or (gc.rounds != null and gc.rounds.is_game_over())
+	else:
+		_btn_end.text = "Concludi turno"
+		_btn_end.disabled = not human or _ev_active or not (gc.turn_op() != "" or planned)
+	_btn_end.tooltip_text = "Chiude la carta in corso e passa alla successiva." if fid == "" \
+		else "Esegue l'Operazione in preparazione (se c'è) e chiude il turno della Fazione (Spazio)."
+
+
+## Il tasto principale: fa la cosa che il pannello sta preparando.
+func _on_execute() -> bool:
+	var gc := GameController
+	if not gc.support_pending().is_empty():
+		var sf := String(gc.support_pending()[0])
+		_support_action = ""
+		_support_faction = ""
+		gc.support_done(sf)
+		_refresh_op_bar()
+		return true
+	var fid := gc.sequence.pending_faction() if gc.sequence != null else ""
+	if fid == "":
+		return false
+	if gc.np != null and gc.np.is_np(fid):
+		_run_np_turn()
+		return true
+	if _ev_active:
+		if _ev_index >= _ev_reqs.size():
+			_ev_run()
+		elif String((_ev_reqs[_ev_index] as Dictionary).get("kind", "space")) == "space":
+			_ev_confirm_spaces()
+		return true
+	if _sa_mode != "":
+		var before := gc.turn_special()
+		_confirm_sa()
+		return gc.turn_special() != before
+	if _op_mode != "":
+		var n := gc.turn_op_spaces().size()
+		_confirm_op()
+		return gc.turn_op_spaces().size() > n
+	return false
+
+
+func _on_pass() -> void:
+	_cancel_op()
+	GameController.do_pass()
+
+
+## Concludi turno: esegue quel che è in preparazione e registra l'azione nella
+## sequenza. A carta conclusa chiude la carta.
+func _on_end_turn() -> void:
+	var gc := GameController
+	if gc.sequence != null and gc.sequence.pending_faction() == "":
+		_cancel_op()
+		gc.end_card()
+		return
+	if _op_mode != "" and not _op_spaces.is_empty():
+		if not _on_execute():
+			return   # l'esecuzione è fallita: l'errore è nel Log, il turno resta aperto
+	elif _sa_mode != "" and (not _op_spaces.is_empty() or _sa_mode in ["transport", "petition"]):
+		if not _on_execute():
+			return
+	var res: Dictionary = gc.end_turn()
+	if not res.get("ok", false):
+		_append_log("[color=#%s]%s[/color]" % [RDRTheme.ERR.to_html(false), res.get("error", "")])
+		return
+	_cancel_op()
+
+
+## §4.3 Support Phase: Pacify per MarsGov, Agitate per Red Dust — fino a due
+## azioni per spazio sotto il proprio Controllo, fra House, Repair e uno
+## spostamento del Supporto. Più il Lobby di MarsGov, una volta per fase.
+##
+## Si sceglie prima l'azione, poi lo spazio sulla mappa: è l'ordine in cui la
+## carta la descrive, e permette di evidenziare solo gli spazi dove quell'azione
+## ha effetto.
+func _refresh_support_panel() -> void:
+	var gc := GameController
+	# La Support Phase arriva a carta conclusa e prende il posto di tutto: quel
+	# che restava in preparazione non c'entra più niente e va tolto di mezzo.
+	if _op_mode != "" or _sa_mode != "" or _ev_active or not _op_spaces.is_empty():
+		_op_mode = ""
+		_sa_mode = ""
+		_ev_active = false
+		_op_spaces.clear()
+		_op_moves.clear()
+		_rally_modes.clear()
+		_sa_choices.clear()
+		_assault_bombard.clear()
+		_ambush_dice.clear()
+		_update_moves_overlay()
+	var fid := String(gc.support_pending()[0])
+	var who: String = gc.game_def.faction(fid).short_name
+	var verso := "Supporto Attivo" if fid == "marsgov" else "Opposizione Attiva"
+	var costo := 3 if fid == "marsgov" else 1
+	_support_faction = fid
+	_refresh_panel_header(fid, who, "Dust Storm Round · %s · %s" % [
+		"Pacify" if fid == "marsgov" else "Agitate", _resources_text(fid)], "SUPPORT")
+	_sec_op.text = "SUPPORT PHASE"
+	var cands := gc.support_candidates(fid)
+	_append_log_once("support_%s_%d" % [fid, gc.state.tracks.get("dust_storm_rounds", 0)],
+		"[b]Support Phase[/b] — %s: fino a due azioni in ognuno dei %d spazi sotto il proprio Controllo." % [
+			who, cands.size()])
+	for act_id in ["house", "repair", "shift"]:
+		var text := ""
+		var tip := ""
+		match act_id:
+			"house":
+				text = "House"
+				tip = "Riporta una Popolazione da Displaced Population (§1.7)."
+			"repair":
+				text = "Repair"
+				tip = "Toglie un Danno; costa %d Risorse (§1.7)." % (3 if fid == "marsgov" else 2)
+			"shift":
+				text = "Verso %s" % verso
+				tip = "%d Risorse per un livello (§4.3)." % costo
+		var b := _grid_btn(text, _start_support.bind(act_id), tip)
+		b.disabled = gc.support_candidates(fid, act_id).is_empty()
+		if _support_action == act_id:
+			RDRTheme.accent_button(b, RDRTheme.faction(fid), RDRTheme.faction(fid).lightened(0.3))
+		_ops_box.add_child(b)
+	if fid == "marsgov":
+		var lb := _grid_btn("Lobby", func():
+			var r: Dictionary = gc.support_lobby()
+			if not r.get("ok", false):
+				_append_log("[color=#e05a4b]%s[/color]" % r.get("error", ""))
+			_refresh_op_bar(),
+			"5 Risorse per un livello di EarthGov Confidence, una sola volta per fase (§4.3).")
+		lb.disabled = not gc.can_lobby()
+		_ops_box.add_child(lb)
+	# Evidenziati gli spazi dell'azione armata; senza azione, tutti quelli in cui
+	# la Fazione può fare qualcosa.
+	_op_candidates = gc.support_candidates(fid, _support_action)
+	_paint_op_highlight()
+
+
+# ---------------------------------------------------------------------------
+# Pianificazione, Eventi, Non-Player, Log
+# ---------------------------------------------------------------------------
+
+## Nomi con cui una Fazione compare nel Log, dal più specifico al più generico.
+const LOG_FACTION_WORDS := {
+	"marsgov": ["marsgov", "MarsGov", "MG "],
+	"corporations": ["corporations", "CORP", "Corporations"],
+	"red_dust": ["red_dust", "Red Dust", "RD "],
+	"reclaimer": ["reclaimer", "Reclaimer"],
+}
 
 
 ## Ingrandimento della carta a schermo intero: la scritta sulle carte Evento è
@@ -432,36 +1525,6 @@ func _close_card_zoom() -> void:
 		_card_zoom = null
 
 
-## Scorciatoie da tastiera: Esc chiude l'ingrandimento o annulla la
-## pianificazione in corso, +/− regolano lo zoom, 0 riporta la tavola intera.
-func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey) or not event.pressed or (event as InputEventKey).echo:
-		return
-	match (event as InputEventKey).keycode:
-		KEY_ESCAPE:
-			if _card_zoom != null:
-				_close_card_zoom()
-			else:
-				_cancel_op()
-		KEY_PLUS, KEY_EQUAL, KEY_KP_ADD:
-			_zoom_at(1.25)
-		KEY_MINUS, KEY_KP_SUBTRACT:
-			_zoom_at(1.0 / 1.25)
-		KEY_0, KEY_KP_0:
-			_set_zoom(1.0)
-		_:
-			return
-	get_viewport().set_input_as_handled()
-
-
-func _title(text: String) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", 14)
-	l.add_theme_color_override("font_color", Color("e0b070"))
-	return l
-
-
 func _rich(min_h: int) -> RichTextLabel:
 	var r := RichTextLabel.new()
 	r.bbcode_enabled = true
@@ -505,76 +1568,6 @@ func _build_regions() -> void:
 	_relayout_map()
 
 
-# ---------------------------------------------------------------------------
-# Layout
-# ---------------------------------------------------------------------------
-
-## Zoom 1 = la tavola intera entra nell'area disponibile; da lì si ingrandisce.
-func _relayout_map() -> void:
-	if _board == null or _map_root == null:
-		return
-	var avail: Vector2 = _board.size
-	if avail.x <= 0.0 or avail.y <= 0.0:
-		return
-	var board_w := 5175.0
-	var board_h := 3775.0
-	var fit: float = minf(avail.x / board_w, avail.y / board_h)
-	_map_base = Vector2(board_w * fit, board_h * fit)
-
-	_map_root.position = Vector2.ZERO
-	_map_root.custom_minimum_size = _map_base
-	_map_root.size = _map_base
-	_map_root.scale = Vector2(_zoom, _zoom)
-	_map_wrap.custom_minimum_size = _map_base * _zoom
-	_map_wrap.size = _map_base * _zoom
-
-	# Le viste hanno anchor a tutto il riquadro, ma le dimensioniamo comunque a
-	# mano: `relayout()` deve vedere la misura nuova subito, non al frame dopo.
-	_map_tex.size = _map_base
-	_regions_layer.size = _map_base
-	for sid in _views.keys():
-		var rv: RegionView = _views[sid]
-		rv.position = Vector2.ZERO
-		rv.size = _map_base
-		rv.relayout()
-	_tracks.size = _map_base
-	_tracks.queue_redraw()
-	_moves.size = _map_base
-	_update_moves_overlay()
-
-
-# ---------------------------------------------------------------------------
-# Zoom e scorrimento della mappa
-# ---------------------------------------------------------------------------
-
-const ZOOM_MIN := 1.0
-const ZOOM_MAX := 5.0
-
-
-func _set_zoom(z: float) -> void:
-	_zoom = clampf(z, ZOOM_MIN, ZOOM_MAX)
-	_relayout_map()
-
-
-## Zoom tenendo fermo il punto della mappa sotto il puntatore; senza puntatore
-## si tiene fermo il centro di ciò che si sta guardando.
-func _zoom_at(factor: float, screen_pos: Vector2 = Vector2(-1, -1)) -> void:
-	if _board == null:
-		return
-	var local := screen_pos - _board.global_position
-	if screen_pos.x < 0 or not Rect2(Vector2.ZERO, _board.size).has_point(local):
-		local = _board.size * 0.5
-	var old_zoom := _zoom
-	var target: float = clampf(_zoom * factor, ZOOM_MIN, ZOOM_MAX)
-	if is_equal_approx(target, old_zoom):
-		return
-	var map_pt := (Vector2(_board.scroll_horizontal, _board.scroll_vertical) + local) / old_zoom
-	_zoom = target
-	_relayout_map()
-	_board.scroll_horizontal = int(map_pt.x * _zoom - local.x)
-	_board.scroll_vertical = int(map_pt.y * _zoom - local.y)
-
-
 ## Rotellina, gesto magnify del trackpad e trascinamento col tasto centrale o
 ## destro per scorrere la mappa ingrandita.
 func _input(event: InputEvent) -> void:
@@ -608,63 +1601,6 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-# ---------------------------------------------------------------------------
-# Stato
-# ---------------------------------------------------------------------------
-
-func _on_state_changed() -> void:
-	if _views.is_empty():
-		_build_regions()
-	# Prima l'animazione, che confronta la plancia con com'era all'aggiornamento
-	# precedente; poi le viste, che ridisegnano lo stato definitivo.
-	if _anim != null:
-		_anim.update(GameController.state)
-	var m: RDRModule = GameController.rdr()
-	for sid in _views.keys():
-		(_views[sid] as RegionView).refresh(GameController.state, m)
-	_tracks.queue_redraw()
-	_refresh_status()
-	_refresh_card_info()
-	_refresh_turn_line()
-	_refresh_op_bar()
-	_refresh_instructions()
-	_refresh_undo_btn()
-	_refresh_hand()
-	if _selected != "":
-		_refresh_space_info(_selected)
-
-
-## §1.5: la mano dei Reclaimer. Le carte di solo valore servono a pagare le
-## Operazioni e non si giocano; Capability ed Eventi hanno un pulsante.
-func _refresh_hand() -> void:
-	if _hand_box == null:
-		return
-	for c in _hand_box.get_children():
-		c.queue_free()
-	var gc := GameController
-	if gc.cards == null:
-		return
-	var hand: Array = gc.cards.hand()
-	var title := Label.new()
-	title.text = "Mano Reclaimer (%d)  ·  Capability in gioco: %d" % [
-		hand.size(), gc.cards.active_capabilities().size()]
-	title.add_theme_font_size_override("font_size", 11)
-	title.add_theme_color_override("font_color", RDRTheme.TEXT_DIM)
-	_hand_box.add_child(title)
-	for number in hand:
-		var n := int(number)
-		var card: Dictionary = gc.cards.assets.get(n, {})
-		var kind := String(card.get("kind", ""))
-		var b := Button.new()
-		b.text = "#%d %s" % [n, card.get("title", "")]
-		b.tooltip_text = "%s\n\nValore %s · %s" % [card.get("text", ""),
-			card.get("value", "?"), kind]
-		# Le carte di puro valore non hanno nulla da giocare.
-		b.disabled = kind == "resource"
-		b.pressed.connect(_play_asset.bind(n))
-		_hand_box.add_child(b)
-
-
 func _play_asset(number: int) -> void:
 	var res: Dictionary = GameController.play_asset_card(number)
 	if not res.get("ok", false):
@@ -673,118 +1609,6 @@ func _play_asset(number: int) -> void:
 	for entry in res.get("free_ops", []):
 		_append_log("[color=#7fc4d8]Operazione gratuita in sospeso: %s[/color]" %
 			(entry as Dictionary).get("operation", ""))
-
-
-## Il tasto Annulla dice anche COSA si sta per disfare: senza, non si sa se si
-## sta togliendo l'ultima Operazione o la chiusura della carta.
-func _refresh_undo_btn() -> void:
-	if _btn_undo == null:
-		return
-	var gc := GameController
-	_btn_undo.disabled = not gc.can_undo()
-	_btn_undo.tooltip_text = "Annulla: %s" % gc.undo_label() if gc.can_undo() \
-		else "Niente da annullare"
-
-
-func _on_game_menu(id: int) -> void:
-	# Nuova partita e caricamenti cambiano tutta la plancia in un colpo: senza
-	# azzerare l'animatore si vedrebbero decine di pezzi volare all'indietro.
-	if _anim != null and id in [0, 2, 3]:
-		_anim.reset()
-	match id:
-		0:
-			# Le Fazioni al bot restano quelle scelte nel menu iniziale: senza
-			# questo, «Nuova partita» le rimetteva tutte in mano ai giocatori.
-			GameController.new_game("standard", 0, Array(GameController.np.np_factions))
-			_cancel_op()
-		1:
-			GameController.save_game(GameController.SAVE_PATH)
-		2:
-			GameController.load_game(GameController.SAVE_PATH)
-			_cancel_op()
-		3:
-			GameController.load_game(GameController.AUTOSAVE_PATH)
-			_cancel_op()
-		4:
-			get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
-		5:
-			DisplayServer.clipboard_set(_log_plain())
-			_append_log("[i]Log copiato negli appunti (%d righe).[/i]" %
-				_log_plain().split("\n").size())
-		6:
-			_save_log()
-
-
-## Le due righe in cima al pannello: quale carta si sta giocando e a chi tocca.
-func _refresh_turn_line() -> void:
-	if _turn_line == null:
-		return
-	var gc := GameController
-	if gc.state == null:
-		return
-	var card: CardDef = gc.game_def.card(gc.state.current_card)
-	var title := card.title if card != null else "—"
-	var line := "[b]#%d %s[/b]" % [gc.state.current_card, title]
-	if gc.sequence != null and gc.sequence.pending_faction() != "":
-		var fid := gc.sequence.pending_faction()
-		var col: Color = RDRAssets.TEXT_COLORS.get(fid, Color.WHITE)
-		var who: String = gc.game_def.faction(fid).short_name
-		var slot := "1ª" if gc.sequence.is_first_slot() else "2ª"
-		var kind := " (bot)" if gc.np != null and gc.np.is_np(fid) else ""
-		line += "\nTocca a [color=#%s][b]%s[/b][/color] — %s Disponibile%s" % [
-			col.to_html(false), who, slot, kind]
-	elif gc.rounds != null and gc.rounds.is_game_over():
-		line += "\n[b]Partita conclusa.[/b]"
-	else:
-		line += "\nCarta conclusa: «Concludi carta» per la prossima."
-	_turn_line.text = line
-
-
-## Le scelte che alcune Attività Speciali offrono per ciascuno spazio: Coordinate
-## (poi House o Repair, e con l'Opposizione già al massimo togliere due cubi o
-## sostituirne uno), Purify (convertire forze o prendere una Base nemica),
-## Public Relations (Repair più House, o solo Repair). Erano tutte fissate a un
-## valore, che è come dire che quella scelta non esisteva.
-func _build_special_box() -> void:
-	var gc := GameController
-	var any := false
-	for sid_v in _op_spaces:
-		var sid := String(sid_v)
-		var opts: Array = gc.special_options(_sa_mode, sid)
-		if opts.is_empty():
-			continue
-		any = true
-		var byk: Dictionary = {}
-		for o in opts:
-			var k := String((o as Dictionary)["key"])
-			if not byk.has(k):
-				byk[k] = []
-			(byk[k] as Array).append(o)
-		var title := Label.new()
-		title.text = gc.game_def.space(sid).name
-		title.add_theme_font_size_override("font_size", 11)
-		_move_box.add_child(title)
-		for k in byk.keys():
-			var key := String(k)
-			var opt := OptionButton.new()
-			var list: Array = byk[key]
-			for i in range(list.size()):
-				var od: Dictionary = list[i]
-				opt.add_item(String(od["label"]))
-				opt.set_item_metadata(i, String(od["id"]))
-				if String(_sa_choices.get(key, {}).get(sid, "")) == String(od["id"]):
-					opt.select(i)
-			# La prima voce è il valore di partenza, se non è già stato scelto.
-			if not (_sa_choices.get(key, {}) as Dictionary).has(sid) and list.size() > 0:
-				if not _sa_choices.has(key):
-					_sa_choices[key] = {}
-				_sa_choices[key][sid] = String((list[0] as Dictionary)["id"])
-			opt.item_selected.connect(func(idx: int):
-				if not _sa_choices.has(key):
-					_sa_choices[key] = {}
-				_sa_choices[key][sid] = String(opt.get_item_metadata(idx))
-				_refresh_preview())
-			_move_box.add_child(opt)
 
 
 ## §6.3 Transport: sposta Truppe fra Phobos e gli spazi con una Base MarsGov,
@@ -797,19 +1621,19 @@ func _build_transport_box() -> void:
 	var head := Label.new()
 	head.text = "Transport — rete: %s" % ", ".join(net)
 	head.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	head.add_theme_font_size_override("font_size", 11)
+	head.add_theme_font_size_override("font_size", 13)
 	_move_box.add_child(head)
 	var hint := Label.new()
 	hint.text = "Clicca fino a 2 spazi per attivarli in più, poi trascina le Truppe fra gli spazi della rete."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.add_theme_font_size_override("font_size", 11)
+	hint.add_theme_font_size_override("font_size", 13)
 	_move_box.add_child(hint)
 	for i in range(_op_moves.size()):
 		var mv: Dictionary = _op_moves[i]
 		var l := Label.new()
 		l.text = "  %s → %s ×%d" % [gc.game_def.space(String(mv["from"])).name,
 			gc.game_def.space(String(mv["to"])).name, int(mv["count"])]
-		l.add_theme_font_size_override("font_size", 11)
+		l.add_theme_font_size_override("font_size", 13)
 		_move_box.add_child(l)
 
 
@@ -826,12 +1650,12 @@ func _build_attack_box() -> void:
 			var hint := Label.new()
 			hint.text = "Ambush: serve un Ribelle Nascosto negli spazi scelti."
 			hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			hint.add_theme_font_size_override("font_size", 11)
+			hint.add_theme_font_size_override("font_size", 13)
 			_move_box.add_child(hint)
 		return
 	var head := Label.new()
 	head.text = "Ambush — scegli i dadi (al massimo 2 spazi)"
-	head.add_theme_font_size_override("font_size", 11)
+	head.add_theme_font_size_override("font_size", 13)
 	_move_box.add_child(head)
 	for sid_v in cands:
 		var sid := String(sid_v)
@@ -863,241 +1687,12 @@ func _build_attack_box() -> void:
 		_move_box.add_child(row)
 
 
-## §5.5: chi è EarthGov Controller ha due opzioni in più durante l'Assault, e
-## non erano mai state chiedibili — Bombard (un Satellite dall'Orbita su uno
-## spazio dell'Assault, due forze nemiche Attive in più e un Danno se è un
-## Labirinto) e Suppress (in UNO spazio non scelto, spinge i Ribelli nei Deserti
-## adiacenti e riporta l'Opposizione verso il Neutrale).
-func _build_assault_box() -> void:
-	var gc := GameController
-	var fid := gc.sequence.pending_faction()
-	if not gc.can_bombard(fid) and gc.suppress_candidates(fid, Array(_op_spaces)).is_empty():
-		return   # non è EarthGov Controller, o non ha di che usarle
-
-	if gc.can_bombard(fid) and not _op_spaces.is_empty():
-		var head := Label.new()
-		head.text = "Bombard (Satelliti in Orbita: %d)" % gc.rdr().count_in(gc.state, "orbit", "satellite")
-		head.add_theme_font_size_override("font_size", 11)
-		_move_box.add_child(head)
-		for sid_v in _op_spaces:
-			var sid := String(sid_v)
-			var cb := CheckBox.new()
-			cb.text = gc.game_def.space(sid).name
-			cb.button_pressed = _assault_bombard.has(sid)
-			cb.toggled.connect(func(on: bool):
-				if on and not _assault_bombard.has(sid):
-					_assault_bombard.append(sid)
-				elif not on:
-					_assault_bombard.erase(sid)
-				_refresh_preview())
-			_move_box.add_child(cb)
-
-	var sup := gc.suppress_candidates(fid, Array(_op_spaces))
-	if sup.size() > 0:
-		var row := HBoxContainer.new()
-		var l := Label.new()
-		l.text = "Suppress"
-		l.custom_minimum_size = Vector2(80, 0)
-		l.add_theme_font_size_override("font_size", 11)
-		row.add_child(l)
-		var opt := OptionButton.new()
-		opt.add_item("— nessuno —")
-		opt.set_item_metadata(0, "")
-		for i in range(sup.size()):
-			opt.add_item(gc.game_def.space(String(sup[i])).name)
-			opt.set_item_metadata(i + 1, String(sup[i]))
-			if String(sup[i]) == _assault_suppress:
-				opt.select(i + 1)
-		opt.item_selected.connect(func(idx: int):
-			_assault_suppress = String(opt.get_item_metadata(idx))
-			_assault_suppress_to = ""
-			_refresh_op_bar())
-		row.add_child(opt)
-		_move_box.add_child(row)
-
-		# Dove finiscono i Ribelli spinti fuori. Al tavolo la sceglie il
-		# proprietario di ciascun Ribelle; qui è una sola destinazione per tutti,
-		# ed è dichiarato nel suggerimento.
-		if _assault_suppress != "":
-			var dests := gc.suppress_destinations(_assault_suppress)
-			var row2 := HBoxContainer.new()
-			var l2 := Label.new()
-			l2.text = "→ Deserto"
-			l2.custom_minimum_size = Vector2(80, 0)
-			l2.add_theme_font_size_override("font_size", 11)
-			row2.add_child(l2)
-			var od := OptionButton.new()
-			od.tooltip_text = "Al tavolo ogni Ribelle lo sceglie il suo proprietario: qui vanno tutti nello stesso Deserto."
-			for i in range(dests.size()):
-				od.add_item(gc.game_def.space(String(dests[i])).name)
-				od.set_item_metadata(i, String(dests[i]))
-				if String(dests[i]) == _assault_suppress_to:
-					od.select(i)
-			if _assault_suppress_to == "" and dests.size() > 0:
-				_assault_suppress_to = String(dests[0])
-			od.item_selected.connect(func(idx: int):
-				_assault_suppress_to = String(od.get_item_metadata(idx)))
-			row2.add_child(od)
-			_move_box.add_child(row2)
-
-
-## §5.6: il Rally fa cose diverse a seconda della modalità scelta per ciascuno
-## spazio — piazzare un Ribelle, costruire una Base con due, riempire fino alla
-## Popolazione, riportare Nascosti, potenziare a Conversion Center. Prima erano
-## tutte «piazza un Ribelle», che è la meno interessante delle cinque.
-func _build_rally_box() -> void:
-	var gc := GameController
-	if _op_spaces.is_empty():
-		var hint := Label.new()
-		hint.text = "Rally: scegli gli spazi sulla mappa, poi la modalità per ciascuno."
-		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		hint.add_theme_font_size_override("font_size", 11)
-		_move_box.add_child(hint)
-		return
-	var fid := gc.sequence.pending_faction()
-	for sid_v in _op_spaces:
-		var sid := String(sid_v)
-		var row := HBoxContainer.new()
-		var lbl := Label.new()
-		lbl.text = gc.game_def.space(sid).name
-		lbl.custom_minimum_size = Vector2(110, 0)
-		lbl.add_theme_font_size_override("font_size", 11)
-		row.add_child(lbl)
-		var opt := OptionButton.new()
-		var modes: Array = gc.rally_modes(fid, sid)
-		for i in range(modes.size()):
-			var mo: Dictionary = modes[i]
-			opt.add_item(String(mo["label"]))
-			opt.set_item_metadata(i, String(mo["id"]))
-			if String(mo["id"]) == String(_rally_modes.get(sid, "place")):
-				opt.select(i)
-		opt.item_selected.connect(func(idx: int):
-			_rally_modes[sid] = String(opt.get_item_metadata(idx))
-			_refresh_preview())
-		row.add_child(opt)
-		_move_box.add_child(row)
-
-	# §5.6: il Red Dust può portare UNA Base a Dug-In, anche fuori dagli spazi
-	# scelti e anche in un'Operazione Limitata.
-	if fid == "red_dust":
-		var digs := gc.dig_in_candidates()
-		if digs.size() > 0:
-			var row2 := HBoxContainer.new()
-			var l2 := Label.new()
-			l2.text = "Dig-In"
-			l2.custom_minimum_size = Vector2(110, 0)
-			l2.add_theme_font_size_override("font_size", 11)
-			row2.add_child(l2)
-			var od := OptionButton.new()
-			od.add_item("— nessuno —")
-			od.set_item_metadata(0, "")
-			for i in range(digs.size()):
-				od.add_item(gc.game_def.space(String(digs[i])).name)
-				od.set_item_metadata(i + 1, String(digs[i]))
-				if String(digs[i]) == _rally_dig_in:
-					od.select(i + 1)
-			od.item_selected.connect(func(idx: int):
-				_rally_dig_in = String(od.get_item_metadata(idx)))
-			row2.add_child(od)
-			_move_box.add_child(row2)
-
-
-## §4.3 Support Phase: Pacify per MarsGov, Agitate per Red Dust — fino a due
-## azioni per spazio sotto il proprio Controllo, fra House, Repair e uno
-## spostamento del Supporto. Più il Lobby di MarsGov, una volta per fase.
-##
-## Si sceglie prima l'azione, poi lo spazio sulla mappa: è l'ordine in cui la
-## carta la descrive, e permette di evidenziare solo gli spazi dove quell'azione
-## ha effetto.
-func _build_support_bar() -> void:
-	var gc := GameController
-	var fid := String(gc.support_pending()[0])
-	var who: String = gc.game_def.faction(fid).short_name
-	var verso := "Supporto Attivo" if fid == "marsgov" else "Opposizione Attiva"
-	var costo := 3 if fid == "marsgov" else 1
-
-	_support_faction = fid
-	var cands := gc.support_candidates(fid)
-	_append_log_once("support_%s_%d" % [fid, gc.state.tracks.get("dust_storm_rounds", 0)],
-		"[b]Support Phase[/b] — %s: fino a due azioni in ognuno dei %d spazi sotto il proprio Controllo." % [
-			who, cands.size()])
-
-	for act_id in ["house", "repair", "shift"]:
-		var b := Button.new()
-		match act_id:
-			"house":
-				b.text = "House"
-				b.tooltip_text = "Riporta una Popolazione da Displaced Population (§1.7)."
-			"repair":
-				b.text = "Repair"
-				b.tooltip_text = "Toglie un Danno; costa %d Risorse (§1.7)." % (3 if fid == "marsgov" else 2)
-			"shift":
-				b.text = "Sposta verso %s" % verso
-				b.tooltip_text = "%d Risorse per un livello (§4.3)." % costo
-		b.disabled = gc.support_candidates(fid, act_id).is_empty()
-		b.pressed.connect(_start_support.bind(act_id))
-		if _support_action == act_id:
-			RDRTheme.accent_button(b, RDRTheme.BTN_HOVER_BG, RDRTheme.FOCUS)
-		else:
-			RDRTheme.faction_button(b, fid)
-		_ops_box.add_child(b)
-
-	if fid == "marsgov":
-		var lb := Button.new()
-		lb.text = "Lobby"
-		lb.tooltip_text = "5 Risorse per un livello di EarthGov Confidence, una sola volta per fase (§4.3)."
-		lb.disabled = not gc.can_lobby()
-		lb.pressed.connect(func():
-			var r: Dictionary = gc.support_lobby()
-			if not r.get("ok", false):
-				_append_log("[color=#e05a4b]%s[/color]" % r.get("error", ""))
-			_refresh_op_bar())
-		RDRTheme.style_button(lb)
-		_ops_box.add_child(lb)
-
-	var done := Button.new()
-	done.text = "Ho finito (%s)" % who
-	done.tooltip_text = "Chiude la Support Phase di %s e prosegue il Dust Storm Round." % who
-	done.pressed.connect(func():
-		_support_action = ""
-		_support_faction = ""
-		gc.support_done(fid)
-		_refresh_op_bar())
-	RDRTheme.accent_button(done, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
-	_ops_box.add_child(done)
-
-	# Evidenziati gli spazi dell'azione armata; senza azione, tutti quelli in cui
-	# la Fazione può fare qualcosa.
-	_op_candidates = gc.support_candidates(fid, _support_action)
-	_paint_op_highlight()
-
-
-## Arma un'azione della Support Phase: il prossimo clic su uno spazio la esegue.
-func _start_support(act_id: String) -> void:
-	_support_action = act_id
-	var gc := GameController
-	_op_candidates = gc.support_candidates(_support_faction, act_id)
-	_append_log("Support Phase: scegli lo spazio (%d disponibili)." % _op_candidates.size())
-	_paint_op_highlight()
-	_refresh_op_bar()
-
-
 ## Una riga di Log che non si ripete a ogni ridisegno del pannello.
 func _append_log_once(key: String, text: String) -> void:
 	if _log_once.has(key):
 		return
 	_log_once[key] = true
 	_append_log(text)
-
-
-## Etichetta che separa due gruppi di comandi nella barra.
-func _group_label(text: String) -> Control:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override("font_size", 10)
-	l.add_theme_color_override("font_color", RDRTheme.TEXT_DIM)
-	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	return l
 
 
 ## Quanti spazi restano da scegliere, detto in italiano invece che con due numeri.
@@ -1114,87 +1709,8 @@ func _pick_hint() -> String:
 
 ## La legenda dei colori della mappa. Senza, il giallo e il verde vanno indovinati.
 func _legend() -> String:
-	return "   [color=#f0eb8c]▉[/color] si può scegliere   [color=#6bff94]▉[/color] scelto"
-
-
-## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
-## Senza, l'unico modo di capirlo è leggere il Log a posteriori.
-func _refresh_instructions() -> void:
-	if _instr == null:
-		return
-	var gc := GameController
-	var txt := ""
-	if gc.rounds != null and gc.rounds.is_game_over():
-		txt = "[b]Partita finita.[/b] Vincitore: %s" % String(gc.state.tracks.get("winner", "—"))
-	elif _ev_active and _ev_index < _ev_reqs.size():
-		var req: Dictionary = _ev_reqs[_ev_index]
-		txt = "[color=#%s]Evento (%d/%d): %s[/color]" % [
-			RDRTheme.FOCUS.to_html(false), _ev_index + 1, _ev_reqs.size(),
-			req.get("prompt", "scegli")]
-	elif _op_mode != "":
-		var extra := ""
-		if gc.MOVEMENT_OPERATIONS.has(_op_mode):
-			extra = "  ·  trascina i pezzi da uno spazio all'altro"
-		txt = "[b]%s[/b] — %s%s%s" % [
-			gc.OPERATION_NAMES.get(_op_mode, _op_mode),
-			_pick_hint(), _legend(), extra]
-	elif _sa_mode != "":
-		txt = "[b]%s[/b] — %s%s" % [
-			gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode), _pick_hint(), _legend()]
-	elif gc.sequence != null and gc.sequence.pending_faction() != "" \
-			and gc.np != null and gc.np.is_np(gc.sequence.pending_faction()):
-		var np_fid := gc.sequence.pending_faction()
-		txt = "Tocca a %s, gestita dal sistema Non-Player: premi «Gioca il turno»." % \
-			RDRTheme.faction_chip(gc.game_def.faction(np_fid).short_name, np_fid)
-	elif gc.sequence != null and gc.sequence.pending_faction() != "":
-		var fid := gc.sequence.pending_faction()
-		txt = "Tocca a %s (%s Disponibile): scegli un'Operazione, l'Evento, oppure Passa." % [
-			RDRTheme.faction_chip(gc.game_def.faction(fid).short_name, fid),
-			"1ª" if gc.sequence.is_first_slot() else "2ª"]
-	elif gc.sequence != null:
-		txt = "Carta conclusa: premi «Concludi carta» per passare alla successiva."
-	if not gc.pending_free_ops().is_empty():
-		txt += "  [color=#%s]★ %d Operazione/i gratuita/e in sospeso.[/color]" % [
-			RDRTheme.ACCENT.to_html(false), gc.pending_free_ops().size()]
-	_instr.text = txt
-
-
-func _refresh_status() -> void:
-	var gc := GameController
-	var m: RDRModule = gc.rdr()
-	var st := gc.state
-	var v := m.victory_status(st)
-	var eg_ctrl := m.eg_controller(st)
-	var ctrl_name := "nessuno"
-	if eg_ctrl != "":
-		ctrl_name = gc.game_def.faction(eg_ctrl).short_name
-
-	var lines: Array[String] = []
-	lines.append("[b]EarthGov[/b]  Confidence %d  ·  Controller: %s  ·  %s" % [
-		m.eg_confidence_value(st), ctrl_name,
-		"EG+" if int(st.tracks.get("eg_side", -1)) > 0 else "EG-"])
-	lines.append("Flashpoint %d/5  ·  Displaced Pop %d  ·  Dust Storm %d/3" % [
-		int(st.tracks.get("flashpoint", 0)),
-		int(st.tracks.get("displaced_population", 0)),
-		int(st.tracks.get("dust_storm_rounds", 0))])
-	lines.append("")
-	lines.append("[b]Vittoria[/b]")
-	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
-		var f: FactionDef = gc.game_def.faction(fid)
-		var d: Dictionary = v[fid]
-		var col: String = RDRAssets.text_color(fid).to_html(false)
-		var res := ""
-		if fid in ["marsgov", "red_dust"]:
-			res = "  ·  %d Ris." % st.get_resources(fid)
-		lines.append("[color=#%s]%s[/color]  %d / %d  (%+d)%s" % [
-			col, f.short_name, d["value"], d["threshold"], d["margin"], res])
-	lines.append("")
-	lines.append("[b]Controllo[/b]  COIN %d  ·  Red Dust %d  ·  Reclaimer %d  ·  libero %d" % [
-		_count_control("coin"), _count_control("red_dust"),
-		_count_control("reclaimer"), _count_control("")])
-	lines.append("Supporto totale %d  ·  Opposizione totale %d" % [
-		m.total_support(st), m.total_opposition(st)])
-	_status.text = "\n".join(lines)
+	return "   [color=#%s]■[/color] si può scegliere   [color=#%s]■[/color] scelto" % [
+		RDRTheme.CYAN.to_html(false), RDRTheme.CHOSEN.to_html(false)]
 
 
 ## Carta corrente, prossima carta, ordine di Eligibility e turno in corso (§4.1).
@@ -1223,7 +1739,7 @@ func _refresh_card_info() -> void:
 	if nxt != null:
 		lines.append("Prossima: #%d %s" % [nxt.number, nxt.title])
 	if r.haboob_active():
-		lines.append("[color=#e0b070]Haboob: Recon e March vietati.[/color]")
+		lines.append("[color=#ffb454]Haboob: Recon e March vietati.[/color]")
 	if r.is_game_over():
 		lines.append("[b]Partita finita.[/b] Vincitore: %s" % String(gc.state.tracks.get("winner", "—")))
 	elif gc.sequence != null:
@@ -1235,9 +1751,6 @@ func _refresh_card_info() -> void:
 		else:
 			lines.append("Carta conclusa: premi «Concludi carta».")
 	_card_info.text = "\n".join(lines)
-	var can_act: bool = gc.sequence != null and gc.sequence.pending_faction() != ""
-	_btn_pass.disabled = not can_act
-	_btn_end.disabled = gc.rounds == null or gc.rounds.is_game_over()
 
 
 ## Conta gli spazi della mappa di Mars (23 + Wilderness). Phobos è escluso:
@@ -1253,75 +1766,12 @@ func _count_control(control: String) -> int:
 	return n
 
 
-func _on_space_clicked(space_id: String) -> void:
-	var gc0 := GameController
-	if not gc0.support_pending().is_empty():
-		if _support_action == "":
-			_append_log("Scegli prima l'azione (House, Repair o lo spostamento).")
-			return
-		if not _op_candidates.has(space_id):
-			_append_log("%s non è sotto il tuo Controllo o l'azione non ha effetto lì." %
-				gc0.game_def.space(space_id).name)
-			return
-		var res0: Dictionary = gc0.support_act(_support_faction, space_id, [_support_action])
-		if not res0.get("ok", false):
-			_append_log("[color=#e05a4b]%s[/color]" % res0.get("error", ""))
-		else:
-			_flash(space_id, Color(0.4, 1.0, 0.5))
-		_refresh_op_bar()
-		return
-	if _op_mode != "" or _sa_mode != "" or _ev_active:
-		if not _op_candidates.has(space_id):
-			_append_log("%s non è selezionabile per %s." % [
-				GameController.game_def.space(space_id).name,
-				"l'Evento" if _ev_active else GameController.OPERATION_NAMES.get(_op_mode,
-					GameController.SPECIAL_NAMES.get(_sa_mode, "l'azione"))])
-		elif _op_spaces.has(space_id) and not _ev_repeat_allowed():
-			_op_spaces.erase(space_id)
-		elif _ev_active and _op_spaces.size() >= _ev_max_spaces():
-			_append_log("Questa scelta ammette al massimo %d spazi." % _ev_max_spaces())
-		else:
-			_op_spaces.append(space_id)
-		_refresh_op_bar()
-		_paint_op_highlight()
-		_refresh_space_info(space_id)
-		_selected = space_id
-		return
-	_selected = space_id
-	for sid in _views.keys():
-		(_views[sid] as RegionView).set_highlight(sid == space_id)
-	_refresh_space_info(space_id)
-	if _tabs != null:
-		_tabs.current_tab = 2   # «Spazio»: è quello che si è appena chiesto
-
-
-# ---------------------------------------------------------------------------
-# Operazioni (§5.0)
-# ---------------------------------------------------------------------------
-
-func _start_op(op_id: String) -> void:
-	var gc := GameController
-	_sa_mode = ""
-	_op_moves.clear()
-	_op_mode = op_id
-	_op_spaces.clear()
-	_op_candidates = gc.operation_candidates(op_id, gc.sequence.pending_faction())
-	if gc.MOVEMENT_OPERATIONS.has(op_id):
-		_append_log("%s: %s. Trascina i pezzi da uno spazio all'altro per dichiarare gli spostamenti, poi «Esegui». (%d spazi disponibili)" % [
-			gc.OPERATION_NAMES.get(op_id, op_id),
-			"scegli le origini" if op_id == "travel" else "scegli le destinazioni",
-			_op_candidates.size()])
-	else:
-		_append_log("%s: scegli gli spazi (%d disponibili), poi «Esegui»." % [
-			gc.OPERATION_NAMES.get(op_id, op_id), _op_candidates.size()])
-	_update_moves_overlay()
-	_paint_op_highlight()
-	_refresh_op_bar()
-
-
 ## §7.0: gioca l'Evento raccogliendo una alla volta le scelte che dichiara —
 ## gli spazi si indicano sulla mappa, Fazioni e rami con i pulsanti della barra.
 func _start_event(shaded: bool) -> void:
+	if GameController.turn_started():
+		_append_log("In questo turno hai già agito: niente Evento.")
+		return
 	_cancel_op()
 	_ev_active = true
 	_ev_shaded = shaded
@@ -1334,11 +1784,14 @@ func _start_event(shaded: bool) -> void:
 func _ev_step() -> void:
 	var gc := GameController
 	_ev_reqs = gc.events.requirements(gc.state.current_card, _ev_shaded, _ev_choices)
+	_op_spaces.clear()
+	_op_candidates = PackedStringArray()
 	if _ev_index >= _ev_reqs.size():
-		_ev_run()
+		# Scelte complete: l'Evento parte con «Esegui Evento».
+		_paint_op_highlight()
+		_refresh_op_bar()
 		return
 	var req: Dictionary = _ev_reqs[_ev_index]
-	_op_spaces.clear()
 	_op_candidates = PackedStringArray()
 	if String(req.get("kind", "space")) == "space":
 		_op_candidates = PackedStringArray(req.get("candidates", []))
@@ -1443,6 +1896,11 @@ func _run_free_op(index: int) -> void:
 ## Attività Speciale (§6.0): stessa pianificazione a scelta di spazi.
 func _start_sa(sa_id: String) -> void:
 	var gc := GameController
+	var why: String = gc.special_block_reason()
+	if why != "":
+		_append_log("[color=#e05a4b]%s[/color]" % why)
+		return
+	_ev_active = false
 	_op_mode = ""
 	_sa_mode = sa_id
 	_op_spaces.clear()
@@ -1507,28 +1965,6 @@ func _sa_extra() -> Dictionary:
 	return out
 
 
-func _cancel_op() -> void:
-	_sa_choices.clear()
-	_rally_modes.clear()
-	_rally_dig_in = ""
-	_assault_bombard.clear()
-	_assault_suppress = ""
-	_assault_suppress_to = ""
-	_ambush_dice.clear()
-	_op_mode = ""
-	_sa_mode = ""
-	_ev_active = false
-	_ev_reqs.clear()
-	_ev_choices.clear()
-	_ev_index = 0
-	_op_moves.clear()
-	_op_spaces.clear()
-	_op_candidates = PackedStringArray()
-	_update_moves_overlay()
-	_paint_op_highlight()
-	_refresh_op_bar()
-
-
 ## Gli stessi parametri che «Esegui» passerebbe: serve al collaudo per provare
 ## ogni azione esattamente com'è configurata nel pannello.
 func _op_extra_for_test() -> Dictionary:
@@ -1542,29 +1978,6 @@ func _op_extra_for_test() -> Dictionary:
 	if _op_mode == "logistics":
 		extra = {}
 	return extra
-
-
-func _confirm_op() -> void:
-	if _op_mode == "" or _op_spaces.is_empty():
-		return
-	var extra := {"moves": _op_moves}
-	if _op_mode == "rally":
-		extra = {"modes": _rally_modes, "dig_in": _rally_dig_in}
-	if _op_mode == "assault":
-		extra = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
-	if _op_mode == "attack":
-		extra = {"ambush_dice": _ambush_dice}
-	if _op_mode == "logistics":
-		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
-		extra = {}
-	var touched := Array(_op_spaces)
-	var res: Dictionary = GameController.execute_operation(_op_mode, Array(_op_spaces), false, extra)
-	if not res.get("ok", false):
-		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "azione rifiutata"))
-		return
-	for sid in touched:
-		_flash(String(sid), Color(0.4, 1.0, 0.5))
-	_cancel_op()
 
 
 ## Evidenzia in bianco gli spazi scelti; gli altri candidati restano cliccabili.
@@ -1639,186 +2052,6 @@ func _refresh_preview() -> void:
 	_preview.tooltip_text = tip
 
 
-func _refresh_op_bar() -> void:
-	for c in _ops_box.get_children():
-		c.queue_free()
-	_refresh_instructions()
-	_refresh_preview()
-	var gc := GameController
-	# §4.3 fase 3: la Support Phase interrompe il Dust Storm Round e ha
-	# precedenza su tutto — finché non è chiusa non si gioca nient'altro.
-	if not gc.support_pending().is_empty():
-		# La Support Phase arriva a carta conclusa e prende il posto di tutto:
-		# quel che restava in preparazione (spazi scelti, modalità del Rally,
-		# anteprima del costo) non c'entra più niente e va tolto di mezzo,
-		# altrimenti resta sotto il pannello a raccontare un'altra azione.
-		if _op_mode != "" or _sa_mode != "" or not _op_spaces.is_empty():
-			_op_mode = ""
-			_sa_mode = ""
-			_op_spaces.clear()
-			_op_moves.clear()
-			_rally_modes.clear()
-			_sa_choices.clear()
-			_assault_bombard.clear()
-			_ambush_dice.clear()
-			_update_moves_overlay()
-		for c2 in _move_box.get_children():
-			c2.queue_free()
-		if _preview != null:
-			_preview.text = ""
-		_build_support_bar()
-		return
-	if gc.sequence == null or gc.sequence.pending_faction() == "":
-		return
-	var fid := gc.sequence.pending_faction()
-	# §8.0: quando tocca a una Fazione gestita dal bot, l'unica azione è farla
-	# giocare — le Operazioni le sceglie la carta Curiosity, non il giocatore.
-	if gc.np != null and gc.np.is_np(fid):
-		var b_np := Button.new()
-		b_np.text = "Gioca il turno di %s" % gc.game_def.faction(fid).short_name
-		b_np.tooltip_text = "Sistema Non-Player Curiosity (§8.0): pesca la carta, sceglie ed esegue."
-		b_np.pressed.connect(_run_np_turn)
-		RDRTheme.accent_button(b_np, RDRTheme.BTN_HOVER_BG, RDRTheme.FOCUS)
-		_ops_box.add_child(b_np)
-		var b_all := Button.new()
-		b_all.text = "…e i successivi"
-		b_all.tooltip_text = "Fa giocare di seguito tutte le Fazioni Non-Player fino al tuo turno."
-		b_all.disabled = _np_running
-		b_all.pressed.connect(_run_np_until_player)
-		_ops_box.add_child(b_all)
-		_refresh_move_box()
-		return
-	if _ev_active:
-		_build_event_bar()
-		return
-	if _op_mode == "" and _sa_mode == "":
-		# §4.1: Operazione e Attività Speciale sono due cose diverse, e la
-		# seconda accompagna la prima. Una fila unica di pulsanti simili non lo
-		# dice: due gruppi con la loro etichetta sì.
-		_ops_box.add_child(_group_label("Operazione"))
-		for op_id in gc.UI_OPERATIONS.get(fid, []):
-			var b := Button.new()
-			b.text = gc.OPERATION_NAMES.get(op_id, op_id)
-			b.tooltip_text = String(OPERATION_TIPS.get(op_id, ""))
-			b.pressed.connect(_start_op.bind(String(op_id)))
-			RDRTheme.faction_button(b, fid)
-			_ops_box.add_child(b)
-		# §7.0: l'Evento, nelle sue due opzioni, quando è consentito. Non è né
-		# un'Operazione né un'Attività Speciale: è la terza scelta della carta,
-		# e va etichettato come tale.
-		if gc.sequence.is_legal(CoinEnums.ActionType.EVENT):
-			var card: CardDef = gc.game_def.card(gc.state.current_card)
-			if card != null:
-				if not gc.events.option(card.number, false).is_empty() \
-						or not gc.events.option(card.number, true).is_empty():
-					_ops_box.add_child(_group_label("Evento"))
-				for shaded in [false, true]:
-					var opt: Dictionary = gc.events.option(card.number, shaded)
-					if opt.is_empty():
-						continue
-					var e := Button.new()
-					e.text = "ombreggiato" if shaded else "non ombreggiato"
-					e.tooltip_text = String(opt.get("text", ""))
-					e.pressed.connect(_start_event.bind(shaded))
-					RDRTheme.accent_button(e, RDRTheme.BTN_HOVER_BG, RDRTheme.ACCENT)
-					_ops_box.add_child(e)
-		# §7.0: Operazioni gratuite concesse da un Evento e non ancora eseguite.
-		var queue: Array = gc.pending_free_ops()
-		for i in range(queue.size()):
-			var entry: Dictionary = queue[i]
-			var label := String(entry.get("operation", ""))
-			if label == "":
-				label = String(entry.get("special", ""))
-			var fb := Button.new()
-			fb.text = "★ %s gratis (%s)" % [
-				gc.OPERATION_NAMES.get(label, gc.SPECIAL_NAMES.get(label, label)),
-				gc.game_def.faction(String(entry.get("faction", ""))).short_name]
-			fb.tooltip_text = String(entry.get("note", ""))
-			fb.pressed.connect(_run_free_op.bind(i))
-			RDRTheme.accent_button(fb, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
-			_ops_box.add_child(fb)
-		if not gc.UI_SPECIALS.get(fid, {}).is_empty():
-			_ops_box.add_child(_group_label("Attività Speciale"))
-		for sa_id in gc.UI_SPECIALS.get(fid, {}).keys():
-			var sb := Button.new()
-			sb.text = "%s" % gc.SPECIAL_NAMES.get(sa_id, sa_id)
-			sb.tooltip_text = "Attività Speciale (§6.0)"
-			sb.pressed.connect(_start_sa.bind(String(sa_id)))
-			RDRTheme.style_button(sb)
-			_ops_box.add_child(sb)
-		_refresh_move_box()
-		return
-	if _sa_mode != "":
-		var run_sa := Button.new()
-		run_sa.text = "Esegui %s" % gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode)
-		run_sa.tooltip_text = "Clicca prima almeno uno spazio acceso sulla mappa." \
-			if _op_spaces.is_empty() and _sa_mode != "transport" and _sa_mode != "petition" \
-			else "Esegue %s." % gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode)
-		if not _op_spaces.is_empty() or _sa_mode == "transport" or _sa_mode == "petition":
-			RDRTheme.accent_button(run_sa, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
-		run_sa.pressed.connect(_confirm_sa)
-		_ops_box.add_child(run_sa)
-		var cancel_sa := Button.new()
-		cancel_sa.text = "Annulla"
-		cancel_sa.pressed.connect(_cancel_op)
-		_ops_box.add_child(cancel_sa)
-		_refresh_move_box()
-		return
-	var run := Button.new()
-	run.text = "Esegui"
-	run.disabled = _op_spaces.is_empty()
-	# Un tasto grigio senza spiegazione è la cosa più frustrante di
-	# un'interfaccia: qui dice sempre cosa manca per accenderlo.
-	run.tooltip_text = "Clicca prima almeno uno spazio acceso sulla mappa." \
-		if run.disabled else "Esegue %s in %d spazi." % [
-			GameController.OPERATION_NAMES.get(_op_mode, _op_mode), _op_spaces.size()]
-	run.pressed.connect(_confirm_op)
-	if not run.disabled:
-		RDRTheme.accent_button(run, RDRTheme.BTN_HOVER_BG, RDRTheme.OK)
-	_ops_box.add_child(run)
-	var cancel := Button.new()
-	cancel.text = "Annulla"
-	cancel.tooltip_text = "Abbandona la pianificazione senza eseguire niente."
-	cancel.pressed.connect(_cancel_op)
-	_ops_box.add_child(cancel)
-	_refresh_move_box()
-
-
-## Barra della scelta in corso di un Evento: gli spazi si prendono dalla mappa,
-## Fazioni e rami hanno un pulsante ciascuno.
-func _build_event_bar() -> void:
-	if _ev_index >= _ev_reqs.size():
-		return
-	var req: Dictionary = _ev_reqs[_ev_index]
-	var label := Label.new()
-	label.text = "Evento (%d/%d): %s" % [
-		_ev_index + 1, _ev_reqs.size(), req.get("prompt", "scegli")]
-	_ops_box.add_child(label)
-	if String(req.get("kind", "space")) == "space":
-		var next := Button.new()
-		next.text = "Conferma (%d/%d)" % [_op_spaces.size(), int(req.get("count", 0))]
-		next.pressed.connect(_ev_confirm_spaces)
-		_ops_box.add_child(next)
-		if not _op_spaces.is_empty():
-			var clear := Button.new()
-			clear.text = "Svuota"
-			clear.pressed.connect(func():
-				_op_spaces.clear()
-				_paint_op_highlight()
-				_refresh_op_bar())
-			_ops_box.add_child(clear)
-	else:
-		for value in req.get("candidates", []):
-			var b := Button.new()
-			b.text = _choice_label(String(value))
-			b.pressed.connect(_ev_pick.bind(String(value)))
-			_ops_box.add_child(b)
-	var cancel := Button.new()
-	cancel.text = "Annulla"
-	cancel.pressed.connect(_cancel_op)
-	_ops_box.add_child(cancel)
-
-
 func _choice_label(value: String) -> String:
 	var f: FactionDef = GameController.game_def.faction(value)
 	if f != null:
@@ -1837,25 +2070,6 @@ func _on_piece_dropped(from_id: String, to_id: String, type_id: String) -> void:
 	# §4.3 fase 3: la Support Phase interrompe il Dust Storm Round e ha
 	# precedenza su tutto — finché non è chiusa non si gioca nient'altro.
 	if not gc.support_pending().is_empty():
-		# La Support Phase arriva a carta conclusa e prende il posto di tutto:
-		# quel che restava in preparazione (spazi scelti, modalità del Rally,
-		# anteprima del costo) non c'entra più niente e va tolto di mezzo,
-		# altrimenti resta sotto il pannello a raccontare un'altra azione.
-		if _op_mode != "" or _sa_mode != "" or not _op_spaces.is_empty():
-			_op_mode = ""
-			_sa_mode = ""
-			_op_spaces.clear()
-			_op_moves.clear()
-			_rally_modes.clear()
-			_sa_choices.clear()
-			_assault_bombard.clear()
-			_ambush_dice.clear()
-			_update_moves_overlay()
-		for c2 in _move_box.get_children():
-			c2.queue_free()
-		if _preview != null:
-			_preview.text = ""
-		_build_support_bar()
 		return
 	if gc.sequence == null or gc.sequence.pending_faction() == "":
 		return
@@ -1941,6 +2155,11 @@ func _refresh_move_box() -> void:
 	for c in _move_box.get_children():
 		c.queue_free()
 	var gc := GameController
+	# Le scelte stanno sotto l'azione a cui si riferiscono.
+	var anchor: Control = _sa_desc if _sa_mode != "" else _op_desc
+	_body.move_child(_move_box, anchor.get_index() + 1)
+	if gc.sequence == null or gc.sequence.pending_faction() == "" or not gc.support_pending().is_empty():
+		return
 	if _op_mode == "rally":
 		_build_rally_box()
 		return
@@ -1965,7 +2184,7 @@ func _refresh_move_box() -> void:
 
 	var title := Label.new()
 	title.text = "Spostamenti (%d dichiarati) — trascina i pezzi sulla mappa" % _op_moves.size()
-	title.add_theme_font_size_override("font_size", 12)
+	title.add_theme_font_size_override("font_size", 13)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_move_box.add_child(title)
 	for i in range(_op_moves.size()):
@@ -1974,7 +2193,7 @@ func _refresh_move_box() -> void:
 		var l := Label.new()
 		l.text = "%d× %s: %s → %s" % [int(m["count"]), String(m["type"]),
 			gc.game_def.space(String(m["from"])).name, gc.game_def.space(String(m["to"])).name]
-		l.add_theme_font_size_override("font_size", 11)
+		l.add_theme_font_size_override("font_size", 13)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row_m.add_child(l)
 		var del := Button.new()
@@ -2129,14 +2348,6 @@ func _save_log() -> void:
 	_append_log("[i]Log salvato in %s[/i]" % path)
 
 
-## Nomi con cui una Fazione compare nel Log, dal più specifico al più generico.
-const LOG_FACTION_WORDS := {
-	"marsgov": ["marsgov", "MarsGov", "MG "],
-	"corporations": ["corporations", "CORP", "Corporations"],
-	"red_dust": ["red_dust", "Red Dust", "RD "],
-	"reclaimer": ["reclaimer", "Reclaimer"],
-}
-
 ## Righe che raccontano COME si è arrivati a una decisione, non cosa è successo:
 ## tiri di dado, righe delle tabelle di priorità, passaggi intermedi. Sono utili
 ## per capire il bot, ma sepolte fra loro le azioni vere non si trovano più.
@@ -2192,11 +2403,11 @@ func _render_log() -> void:
 			hidden += 1
 			continue
 		var fid := String(entry["faction"])
-		var col: Color = RDRAssets.TEXT_COLORS.get(fid, Color("d8d8d8"))
+		var col: Color = RDRTheme.FACTION_TEXT.get(fid, Color("c9d6e0"))
 		if bool(entry.get("header", false)):
 			var fdef: FactionDef = GameController.game_def.faction(fid) if fid != "" else null
 			var name: String = fdef.short_name if fdef != null else fid
-			out.append("[color=#%s]—— %s ——[/color]" % [col.to_html(false), name])
+			out.append("[color=#%s]▸ %s[/color]" % [col.to_html(false), name.to_upper()])
 			continue
 		var line := String(entry["text"])
 		if bool(entry["detail"]):
@@ -2204,9 +2415,356 @@ func _render_log() -> void:
 		else:
 			out.append("[color=#%s]%s[/color]" % [col.to_html(false), line])
 	if hidden > 0 and not show_details:
-		out.append("[color=#7a7a7a][i]%d righe di dettaglio nascoste — «Dettagli» per vederle.[/i][/color]"
+		out.append("[color=#5a6b7a][i]%d righe di dettaglio nascoste — «Dettagli» per vederle.[/i][/color]"
 			% hidden)
 	_log.text = "\n".join(out)
 	# Sempre in fondo: quel che è appena successo è la riga che interessa.
 	await get_tree().process_frame
 	_log.scroll_to_line(maxi(0, _log.get_line_count() - 1))
+
+
+## Arma un'azione della Support Phase: il prossimo clic su uno spazio la esegue.
+func _start_support(act_id: String) -> void:
+	_support_action = act_id
+	var gc := GameController
+	_op_candidates = gc.support_candidates(_support_faction, act_id)
+	_append_log("Support Phase: scegli lo spazio (%d disponibili)." % _op_candidates.size())
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _start_op(op_id: String) -> void:
+	var gc := GameController
+	if _op_mode == op_id:
+		return
+	var why: String = gc.op_block_reason(op_id)
+	if why != "":
+		_append_log("[color=#e05a4b]%s[/color]" % why)
+		return
+	_ev_active = false
+	_sa_mode = ""
+	_op_moves.clear()
+	_op_mode = op_id
+	_op_spaces.clear()
+	_op_candidates = gc.operation_candidates(op_id, gc.sequence.pending_faction())
+	# Ripresa della stessa Operazione: gli spazi già usati non tornano.
+	var used: Array = gc.turn_op_spaces() if gc.turn_op() == op_id else []
+	if not used.is_empty():
+		var left := PackedStringArray()
+		for sid in _op_candidates:
+			if not used.has(String(sid)):
+				left.append(sid)
+		_op_candidates = left
+	if gc.MOVEMENT_OPERATIONS.has(op_id):
+		_append_log("%s: %s. Trascina i pezzi da uno spazio all'altro per dichiarare gli spostamenti, poi «Esegui». (%d spazi disponibili)" % [
+			gc.OPERATION_NAMES.get(op_id, op_id),
+			"scegli le origini" if op_id == "travel" else "scegli le destinazioni",
+			_op_candidates.size()])
+	else:
+		_append_log("%s: scegli gli spazi (%d disponibili), poi «Esegui»." % [
+			gc.OPERATION_NAMES.get(op_id, op_id), _op_candidates.size()])
+	_update_moves_overlay()
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _confirm_op() -> void:
+	if _op_mode == "" or _op_spaces.is_empty():
+		return
+	var extra := {"moves": _op_moves}
+	if _op_mode == "rally":
+		extra = {"modes": _rally_modes, "dig_in": _rally_dig_in}
+	if _op_mode == "assault":
+		extra = {"bombard": _assault_bombard, "suppress": _suppress_plan()}
+	if _op_mode == "attack":
+		extra = {"ambush_dice": _ambush_dice}
+	if _op_mode == "logistics":
+		# Piano minimo: si potenziano le Basi scelte, senza acquisti su Earth.
+		extra = {}
+	var touched := Array(_op_spaces)
+	var res: Dictionary = GameController.execute_operation(_op_mode, Array(_op_spaces), false, extra)
+	if not res.get("ok", false):
+		_append_log("[color=#e05a4b]%s[/color]" % res.get("error", "azione rifiutata"))
+		return
+	for sid in touched:
+		_flash(String(sid), Color(0.4, 1.0, 0.5))
+	_cancel_op()
+
+
+func _cancel_op() -> void:
+	_sa_choices.clear()
+	_rally_modes.clear()
+	_rally_dig_in = ""
+	_assault_bombard.clear()
+	_assault_suppress = ""
+	_assault_suppress_to = ""
+	_ambush_dice.clear()
+	_op_mode = ""
+	_sa_mode = ""
+	_ev_active = false
+	_ev_reqs.clear()
+	_ev_choices.clear()
+	_ev_index = 0
+	_op_moves.clear()
+	_op_spaces.clear()
+	_op_candidates = PackedStringArray()
+	_update_moves_overlay()
+	_paint_op_highlight()
+	_refresh_op_bar()
+
+
+func _on_space_clicked(space_id: String) -> void:
+	var gc0 := GameController
+	if not gc0.support_pending().is_empty():
+		if _support_action == "":
+			_append_log("Scegli prima l'azione (House, Repair o lo spostamento).")
+			return
+		if not _op_candidates.has(space_id):
+			_append_log("%s non è sotto il tuo Controllo o l'azione non ha effetto lì." %
+				gc0.game_def.space(space_id).name)
+			return
+		var res0: Dictionary = gc0.support_act(_support_faction, space_id, [_support_action])
+		if not res0.get("ok", false):
+			_append_log("[color=#e05a4b]%s[/color]" % res0.get("error", ""))
+		else:
+			_flash(space_id, Color(0.4, 1.0, 0.5))
+		_refresh_op_bar()
+		return
+	if _op_mode != "" or _sa_mode != "" or _ev_active:
+		if not _op_candidates.has(space_id):
+			_append_log("%s non è selezionabile per %s." % [
+				GameController.game_def.space(space_id).name,
+				"l'Evento" if _ev_active else GameController.OPERATION_NAMES.get(_op_mode,
+					GameController.SPECIAL_NAMES.get(_sa_mode, "l'azione"))])
+		elif _op_spaces.has(space_id) and not _ev_repeat_allowed():
+			_op_spaces.erase(space_id)
+		elif _ev_active and _op_spaces.size() >= _ev_max_spaces():
+			_append_log("Questa scelta ammette al massimo %d spazi." % _ev_max_spaces())
+		else:
+			_op_spaces.append(space_id)
+		_refresh_op_bar()
+		_paint_op_highlight()
+		_refresh_space_info(space_id)
+		_selected = space_id
+		return
+	_selected = space_id
+	for sid in _views.keys():
+		(_views[sid] as RegionView).set_highlight(sid == space_id)
+	_refresh_space_info(space_id)
+	if _tabs != null:
+		_tabs.current_tab = 2   # «Spazio»: è quello che si è appena chiesto
+
+
+## Riga sopra la mappa: dice sempre di chi è il turno e cosa si sta facendo.
+## Senza, l'unico modo di capirlo è leggere il Log a posteriori.
+func _refresh_instructions() -> void:
+	if _instr == null:
+		return
+	var gc := GameController
+	var txt := ""
+	if gc.rounds != null and gc.rounds.is_game_over():
+		txt = "[b]Partita finita.[/b] Vincitore: %s" % String(gc.state.tracks.get("winner", "—"))
+	elif not gc.support_pending().is_empty():
+		txt = "[b]Support Phase[/b] — scegli House, Repair o lo spostamento, poi clicca gli spazi accesi; «Ho finito» per chiudere."
+	elif _ev_active and _ev_index >= _ev_reqs.size():
+		txt = "[b]Evento[/b] — scelte complete: premi «Esegui Evento»."
+	elif _ev_active and _ev_index < _ev_reqs.size():
+		var req: Dictionary = _ev_reqs[_ev_index]
+		txt = "[color=#%s]Evento (%d/%d): %s[/color]" % [
+			RDRTheme.FOCUS.to_html(false), _ev_index + 1, _ev_reqs.size(),
+			req.get("prompt", "scegli")]
+	elif _op_mode != "":
+		var extra := ""
+		if gc.MOVEMENT_OPERATIONS.has(_op_mode):
+			extra = "  ·  trascina i pezzi da uno spazio all'altro"
+		txt = "[b]%s[/b] — %s%s%s" % [
+			gc.OPERATION_NAMES.get(_op_mode, _op_mode),
+			_pick_hint(), _legend(), extra]
+	elif _sa_mode != "":
+		txt = "[b]%s[/b] — %s%s" % [
+			gc.SPECIAL_NAMES.get(_sa_mode, _sa_mode), _pick_hint(), _legend()]
+	elif gc.sequence != null and gc.sequence.pending_faction() != "" \
+			and gc.np != null and gc.np.is_np(gc.sequence.pending_faction()):
+		var np_fid := gc.sequence.pending_faction()
+		txt = "Tocca a %s, gestita dal sistema Non-Player: premi «Gioca il turno»%s." % [
+			RDRTheme.faction_chip(gc.game_def.faction(np_fid).short_name, np_fid),
+			"" if not _auto_bot else " (Auto-Bot acceso: parte da solo)"]
+	elif gc.sequence != null and gc.sequence.pending_faction() != "":
+		var fid := gc.sequence.pending_faction()
+		var dop: String = gc.turn_op()
+		if dop != "" or gc.turn_special_done():
+			var parts: Array[String] = []
+			if dop != "":
+				parts.append("%s svolto: puoi proseguirlo in altri spazi" % gc.OPERATION_NAMES.get(dop, dop))
+			if not gc.turn_special_done() and gc.special_block_reason() == "":
+				parts.append("aggiungere un'Attività Speciale")
+			elif gc.turn_special_done():
+				parts.append("%s svolta" % gc.SPECIAL_NAMES.get(gc.turn_special(), gc.turn_special()))
+			if dop == "":
+				parts.append("ora l'Operazione")
+			txt = "%s, poi «Concludi turno»." % ", ".join(parts)
+			txt = txt.substr(0, 1).to_upper() + txt.substr(1)
+		else:
+			txt = "Tocca a %s (%s Disponibile): scegli un'Operazione, l'Evento, oppure Passa." % [
+				RDRTheme.faction_chip(gc.game_def.faction(fid).short_name, fid),
+				"1ª" if gc.sequence.is_first_slot() else "2ª"]
+	elif gc.sequence != null:
+		txt = "Carta conclusa: «Concludi carta» per passare alla successiva."
+	if not gc.pending_free_ops().is_empty():
+		txt += "  [color=#%s]★ %d Operazione/i gratuita/e in sospeso.[/color]" % [
+			RDRTheme.OK.to_html(false), gc.pending_free_ops().size()]
+	_instr.text = txt
+
+
+func _refresh_status() -> void:
+	var gc := GameController
+	var m: RDRModule = gc.rdr()
+	var st := gc.state
+	var v := m.victory_status(st)
+	var eg_ctrl := m.eg_controller(st)
+	var ctrl_name := "nessuno"
+	if eg_ctrl != "":
+		ctrl_name = gc.game_def.faction(eg_ctrl).short_name
+
+	var lines: Array[String] = []
+	lines.append("[b]EarthGov[/b]  Confidence %d  ·  Controller: %s  ·  %s" % [
+		m.eg_confidence_value(st), ctrl_name,
+		"EG+" if int(st.tracks.get("eg_side", -1)) > 0 else "EG-"])
+	lines.append("Flashpoint %d/5  ·  Displaced Pop %d  ·  Dust Storm %d/3" % [
+		int(st.tracks.get("flashpoint", 0)),
+		int(st.tracks.get("displaced_population", 0)),
+		int(st.tracks.get("dust_storm_rounds", 0))])
+	lines.append("")
+	lines.append("[b]Vittoria[/b]")
+	for fid in ["marsgov", "corporations", "red_dust", "reclaimer"]:
+		var f: FactionDef = gc.game_def.faction(fid)
+		var d: Dictionary = v[fid]
+		var col: String = RDRAssets.text_color(fid).to_html(false)
+		var res := ""
+		if fid in ["marsgov", "red_dust"]:
+			res = "  ·  %d Ris." % st.get_resources(fid)
+		lines.append("[color=#%s]%s[/color]  %d / %d  (%+d)%s" % [
+			col, f.short_name, d["value"], d["threshold"], d["margin"], res])
+	lines.append("")
+	lines.append("[b]Controllo[/b]  COIN %d  ·  Red Dust %d  ·  Reclaimer %d  ·  libero %d" % [
+		_count_control("coin"), _count_control("red_dust"),
+		_count_control("reclaimer"), _count_control("")])
+	lines.append("Supporto totale %d  ·  Opposizione totale %d" % [
+		m.total_support(st), m.total_opposition(st)])
+	_status.text = "\n".join(lines)
+
+
+## Le scelte che alcune Attività Speciali offrono per ciascuno spazio: Coordinate
+## (poi House o Repair, e con l'Opposizione già al massimo togliere due cubi o
+## sostituirne uno), Purify (convertire forze o prendere una Base nemica),
+## Public Relations (Repair più House, o solo Repair), Entrench (Base e
+## Fortificazione). Una fila di tasti per scelta, niente tendine.
+func _build_special_box() -> void:
+	var gc := GameController
+	for sid_v in _op_spaces:
+		var sid := String(sid_v)
+		var opts: Array = gc.special_options(_sa_mode, sid)
+		if opts.is_empty():
+			continue
+		var byk: Dictionary = {}
+		for o in opts:
+			var key := String((o as Dictionary)["key"])
+			if not byk.has(key):
+				byk[key] = []
+			(byk[key] as Array).append(o)
+		_move_box.add_child(_small_title(gc.game_def.space(sid).name))
+		for k in byk.keys():
+			var key := String(k)
+			var list: Array = byk[key]
+			if not _sa_choices.has(key):
+				_sa_choices[key] = {}
+			# La prima voce è il valore di partenza, se non è già stato scelto.
+			if not (_sa_choices[key] as Dictionary).has(sid) and list.size() > 0:
+				_sa_choices[key][sid] = String((list[0] as Dictionary)["id"])
+			_choice_buttons(_move_box, list, String(_sa_choices[key][sid]), func(id):
+				_sa_choices[key][sid] = id
+				_refresh_op_bar())
+
+
+## §5.5: chi è EarthGov Controller ha due opzioni in più durante l'Assault —
+## Bombard (un Satellite dall'Orbita su uno spazio dell'Assault, due forze nemiche
+## Attive in più e un Danno se è un Labirinto) e Suppress (in UNO spazio non
+## scelto, spinge i Ribelli nei Deserti adiacenti e riporta l'Opposizione verso
+## il Neutrale).
+func _build_assault_box() -> void:
+	var gc := GameController
+	var fid := gc.sequence.pending_faction()
+	if not gc.can_bombard(fid) and gc.suppress_candidates(fid, Array(_op_spaces)).is_empty():
+		return   # non è EarthGov Controller, o non ha di che usarle
+
+	if gc.can_bombard(fid) and not _op_spaces.is_empty():
+		_move_box.add_child(_small_title("Bombard (Satelliti in Orbita: %d)" %
+			gc.rdr().count_in(gc.state, "orbit", "satellite")))
+		for sid_v in _op_spaces:
+			var sid := String(sid_v)
+			var cb := CheckBox.new()
+			cb.text = gc.game_def.space(sid).name
+			cb.focus_mode = Control.FOCUS_NONE
+			cb.button_pressed = _assault_bombard.has(sid)
+			cb.toggled.connect(func(on: bool):
+				if on and not _assault_bombard.has(sid):
+					_assault_bombard.append(sid)
+				elif not on:
+					_assault_bombard.erase(sid)
+				_refresh_preview())
+			_move_box.add_child(cb)
+
+	var sup := gc.suppress_candidates(fid, Array(_op_spaces))
+	if sup.size() > 0:
+		_move_box.add_child(_small_title("Suppress"))
+		var opts: Array = [{"id": "", "label": "nessuno"}]
+		for s in sup:
+			opts.append({"id": String(s), "label": gc.game_def.space(String(s)).name})
+		_choice_buttons(_move_box, opts, _assault_suppress, func(id):
+			_assault_suppress = id
+			_assault_suppress_to = ""
+			_refresh_op_bar())
+		# Dove finiscono i Ribelli spinti fuori. Al tavolo la sceglie il
+		# proprietario di ciascun Ribelle; qui è una sola destinazione per tutti.
+		if _assault_suppress != "":
+			var dests := gc.suppress_destinations(_assault_suppress)
+			if _assault_suppress_to == "" and dests.size() > 0:
+				_assault_suppress_to = String(dests[0])
+			var t := _small_title("→ Deserto (tutti i Ribelli nello stesso)")
+			t.tooltip_text = "Al tavolo ogni Ribelle lo sceglie il suo proprietario: qui vanno tutti nello stesso Deserto."
+			_move_box.add_child(t)
+			var dopts: Array = []
+			for d in dests:
+				dopts.append({"id": String(d), "label": gc.game_def.space(String(d)).name})
+			_choice_buttons(_move_box, dopts, _assault_suppress_to, func(id):
+				_assault_suppress_to = id
+				_refresh_op_bar())
+
+
+## §5.6: il Rally fa cose diverse a seconda della modalità scelta per ciascuno
+## spazio — piazzare un Ribelle, costruire una Base con due, riempire fino alla
+## Popolazione, riportare Nascosti, potenziare a Conversion Center.
+func _build_rally_box() -> void:
+	var gc := GameController
+	if _op_spaces.is_empty():
+		return
+	var fid := gc.sequence.pending_faction()
+	for sid_v in _op_spaces:
+		var sid := String(sid_v)
+		_move_box.add_child(_small_title(gc.game_def.space(sid).name))
+		_choice_buttons(_move_box, gc.rally_modes(fid, sid), String(_rally_modes.get(sid, "place")), func(id):
+			_rally_modes[sid] = id
+			_refresh_op_bar())
+
+	# §5.6: il Red Dust può portare UNA Base a Dug-In, anche fuori dagli spazi
+	# scelti e anche in un'Operazione Limitata.
+	if fid == "red_dust":
+		var digs := gc.dig_in_candidates()
+		if digs.size() > 0:
+			_move_box.add_child(_small_title("Dig-In (una Base RD in un Deserto)"))
+			var opts: Array = [{"id": "", "label": "nessuno"}]
+			for d in digs:
+				opts.append({"id": String(d), "label": gc.game_def.space(String(d)).name})
+			_choice_buttons(_move_box, opts, _rally_dig_in, func(id):
+				_rally_dig_in = id
+				_refresh_op_bar())

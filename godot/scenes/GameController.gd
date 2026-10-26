@@ -40,6 +40,17 @@ const SAVE_PATH := "user://partita.json"
 ## chiudere per sbaglio non deve costare la serata.
 const AUTOSAVE_PATH := "user://autosave.json"
 
+## §4.1/§6.0: cosa ha già fatto la Fazione di turno. Una Fazione svolge UNA
+## Operazione (che può proseguire a riprese in altri spazi, prima o dopo
+## l'Attività Speciale) e al massimo UNA Attività Speciale; il turno si chiude con
+## `end_turn()`, che registra nella sequenza Operazione, Operazione + Attività
+## Speciale o Operazione Limitata. `_turn_key` lega questi dati alla Fazione e al
+## punto della carta in cui sono stati presi: se cambia, si azzerano da soli.
+var _turn_key := ""
+var _turn_op := ""
+var _turn_op_spaces: Array = []
+var _turn_sa := ""
+
 ## Geometrie della tavola (regions.json / board_layout.json), normalizzate [0..1].
 var regions: Dictionary = {}
 var off_map: Dictionary = {}
@@ -111,6 +122,11 @@ func new_game(scenario: String = "standard", seed_value: int = 0,
 
 func _start_card() -> void:
 	sequence = null
+	# Carta nuova (o partita nuova, o ripresa): nessuna azione di turno in corso.
+	_turn_key = ""
+	_turn_op = ""
+	_turn_op_spaces = []
+	_turn_sa = ""
 	if rounds == null or rounds.is_game_over():
 		return
 	var card: CardDef = game_def.card(state.current_card)
@@ -152,6 +168,9 @@ func _np_reclaimer_eligibility() -> void:
 ## La Fazione di turno Passa (§4.1). Restituisce false se non è una mossa legale.
 func do_pass() -> bool:
 	if sequence == null or sequence.pending_faction() == "":
+		return false
+	if turn_started():
+		emit_signal("log_line", "Hai già agito in questo turno: non puoi più Passare, usa «Concludi turno».")
 		return false
 	var fid := sequence.pending_faction()
 	var before := sequence.pass_effects.size()
@@ -219,10 +238,14 @@ const OPERATION_NAMES := {
 }
 
 
-## Esegue un'Operazione per la Fazione di turno e registra l'azione nella
-## sequenza. Restituisce il risultato dell'Operazione ({ok, error, spent}).
+## Esegue un'Operazione per la Fazione di turno. NON chiude il turno: la stessa
+## Operazione si può proseguire in altri spazi e accompagnare con un'Attività
+## Speciale; il turno si chiude con `end_turn()`. Restituisce il risultato
+## dell'Operazione ({ok, error, spent}).
 ## `plan_extra` porta le scelte in più delle Operazioni di movimento
 ## ({moves: [...]}) e di Logistics ({earth: {...}, transit: bool}).
+## `with_special` resta per compatibilità: se l'Operazione è accompagnata da
+## un'Attività Speciale lo stabilisce `end_turn()`.
 func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
 		plan_extra: Dictionary = {}) -> Dictionary:
 	if sequence == null:
@@ -237,12 +260,20 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
 	if not Array(UI_OPERATIONS.get(fid, [])).has(op_id):
 		return {"ok": false, "error": "%s non è un'Operazione di %s." % [
 			OPERATION_NAMES.get(op_id, op_id), game_def.faction(fid).short_name]}
-	var action := CoinEnums.ActionType.OPERATION_WITH_SPECIAL if with_special \
-		else CoinEnums.ActionType.OPERATION
-	if not sequence.is_legal(action):
-		action = CoinEnums.ActionType.LIMITED_OPERATION
-		if not sequence.is_legal(action) or spaces.size() > 1:
+	var A := CoinEnums.ActionType
+	if not (sequence.is_legal(A.OPERATION) or sequence.is_legal(A.OPERATION_WITH_SPECIAL)):
+		if not sequence.is_legal(A.LIMITED_OPERATION) or spaces.size() > 1:
 			return {"ok": false, "error": "Azione non consentita adesso."}
+	var why := op_block_reason(op_id, spaces)
+	if why != "":
+		return {"ok": false, "error": why}
+	# §6.9/§6.12: l'Ambush è l'Attività Speciale del turno, anche se si gioca
+	# dentro l'Attack: conta come le altre.
+	var ambush := op_id == "attack" and not (plan_extra.get("ambush_dice", {}) as Dictionary).is_empty()
+	if ambush:
+		var why_sa := special_block_reason()
+		if why_sa != "":
+			return {"ok": false, "error": why_sa}
 
 	snapshot(OPERATION_NAMES.get(op_id, op_id))
 	var res: Dictionary = _run_operation(op_id, fid, spaces, plan_extra)
@@ -254,9 +285,134 @@ func execute_operation(op_id: String, spaces: Array, with_special: bool = false,
 	ops.log_lines.clear()
 	emit_signal("log_line", "%s esegue %s in %d spazi." % [
 		game_def.faction(fid).short_name, OPERATION_NAMES.get(op_id, op_id), spaces.size()])
-	sequence.act(action)
-	_after_action()
+	_sync_turn()
+	_turn_op = op_id
+	for sid in spaces:
+		if not _turn_op_spaces.has(String(sid)):
+			_turn_op_spaces.append(String(sid))
+	if ambush:
+		_turn_sa = "ambush"
+	refresh()
 	return res
+
+
+# ---------------------------------------------------------------------------
+# Una Operazione e una Attività Speciale per turno (§4.1, §6.0)
+# ---------------------------------------------------------------------------
+
+## Chiave del turno in corso: carta, Fazione di turno e quante hanno già deciso.
+func _current_turn_key() -> String:
+	if sequence == null or sequence.pending_faction() == "":
+		return ""
+	return "%d:%s:%d" % [state.current_card, sequence.pending_faction(),
+		sequence.actors().size() + sequence.passers().size()]
+
+
+## Azzera quel che si sa del turno se nel frattempo la Fazione di turno è cambiata.
+func _sync_turn() -> void:
+	var k := _current_turn_key()
+	if k != _turn_key:
+		_turn_key = k
+		_turn_op = ""
+		_turn_op_spaces = []
+		_turn_sa = ""
+
+
+## Operazione già svolta in questo turno ("" se nessuna): si può solo proseguirla.
+func turn_op() -> String:
+	_sync_turn()
+	return _turn_op
+
+
+## Spazi in cui l'Operazione del turno è già stata eseguita.
+func turn_op_spaces() -> Array:
+	_sync_turn()
+	return _turn_op_spaces
+
+
+## Attività Speciale già svolta in questo turno ("" se nessuna).
+func turn_special() -> String:
+	_sync_turn()
+	return _turn_sa
+
+
+func turn_special_done() -> bool:
+	return turn_special() != ""
+
+
+## La Fazione di turno ha già fatto qualcosa (Operazione o Attività Speciale)?
+func turn_started() -> bool:
+	return turn_op() != "" or turn_special_done()
+
+
+## Vero se alla Fazione di turno resta solo l'Operazione Limitata (§4.1): un
+## solo spazio e nessuna Attività Speciale.
+func limited_only() -> bool:
+	if sequence == null or sequence.pending_faction() == "":
+		return false
+	var A := CoinEnums.ActionType
+	return sequence.is_legal(A.LIMITED_OPERATION) and not sequence.is_legal(A.OPERATION) \
+		and not sequence.is_legal(A.OPERATION_WITH_SPECIAL)
+
+
+## Perché questa Operazione non si può (più) svolgere in questo turno ("" = si può).
+## Una Fazione fa UNA Operazione: la può eseguire a riprese, ma sempre la stessa
+## e mai due volte nello stesso spazio.
+func op_block_reason(op_id: String, spaces: Array = []) -> String:
+	var done := turn_op()
+	if done != "" and op_id != done:
+		return "In questo turno l'Operazione è %s: puoi solo proseguirla." % OPERATION_NAMES.get(done, done)
+	if done != "" and limited_only():
+		return "Operazione Limitata: un solo spazio, già usato."
+	for sid in spaces:
+		if _turn_op_spaces.has(String(sid)):
+			var sd := game_def.space(String(sid))
+			return "%s è già stato scelto per questa Operazione." % (sd.name if sd != null else String(sid))
+	return ""
+
+
+## Perché non si può svolgere un'Attività Speciale ("" = si può): una sola per
+## turno, e mai con l'Operazione Limitata (§6.0).
+func special_block_reason() -> String:
+	if sequence == null or sequence.pending_faction() == "":
+		return "Non è il turno di nessuno."
+	if turn_special_done():
+		return "In questo turno hai già svolto un'Attività Speciale (%s)." % \
+			SPECIAL_NAMES.get(_turn_sa, _turn_sa)
+	if not sequence.is_legal(CoinEnums.ActionType.OPERATION_WITH_SPECIAL):
+		return "Qui è consentita solo un'Operazione Limitata: niente Attività Speciale."
+	return ""
+
+
+## Chiude il turno della Fazione: registra nella sequenza l'azione svolta.
+## Restituisce {ok, error}.
+func end_turn() -> Dictionary:
+	if sequence == null or sequence.pending_faction() == "":
+		return {"ok": false, "error": "Non è il turno di nessuno."}
+	var A := CoinEnums.ActionType
+	var fid := sequence.pending_faction()
+	var op := turn_op()
+	if op == "":
+		if turn_special_done():
+			return {"ok": false, "error": "L'Attività Speciale accompagna un'Operazione: eseguine una, o «Annulla»."}
+		return {"ok": false, "error": "Niente da concludere: scegli un'azione oppure Passa."}
+	var action := -1
+	if turn_special_done() and sequence.is_legal(A.OPERATION_WITH_SPECIAL):
+		action = A.OPERATION_WITH_SPECIAL
+	elif sequence.is_legal(A.OPERATION):
+		action = A.OPERATION
+	elif sequence.is_legal(A.LIMITED_OPERATION):
+		action = A.LIMITED_OPERATION
+	elif sequence.is_legal(A.OPERATION_WITH_SPECIAL):
+		action = A.OPERATION_WITH_SPECIAL
+	if action < 0 or not sequence.act(action):
+		return {"ok": false, "error": "Azione non consentita adesso."}
+	emit_signal("log_line", "%s conclude il turno: %s%s." % [game_def.faction(fid).short_name,
+		OPERATION_NAMES.get(op, op),
+		" + %s" % SPECIAL_NAMES.get(_turn_sa, _turn_sa) if action == A.OPERATION_WITH_SPECIAL else ""])
+	_sync_turn()
+	_after_action()
+	return {"ok": true, "error": ""}
 
 
 func _run_operation(op_id: String, fid: String, spaces: Array,
@@ -603,11 +759,16 @@ func execute_special(sa_id: String, spaces: Array,
 		extra_moves: Dictionary = {}) -> Dictionary:
 	if sequence == null or sequence.pending_faction() == "":
 		return {"ok": false, "error": "Non è il turno di nessuno."}
+	var why := special_block_reason()
+	if why != "":
+		return {"ok": false, "error": why}
 	snapshot(SPECIAL_NAMES.get(sa_id, sa_id))
 	var res: Dictionary = _run_special(sa_id, spaces, extra_moves)
 	if not res.get("ok", false):
 		_undo.pop_back()
 		return res
+	_sync_turn()
+	_turn_sa = sa_id
 	for line in specials.log_lines:
 		emit_signal("log_line", line)
 	specials.log_lines.clear()
@@ -684,6 +845,8 @@ func execute_event(shaded: bool, choices = {}) -> Dictionary:
 		return {"ok": false, "error": "Non è il turno di nessuno."}
 	if not sequence.is_legal(CoinEnums.ActionType.EVENT):
 		return {"ok": false, "error": "L'Evento non è consentito adesso."}
+	if turn_started():
+		return {"ok": false, "error": "In questo turno hai già agito: niente Evento."}
 	var fid := sequence.pending_faction()
 	snapshot("Evento #%d" % state.current_card)
 	var res: Dictionary = events.play(state.current_card, shaded, choices, fid)
@@ -794,6 +957,7 @@ func snapshot(label: String) -> void:
 		"state": state.to_dict(),
 		"has_sequence": sequence != null,
 		"sequence": sequence.snapshot() if sequence != null else {},
+		"turn": _turn_dict(),
 	})
 	while _undo.size() > UNDO_LIMIT:
 		_undo.pop_front()
@@ -816,9 +980,26 @@ func undo() -> bool:
 	_start_card()
 	if sequence != null and bool(snap["has_sequence"]):
 		sequence.restore_snapshot(snap["sequence"])
+	_restore_turn(snap.get("turn", {}))
 	emit_signal("log_line", "Annullato: %s." % snap["label"])
 	refresh()
 	return true
+
+
+## I dati del turno in corso, per l'Annulla e i salvataggi.
+func _turn_dict() -> Dictionary:
+	_sync_turn()
+	return {"key": _turn_key, "op": _turn_op, "spaces": _turn_op_spaces.duplicate(), "sa": _turn_sa}
+
+
+## Ripristina i dati del turno. I salvataggi precedenti non li hanno: si riparte
+## da un turno pulito.
+func _restore_turn(d: Dictionary) -> void:
+	_turn_key = String(d.get("key", ""))
+	_turn_op = String(d.get("op", ""))
+	_turn_op_spaces = (d.get("spaces", []) as Array).duplicate()
+	_turn_sa = String(d.get("sa", ""))
+	_sync_turn()
 
 
 func clear_undo() -> void:
@@ -838,6 +1019,7 @@ func save_game(path: String) -> bool:
 		"state": state.to_dict(),
 		"has_sequence": sequence != null,
 		"sequence": sequence.snapshot() if sequence != null else {},
+		"turn": _turn_dict(),
 	}, "\t"))
 	f.close()
 	emit_signal("log_line", "Partita salvata in %s." % path)
@@ -860,6 +1042,7 @@ func load_game(path: String) -> bool:
 	_start_card()
 	if sequence != null and bool(d.get("has_sequence", false)):
 		sequence.restore_snapshot(d.get("sequence", {}))
+	_restore_turn(d.get("turn", {}))
 	clear_undo()
 	emit_signal("log_line", "Partita ripresa da %s." % path)
 	refresh()
@@ -887,6 +1070,8 @@ func play_asset_card(number: int, choices = {}) -> Dictionary:
 		if not sequence.is_legal(CoinEnums.ActionType.EVENT):
 			return {"ok": false,
 				"error": "I Reclaimer non possono giocare un Asset Event adesso."}
+		if turn_started():
+			return {"ok": false, "error": "In questo turno hai già agito: niente Asset Event."}
 		as_turn = true
 	snapshot("Asset card #%d" % number)
 	var res: Dictionary = cards.play_asset_event(number)
@@ -1436,6 +1621,7 @@ func _autosave() -> void:
 		"state": state.to_dict(),
 		"has_sequence": sequence != null,
 		"sequence": sequence.snapshot() if sequence != null else {},
+		"turn": _turn_dict(),
 	}, "\t"))
 	f.close()
 

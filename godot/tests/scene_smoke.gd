@@ -89,7 +89,7 @@ func _initialize() -> void:
 	_ok(gc.cards.campaign_in_play() > 0, "una Campaign card in gioco")
 
 	# Barra delle Operazioni della Fazione di turno (§5.0).
-	var ops_box: HFlowContainer = main.get("_ops_box")
+	var ops_box: Container = main.get("_ops_box")
 	_ok(ops_box.get_child_count() > 0, "barra delle Operazioni popolata (%d)" % ops_box.get_child_count())
 
 	# Pianificazione: si sceglie un'Operazione, si clicca uno spazio candidato,
@@ -129,6 +129,10 @@ func _initialize() -> void:
 	main.call("_confirm_op")
 	await process_frame
 	_ok(String(main.get("_op_mode")) == "", "pianificazione chiusa dopo l'esecuzione")
+	_ok(gc.turn_op() == op_id, "l'Operazione resta quella del turno, finché non lo si conclude")
+	_ok(not gc.do_pass(), "dopo un'Operazione non si può più Passare")
+	main.call("_on_end_turn")
+	await process_frame
 	_ok(gc.sequence == null or gc.sequence.pending_faction() != fid,
 		"l'Operazione ha consumato il turno di %s" % fid)
 
@@ -192,6 +196,9 @@ func _initialize() -> void:
 		var reqs: Array = main.get("_ev_reqs")
 		var idx: int = main.get("_ev_index")
 		if idx >= reqs.size():
+			_ok(not (main.get("_btn_exec") as Button).disabled, "scelte complete: «Esegui Evento» è attivo")
+			main.call("_on_execute")
+			await process_frame
 			break
 		var req: Dictionary = reqs[idx]
 		if String(req.get("kind", "space")) == "space":
@@ -771,7 +778,7 @@ func _initialize() -> void:
 		await process_frame
 	if gc.sequence != null and gc.np.is_np(gc.sequence.pending_faction()):
 		var labels: Array[String] = []
-		for child in (main.get("_ops_box") as HFlowContainer).get_children():
+		for child in (main.get("_ops_box") as Container).get_children():
 			if child is Button:
 				labels.append((child as Button).text)
 		var has_np_btn := false
