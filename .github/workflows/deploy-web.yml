@@ -1,0 +1,72 @@
+name: Deploy Web (Godot)
+
+# Compila l'export Web del progetto Godot e lo pubblica su GitHub Pages.
+# Su ogni pull request esegue test ed export (senza pubblicare); su master pubblica.
+# Pages serve il sito dalla branch `gh-pages` (solo l'export, storia separata):
+# il job di pubblicazione la riscrive con l'export appena compilato.
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "pages-${{ github.event.pull_request.head.ref || github.ref_name }}"
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.7-stable"
+  TEMPLATES_DIR: "4.7.stable"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Scarica Godot headless
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}_linux.x86_64" /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+
+      - name: Installa i template di export
+        run: |
+          curl -sSL -o templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${TEMPLATES_DIR}"
+          unzip -q templates.tpz
+          mv templates/* "$HOME/.local/share/godot/export_templates/${TEMPLATES_DIR}/"
+
+      - name: Import del progetto
+        run: godot --headless --path godot --import || true
+
+      - name: Test (headless)
+        run: godot --headless --path godot -s res://tests/test_runner.gd
+
+      - name: Smoke test della scena (montaggio UI)
+        run: godot --headless --path godot -s res://tests/scene_smoke.gd
+
+      - name: Export Web
+        run: |
+          mkdir -p web
+          godot --headless --path godot --export-release "Web"
+          test -f web/index.html
+          # GitHub Pages: assicura che non venga processato da Jekyll
+          touch web/.nojekyll
+
+      # Solo su master: sulle PR ci si ferma alla build (CI).
+      - name: Pubblica su gh-pages
+        if: github.ref == 'refs/heads/master'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: web
+          force_orphan: true
+          commit_message: "Build Web da ${{ github.sha }}"
